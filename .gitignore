@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Firebase client config: shared between teammates directly, kept out of the repository (decisions.md D-010).
+/app/google-services.json

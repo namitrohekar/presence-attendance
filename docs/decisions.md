@@ -103,3 +103,19 @@ Each entry: context, decision, alternatives, consequence. Newest last.
   app label use Presence. The folder name is left alone.
 - Alternatives: rename the folder (breaks the open Android Studio project).
 - Consequence: none at runtime.
+
+## D-010 `google-services.json` and the shared debug keystore
+
+- Context: Google sign-in only works for builds signed with a key whose
+  SHA-1/SHA-256 is registered in Firebase, and the app needs the project's
+  `google-services.json` at runtime.
+- Decision: commit one debug keystore (`keystore/debug.keystore`, standard
+  debug credentials) and sign every debug build with it. Keep
+  `app/google-services.json` out of git; teammates receive it directly. The
+  Firebase project ID lives in `firebase/.firebaserc`.
+- Alternatives: per-developer debug keys (each must be registered); committing
+  `google-services.json` (not a secret, but a public repository triggers
+  exposed-key alerts from Google).
+- Consequence: a fresh clone builds, lints and tests, and shows "no Firebase
+  configuration" on sign-in until the file is added. Release signing is not
+  configured; release builds are unsigned.
