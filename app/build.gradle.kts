@@ -26,6 +26,16 @@ android {
         buildConfigField("boolean", "FIREBASE_CONFIGURED", firebaseConfigured.toString())
     }
 
+    signingConfigs {
+        // One debug key for the whole team, so a single SHA pair registered in Firebase works on every machine.
+        getByName("debug") {
+            storeFile = rootProject.file("keystore/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
