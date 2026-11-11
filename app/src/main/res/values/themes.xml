@@ -1,5 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!--
+        Every Material colour and type role is pinned to a token so no default leaks through.
+        Fonts are set through text appearances only: a theme-level fontFamily would outrank them
+        and flatten the semibold styles to regular.
+    -->
+    <style name="Theme.Presence" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorOnPrimary">@color/on_accent</item>
+        <item name="colorPrimaryContainer">@color/fill</item>
+        <item name="colorOnPrimaryContainer">@color/accent</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorOnSecondary">@color/on_accent</item>
+        <item name="colorSecondaryContainer">@color/fill</item>
+        <item name="colorOnSecondaryContainer">@color/text</item>
+        <item name="colorTertiary">@color/accent</item>
+        <item name="colorOnTertiary">@color/on_accent</item>
+        <item name="colorTertiaryContainer">@color/fill</item>
+        <item name="colorOnTertiaryContainer">@color/text</item>
+        <item name="android:colorBackground">@color/background</item>
+        <item name="colorOnBackground">@color/text</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text</item>
+        <item name="colorSurfaceVariant">@color/fill</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorSurfaceDim">@color/background</item>
+        <item name="colorSurfaceBright">@color/surface</item>
+        <item name="colorSurfaceContainerLowest">@color/surface</item>
+        <item name="colorSurfaceContainerLow">@color/surface</item>
+        <item name="colorSurfaceContainer">@color/surface</item>
+        <item name="colorSurfaceContainerHigh">@color/surface</item>
+        <item name="colorSurfaceContainerHighest">@color/fill</item>
+        <item name="colorOutline">@color/separator</item>
+        <item name="colorOutlineVariant">@color/separator</item>
+        <item name="colorError">@color/danger</item>
+        <item name="colorOnError">@color/on_accent</item>
+        <item name="elevationOverlayEnabled">false</item>
+        <item name="android:textAppearance">@style/TextAppearance.Presence.Body</item>
+        <item name="textAppearanceDisplayLarge">@style/TextAppearance.Presence.LargeTitle</item>
+        <item name="textAppearanceDisplayMedium">@style/TextAppearance.Presence.LargeTitle</item>
+        <item name="textAppearanceDisplaySmall">@style/TextAppearance.Presence.LargeTitle</item>
+        <item name="textAppearanceHeadlineLarge">@style/TextAppearance.Presence.LargeTitle</item>
+        <item name="textAppearanceHeadlineMedium">@style/TextAppearance.Presence.Title</item>
+        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.Presence.Title</item>
+        <item name="textAppearanceTitleLarge">@style/TextAppearance.Presence.Title</item>
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.Presence.Headline</item>
+        <item name="textAppearanceTitleSmall">@style/TextAppearance.Presence.Headline</item>
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.Presence.Body</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.Presence.Subhead</item>
+        <item name="textAppearanceBodySmall">@style/TextAppearance.Presence.Footnote</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.Presence.Headline</item>
+        <item name="textAppearanceLabelMedium">@style/TextAppearance.Presence.Caption</item>
+        <item name="textAppearanceLabelSmall">@style/TextAppearance.Presence.Caption</item>
+        <item name="android:textColorPrimary">@color/text</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="materialButtonStyle">@style/Widget.Presence.Button.Primary</item>
+    </style>
 
-    <style name="Theme.Cadence" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Presence.Splash" parent="Theme.SplashScreen.IconBackground">
+        <item name="windowSplashScreenBackground">@color/background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/accent</item>
+        <item name="postSplashScreenTheme">@style/Theme.Presence</item>
+    </style>
 </resources>

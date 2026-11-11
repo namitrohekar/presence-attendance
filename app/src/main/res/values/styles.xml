@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="ShapeAppearance.Presence.Control" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/radius_control</item>
+    </style>
+
+    <style name="Widget.Presence.Button" parent="Widget.Material3.Button.UnelevatedButton">
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingStart">@dimen/space_20</item>
+        <item name="android:paddingEnd">@dimen/space_20</item>
+        <item name="android:textAppearance">@style/TextAppearance.Presence.Headline</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.Presence.Control</item>
+    </style>
+
+    <style name="Widget.Presence.Button.Primary">
+        <item name="backgroundTint">@color/button_primary_fill</item>
+        <item name="android:textColor">@color/button_primary_text</item>
+    </style>
+
+    <style name="Widget.Presence.Button.Google">
+        <item name="backgroundTint">@color/google_button_fill</item>
+        <item name="strokeColor">@color/google_button_stroke</item>
+        <item name="strokeWidth">@dimen/hairline_stroke</item>
+        <item name="android:textColor">@color/google_button_text</item>
+        <item name="android:textAppearance">@style/TextAppearance.Presence.GoogleButton</item>
+        <item name="icon">@drawable/ic_google_g</item>
+        <item name="iconTint">@null</item>
+        <item name="iconSize">@dimen/google_button_icon</item>
+        <item name="iconPadding">@dimen/space_12</item>
+        <item name="iconGravity">textStart</item>
+    </style>
+</resources>
