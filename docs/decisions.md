@@ -119,3 +119,78 @@ Each entry: context, decision, alternatives, consequence. Newest last.
 - Consequence: a fresh clone builds, lints and tests, and shows "no Firebase
   configuration" on sign-in until the file is added. Release signing is not
   configured; release builds are unsigned.
+
+## D-011 Ending a session never moves its end time later
+
+- Context: the brief says the only session update is ACTIVE to ENDED with
+  `endsAt == request.time`. Applied to a session whose end time has already
+  passed, that would push `endsAt` forward and reopen the window in which
+  queued scans are accepted.
+- Decision: two forms of the same transition. Before `endsAt`: status ENDED and
+  `endsAt == request.time` (ending early). At or after `endsAt`: status ENDED
+  with `endsAt` unchanged (closing an expired session). Token writes also
+  require `request.time < endsAt`, not only status ACTIVE.
+- Alternatives: the literal rule (lets a teacher extend an expired session);
+  forbidding any update after expiry (leaves stale ACTIVE documents forever).
+- Consequence: `endsAt` only ever decreases. Clients must treat "ACTIVE and past
+  `endsAt`" as ended, since nothing flips the status automatically.
+
+## D-012 Role is derived in the rules on every write
+
+- Context: role must never be client-chosen, and clients cannot read the
+  allowlist.
+- Decision: the rules compute the role from `exists(teacherAllowlist/<email>)`
+  wherever it matters (profile create and update, course create) and never
+  trust `users/{uid}.role`. The profile's `name` and `email` must equal the
+  sign-in token's claims. The email is lower-cased for the allowlist lookup.
+- Alternatives: read `users/{uid}.role` in other rules (one more lookup, and a
+  stale role after an allowlist change).
+- Consequence: allowlist document ids must be lower-case. `users.role` is a
+  display hint for choosing the home screen; removing an allowlist entry takes
+  effect immediately for writes.
+
+## D-013 Own composite ids can be read before they exist
+
+- Context: the offline queue reconciles by reading
+  `attendance/{sessionId}_{uid}`, and the scan pre-check reads
+  `memberships/{courseId}_{uid}`. A rule written against `resource.data` denies
+  a read of a missing document, which is indistinguishable from a real denial.
+- Decision: `get` on memberships and attendance is allowed when the document id
+  ends in `_<own uid>`, so a missing document returns "not found". Create rules
+  guarantee such ids only ever hold that user's data.
+- Alternatives: treat PERMISSION_DENIED as "not found" in the client (hides
+  genuine denials).
+- Consequence: precise client messages and a reliable reconcile.
+
+## D-014 Join code carries the course name and must follow a rename
+
+- Context: the join confirm sheet shows course and teacher before the student
+  is a member, so that data is denormalised on `joinCodes/{code}`.
+- Decision: a course rename is only accepted in a batch that also updates
+  `joinCodes/{code}.courseName`; the rules check both documents after the write.
+- Alternatives: let the join code go stale (the sheet would show the old name).
+- Consequence: renames are a two-document batch. `teacherName` is the teacher's
+  token name at creation and is not refreshed.
+
+## D-015 Rules tooling beyond the three named packages
+
+- Context: allowed Node tooling is firebase-tools, @firebase/rules-unit-testing
+  and Jest.
+- Decision: also install `firebase` (the JS SDK), which rules-unit-testing
+  declares as a required peer dependency. Add `npm run test:mutation`, a script
+  that weakens 27 rules one at a time and requires a test to fail for each.
+- Alternatives: none for the peer dependency. Without the mutation check there
+  is no evidence that the negative tests fail for the right reason; it already
+  found two tests that passed only because another condition masked the one
+  under test.
+- Consequence: dev-only; nothing ships in the app.
+
+## D-016 Contract files are parsed with a small regex reader in JUnit
+
+- Context: JUnit must read `contracts/*.json`, and the allowed test libraries
+  include no JSON parser (`org.json` is a stub in local unit tests).
+- Decision: `testutil/Contracts.java` reads flat objects of scalars with two
+  regular expressions. The contract files are kept flat for this reason.
+- Alternatives: add `org.json:json` as a test dependency.
+- Consequence: if a contract ever needs nesting, add the library and delete the
+  reader.

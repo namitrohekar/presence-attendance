@@ -61,10 +61,14 @@ Automated gate:
   `constants.json`, the rules file and `Constants.java` disagree (proved by
   changing one value and watching it fail).
 - No rule path uses more than 4 `get()`/`exists()` calls (counted in the report).
+- `npm run test:mutation`: every deliberately weakened rule is caught by a test.
 
 Run-checks:
-1. `cd firebase && npm test` prints the per-invariant test list, all passing.
-2. Change `ROTATION_S` in `constants.json`; `./gradlew testDebugUnitTest` fails.
+1. `cd firebase && npm install && npm test` prints the per-invariant test list,
+   all passing.
+2. `npm run test:mutation` reports every weakened rule as caught.
+3. Change `ROTATION_S` in `contracts/constants.json`; `./gradlew testDebugUnitTest`
+   fails. Change it back.
 
 ## Phase 2: auth, roles, courses
 

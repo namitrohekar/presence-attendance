@@ -1,0 +1,397 @@
+rules_version = '2';
+
+// Presence security rules.
+//
+// There is no server: these rules are the only verifier. A modified client can
+// send any write it likes, so every invariant is enforced here and the app's
+// own checks exist only to give precise messages.
+//
+// Anything not matched below is denied. request.time is the only clock.
+// Lookup budget: no request path uses more than 3 get()/exists()/getAfter()
+// calls (limit 10); the count is noted beside each write rule.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- Constants -------------------------------------------------------
+    // Mirror of contracts/constants.json. firebase/test/constants.test.js
+    // fails if any value here drifts from that file.
+    function TOKEN_VALIDITY_S() { return 20; }
+    function SESSION_MIN_MIN() { return 5; }
+    function SESSION_MAX_MIN() { return 180; }
+    function SESSION_SKEW_MIN() { return 1; }
+    function GEO_RADIUS_MIN_M() { return 30; }
+    function GEO_RADIUS_MAX_M() { return 1000; }
+    function MAX_ACCURACY_M() { return 100; }
+    function QUEUE_GRACE_MIN() { return 30; }
+    function THRESHOLD_MIN() { return 1; }
+    function THRESHOLD_MAX() { return 100; }
+    function NOTE_MAX_LEN() { return 140; }
+    function METERS_PER_DEGREE() { return 111320; }
+
+    // Empty disables the check. Set to a domain such as 'college.edu' to
+    // accept only accounts from that domain.
+    function INSTITUTE_DOMAIN() { return ''; }
+
+    // ---- Identity (invariant 1) -----------------------------------------
+    function uid() { return request.auth.uid; }
+    function email() { return request.auth.token.email.lower(); }
+
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email is string
+        && (INSTITUTE_DOMAIN() == '' || email().split('@')[1] == INSTITUTE_DOMAIN());
+    }
+
+    // Role is derived from the allowlist on every use; it is never read from
+    // a field the client wrote.
+    function isAllowlisted() {
+      return exists(/databases/$(database)/documents/teacherAllowlist/$(email()));
+    }
+
+    // ---- Shared validators ----------------------------------------------
+    function isText(v, min, max) {
+      return v is string && v.size() >= min && v.size() <= max;
+    }
+
+    // Values that are interpolated into document paths must not contain '/'.
+    function isId(v) {
+      return v is string && v.matches('^[A-Za-z0-9]{1,128}$');
+    }
+
+    function isJoinCode(v) {
+      return v is string && v.matches('^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$');
+    }
+
+    function isToken(v) {
+      return v is string && v.matches('^[A-Za-z0-9_-]{22}$');
+    }
+
+    function hasExactly(data, fields) {
+      return data.keys().hasOnly(fields) && data.keys().hasAll(fields);
+    }
+
+    function isMemberOf(courseId, studentId) {
+      return exists(/databases/$(database)/documents/memberships/$(courseId + '_' + studentId));
+    }
+
+    // Document ids of the form <prefix>_<uid> belong to that uid. Matching on
+    // the id lets the owner read a document that does not exist yet and get
+    // "not found" instead of a denial.
+    function isOwnCompositeId(id) {
+      return id.matches('^[A-Za-z0-9]+_' + uid() + '$');
+    }
+
+    // ---- appConfig: read by signed-in users, written from the console only
+    match /appConfig/campus {
+      allow get: if signedIn();
+    }
+
+    // teacherAllowlist has no match block on purpose: no client can read,
+    // list or write it. Only exists() in these rules can see it.
+
+    // ---- users (invariant 1) --------------------------------------------
+    match /users/{userId} {
+      function validUser(data) {
+        return hasExactly(data, ['name', 'email', 'role', 'createdAt'])
+          && isText(data.name, 1, 100)
+          && data.name == request.auth.token.name
+          && data.email == request.auth.token.email
+          && data.role == (isAllowlisted() ? 'FACULTY' : 'STUDENT');
+      }
+
+      allow get: if signedIn() && uid() == userId;
+
+      // Lookups: 1 (allowlist).
+      allow create: if signedIn()
+        && uid() == userId
+        && validUser(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+
+      // Lookups: 1 (allowlist). The role is re-derived, so adding or removing
+      // an allowlist entry takes effect the next time the profile is written.
+      allow update: if signedIn()
+        && uid() == userId
+        && validUser(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    // ---- courses and join codes (invariant 2) ---------------------------
+    match /courses/{courseId} {
+      function validCourseFields(data) {
+        return isText(data.name, 1, 80)
+          && isText(data.code, 1, 20)
+          && data.threshold is int
+          && data.threshold >= THRESHOLD_MIN()
+          && data.threshold <= THRESHOLD_MAX();
+      }
+
+      function joinCodeAfter(code) {
+        return getAfter(/databases/$(database)/documents/joinCodes/$(code)).data;
+      }
+
+      // Lookups: 1 (membership), only when the reader is not the owner.
+      allow get: if signedIn()
+        && (resource.data.teacherId == uid() || isMemberOf(courseId, uid()));
+
+      allow list: if signedIn() && resource.data.teacherId == uid();
+
+      // Lookups: 2 (allowlist, join code after this write). The join code
+      // document must be created in the same batch and point back here.
+      allow create: if signedIn()
+        && isAllowlisted()
+        && hasExactly(request.resource.data,
+            ['teacherId', 'name', 'code', 'threshold', 'joinCode', 'createdAt'])
+        && request.resource.data.teacherId == uid()
+        && validCourseFields(request.resource.data)
+        && isJoinCode(request.resource.data.joinCode)
+        && request.resource.data.createdAt == request.time
+        && joinCodeAfter(request.resource.data.joinCode).courseId == courseId;
+
+      // Lookups: 1 (join code after this write). A rename must update the
+      // denormalised name on the join code in the same batch.
+      allow update: if signedIn()
+        && resource.data.teacherId == uid()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'threshold'])
+        && validCourseFields(request.resource.data)
+        && joinCodeAfter(resource.data.joinCode).courseName == request.resource.data.name;
+    }
+
+    match /joinCodes/{code} {
+      function courseAfter(courseId) {
+        return getAfter(/databases/$(database)/documents/courses/$(courseId)).data;
+      }
+
+      function validJoinCode(data) {
+        return hasExactly(data, ['courseId', 'courseName', 'teacherName'])
+          && isId(data.courseId)
+          && courseAfter(data.courseId).teacherId == uid()
+          && courseAfter(data.courseId).joinCode == code
+          && courseAfter(data.courseId).name == data.courseName
+          && data.teacherName == request.auth.token.name;
+      }
+
+      // get only: listing would let anyone enumerate every course.
+      allow get: if signedIn();
+
+      // Lookups: 1 (course after this write). A code that already exists makes
+      // this an update, which fails, so codes are unique.
+      allow create: if signedIn() && validJoinCode(request.resource.data);
+
+      // Lookups: 1. Only the denormalised course name can follow a rename.
+      allow update: if signedIn()
+        && validJoinCode(request.resource.data)
+        && request.resource.data.courseId == resource.data.courseId;
+    }
+
+    // ---- memberships (invariant 3) --------------------------------------
+    match /memberships/{membershipId} {
+      allow get: if signedIn()
+        && (isOwnCompositeId(membershipId) || resource.data.teacherId == uid());
+
+      allow list: if signedIn()
+        && (resource.data.studentId == uid() || resource.data.teacherId == uid());
+
+      // Lookups: 2 (join code, course).
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(
+            ['courseId', 'teacherId', 'studentId', 'name', 'email', 'rollNo', 'joinCode', 'joinedAt'])
+        && request.resource.data.keys().hasAll(
+            ['courseId', 'teacherId', 'studentId', 'name', 'email', 'joinCode', 'joinedAt'])
+        && isId(request.resource.data.courseId)
+        && membershipId == request.resource.data.courseId + '_' + uid()
+        && request.resource.data.studentId == uid()
+        && request.resource.data.teacherId != uid()
+        && isJoinCode(request.resource.data.joinCode)
+        && get(/databases/$(database)/documents/joinCodes/$(request.resource.data.joinCode)).data.courseId
+            == request.resource.data.courseId
+        && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.teacherId
+            == request.resource.data.teacherId
+        && request.resource.data.name == request.auth.token.name
+        && request.resource.data.email == request.auth.token.email
+        && (!('rollNo' in request.resource.data) || isText(request.resource.data.rollNo, 1, 20))
+        && request.resource.data.joinedAt == request.time;
+    }
+
+    // ---- sessions and tokens (invariants 4 and 5) -----------------------
+    match /sessions/{sessionId} {
+      function validGeofence(g) {
+        return hasExactly(g, ['lat', 'lng', 'radiusM', 'cosLat'])
+          && g.lat is number && g.lat >= -90 && g.lat <= 90
+          && g.lng is number && g.lng >= -180 && g.lng <= 180
+          && g.radiusM is number
+          && g.radiusM >= GEO_RADIUS_MIN_M()
+          && g.radiusM <= GEO_RADIUS_MAX_M()
+          && g.cosLat is number && g.cosLat > 0 && g.cosLat <= 1;
+      }
+
+      // Lookups: 1 (membership), only when the reader is not the teacher.
+      allow read: if signedIn()
+        && (resource.data.teacherId == uid() || isMemberOf(resource.data.courseId, uid()));
+
+      // Lookups: 1 (course).
+      allow create: if signedIn()
+        && hasExactly(request.resource.data,
+            ['courseId', 'teacherId', 'status', 'startedAt', 'endsAt', 'geofence'])
+        && isId(request.resource.data.courseId)
+        && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.teacherId == uid()
+        && request.resource.data.teacherId == uid()
+        && request.resource.data.status == 'ACTIVE'
+        && request.resource.data.startedAt == request.time
+        && request.resource.data.endsAt is timestamp
+        && request.resource.data.endsAt
+            >= request.time + duration.value(SESSION_MIN_MIN() - SESSION_SKEW_MIN(), 'm')
+        && request.resource.data.endsAt
+            <= request.time + duration.value(SESSION_MAX_MIN() + SESSION_SKEW_MIN(), 'm')
+        && request.resource.data.geofence is map
+        && validGeofence(request.resource.data.geofence);
+
+      // Lookups: 0. The only transition is ACTIVE -> ENDED, and it can never
+      // move endsAt later: ending early stamps the server time, closing an
+      // already expired session keeps the original end.
+      allow update: if signedIn()
+        && resource.data.teacherId == uid()
+        && resource.data.status == 'ACTIVE'
+        && request.resource.data.status == 'ENDED'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'endsAt'])
+        && ((request.time < resource.data.endsAt && request.resource.data.endsAt == request.time)
+            || (request.time >= resource.data.endsAt
+                && request.resource.data.endsAt == resource.data.endsAt));
+
+      match /tokens/{token} {
+        function session() {
+          return get(/databases/$(database)/documents/sessions/$(sessionId)).data;
+        }
+
+        // Lookups: 1 (session). No read, list, update or delete rule exists,
+        // so no client can ever see or reuse a token id.
+        allow create: if signedIn()
+          && isToken(token)
+          && hasExactly(request.resource.data, ['validFrom'])
+          && request.resource.data.validFrom == request.time
+          && session().teacherId == uid()
+          && session().status == 'ACTIVE'
+          && request.time < session().endsAt;
+      }
+    }
+
+    // ---- attendance (invariants 6, 7 and 8) -----------------------------
+    match /attendance/{attendanceId} {
+      function sessionOf(sessionId) {
+        return get(/databases/$(database)/documents/sessions/$(sessionId)).data;
+      }
+
+      function validFromOf(sessionId, token) {
+        return get(/databases/$(database)/documents/sessions/$(sessionId)/tokens/$(token)).data.validFrom;
+      }
+
+      // Same arithmetic, in the same order, as Geofence.java. No sqrt or trig:
+      // squared distances are compared and cosLat is precomputed by the
+      // faculty app. float() makes integer and double inputs behave alike.
+      function inGeofence(g, lat, lng, accuracyM) {
+        let dy = (float(lat) - float(g.lat)) * float(METERS_PER_DEGREE());
+        let dx = (float(lng) - float(g.lng)) * float(METERS_PER_DEGREE()) * float(g.cosLat);
+        let reach = float(g.radiusM) + float(accuracyM);
+        return lat is number && lng is number && accuracyM is number
+          && lat >= -90 && lat <= 90
+          && lng >= -180 && lng <= 180
+          && accuracyM > 0 && accuracyM <= MAX_ACCURACY_M()
+          && dx * dx + dy * dy <= reach * reach;
+      }
+
+      function studentFields() {
+        return ['sessionId', 'courseId', 'teacherId', 'studentId', 'status', 'source',
+                'token', 'markedAt', 'lat', 'lng', 'accuracyM'];
+      }
+
+      function liveMark(data, session, validFrom) {
+        return hasExactly(data, studentFields())
+          && data.source == 'LIVE'
+          && data.status == 'PRESENT'
+          && session.status == 'ACTIVE'
+          && request.time < session.endsAt
+          && request.time < validFrom + duration.value(TOKEN_VALIDITY_S(), 's');
+      }
+
+      // scannedAt is the device clock at scan time. It is forgeable by a
+      // modified client; the window checks bound what a forgery can achieve.
+      function queuedMark(data, session, validFrom) {
+        return hasExactly(data, studentFields().concat(['scannedAt']))
+          && data.source == 'QUEUED'
+          && data.status == 'LATE_SYNC'
+          && data.scannedAt is timestamp
+          && data.scannedAt >= validFrom
+          && data.scannedAt < validFrom + duration.value(TOKEN_VALIDITY_S(), 's')
+          && data.scannedAt <= request.time
+          && data.scannedAt < session.endsAt
+          && request.time < session.endsAt + duration.value(QUEUE_GRACE_MIN(), 'm');
+      }
+
+      // Lookups: 3 (session, membership, token).
+      function studentMark(data) {
+        let session = sessionOf(data.sessionId);
+        let validFrom = validFromOf(data.sessionId, data.token);
+        return isId(data.sessionId)
+          && isToken(data.token)
+          && attendanceId == data.sessionId + '_' + uid()
+          && data.studentId == uid()
+          && data.courseId == session.courseId
+          && data.teacherId == session.teacherId
+          && isMemberOf(session.courseId, uid())
+          && data.markedAt == request.time
+          && inGeofence(session.geofence, data.lat, data.lng, data.accuracyM)
+          && (liveMark(data, session, validFrom) || queuedMark(data, session, validFrom));
+      }
+
+      function validCorrection(data) {
+        return isText(data.note, 1, NOTE_MAX_LEN())
+          && data.updatedBy == uid()
+          && data.updatedAt == request.time;
+      }
+
+      // Lookups: 2 (session, membership). Absent means "no document", so the
+      // only record a teacher can create is MANUAL_PRESENT.
+      function manualCreate(data) {
+        let session = sessionOf(data.sessionId);
+        return hasExactly(data,
+            ['sessionId', 'courseId', 'teacherId', 'studentId', 'status', 'source',
+             'markedAt', 'note', 'updatedBy', 'updatedAt'])
+          && isId(data.sessionId)
+          && isId(data.studentId)
+          && attendanceId == data.sessionId + '_' + data.studentId
+          && session.teacherId == uid()
+          && data.teacherId == uid()
+          && data.courseId == session.courseId
+          && isMemberOf(session.courseId, data.studentId)
+          && data.status == 'MANUAL_PRESENT'
+          && data.source == 'MANUAL'
+          && data.markedAt == request.time
+          && validCorrection(data);
+      }
+
+      // Lookups: 0. teacherId on the document was checked against the session
+      // when the document was created and cannot change afterwards.
+      function manualUpdate() {
+        return resource.data.teacherId == uid()
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'note', 'updatedBy', 'updatedAt'])
+          && request.resource.data.status in ['MANUAL_PRESENT', 'MANUAL_ABSENT']
+          && validCorrection(request.resource.data);
+      }
+
+      allow get: if signedIn()
+        && (isOwnCompositeId(attendanceId) || resource.data.teacherId == uid());
+
+      allow list: if signedIn()
+        && (resource.data.studentId == uid() || resource.data.teacherId == uid());
+
+      allow create: if signedIn()
+        && (studentMark(request.resource.data) || manualCreate(request.resource.data));
+
+      // Students have no update rule, and nobody has a delete rule: one
+      // record per student per session, kept forever.
+      allow update: if signedIn() && manualUpdate();
+    }
+  }
+}

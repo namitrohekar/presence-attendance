@@ -1,0 +1,21 @@
+{
+  "name": "presence-firebase",
+  "private": true,
+  "description": "Firestore security rules, indexes and their emulator test suite.",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project demo-presence \"jest --runInBand\"",
+    "test:mutation": "firebase emulators:exec --only firestore --project demo-presence \"node test/mutation-check.js\"",
+    "deploy": "firebase deploy --only firestore"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 30000,
+    "verbose": true
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "6.0.0",
+    "firebase": "13.2.0",
+    "firebase-tools": "15.35.0",
+    "jest": "30.5.2"
+  }
+}

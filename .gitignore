@@ -16,3 +16,8 @@ local.properties
 
 # Firebase client config: shared between teammates directly, kept out of the repository (decisions.md D-010).
 /app/google-services.json
+
+# Rules test tooling
+/firebase/node_modules/
+/firebase/*.log
+/firebase/.firebase/

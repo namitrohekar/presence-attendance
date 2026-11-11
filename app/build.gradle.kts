@@ -65,6 +65,14 @@ tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-dangling-doc-comments", "-Werror"))
 }
 
+tasks.withType<Test>().configureEach {
+    // The contract files live outside this module. Declaring them as inputs makes the parity
+    // tests rerun when a contract changes instead of being reported up to date.
+    val contracts = rootProject.layout.projectDirectory.dir("contracts")
+    inputs.dir(contracts).withPathSensitivity(PathSensitivity.RELATIVE)
+    systemProperty("contractsDir", contracts.asFile.absolutePath)
+}
+
 spotless {
     java {
         target("src/**/*.java")
@@ -83,4 +91,6 @@ dependencies {
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.dynamicanimation)
     implementation(libs.material)
+
+    testImplementation(libs.junit)
 }
