@@ -48,6 +48,11 @@
         <item name="android:lineHeight">@dimen/line_caption</item>
     </style>
 
+    <!-- Codes and numbers: tabular figures so digits line up and do not shift. -->
+    <style name="TextAppearance.Presence.Code" parent="TextAppearance.Presence.LargeTitle">
+        <item name="android:fontFeatureSettings">tnum</item>
+    </style>
+
     <!-- Google's guidelines fix this label to Roboto Medium 14/20. -->
     <style name="TextAppearance.Presence.GoogleButton" parent="TextAppearance.Material3.LabelLarge">
         <item name="android:fontFamily">sans-serif-medium</item>

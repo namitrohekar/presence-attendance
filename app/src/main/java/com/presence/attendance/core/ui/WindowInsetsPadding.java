@@ -16,21 +16,38 @@ public final class WindowInsetsPadding {
 
     private WindowInsetsPadding() {}
 
-    /** Adds the window insets to the padding the view was laid out with. */
+    /** Adds the window insets on every side to the padding the view was laid out with. */
     public static void apply(@NonNull View view) {
-        final int left = view.getPaddingLeft();
-        final int top = view.getPaddingTop();
-        final int right = view.getPaddingRight();
-        final int bottom = view.getPaddingBottom();
+        apply(view, true, true, true);
+    }
+
+    /**
+     * Left and right insets only. For the root of a screen whose content is a centred column: the
+     * column is then centred inside the safe area instead of being pushed sideways.
+     */
+    public static void applyHorizontal(@NonNull View view) {
+        apply(view, true, false, false);
+    }
+
+    /** Bottom inset only. For scrolling content below an app bar that clears the status bar. */
+    public static void applyBottom(@NonNull View view) {
+        apply(view, false, false, true);
+    }
+
+    private static void apply(@NonNull View view, boolean sides, boolean top, boolean bottom) {
+        final int paddingLeft = view.getPaddingLeft();
+        final int paddingTop = view.getPaddingTop();
+        final int paddingRight = view.getPaddingRight();
+        final int paddingBottom = view.getPaddingBottom();
         ViewCompat.setOnApplyWindowInsetsListener(
                 view,
                 (v, windowInsets) -> {
                     final Insets insets = windowInsets.getInsets(INSET_TYPES);
                     v.setPadding(
-                            left + insets.left,
-                            top + insets.top,
-                            right + insets.right,
-                            bottom + insets.bottom);
+                            paddingLeft + (sides ? insets.left : 0),
+                            paddingTop + (top ? insets.top : 0),
+                            paddingRight + (sides ? insets.right : 0),
+                            paddingBottom + (bottom ? insets.bottom : 0));
                     return windowInsets;
                 });
     }

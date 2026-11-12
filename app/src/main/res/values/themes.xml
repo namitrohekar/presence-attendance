@@ -55,6 +55,11 @@
         <item name="android:textColorPrimary">@color/text</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
         <item name="materialButtonStyle">@style/Widget.Presence.Button.Primary</item>
+        <item name="bottomSheetDialogTheme">@style/ThemeOverlay.Presence.BottomSheetDialog</item>
+        <item name="popupMenuStyle">@style/Widget.Presence.PopupMenu</item>
+        <item name="android:popupMenuStyle">@style/Widget.Presence.PopupMenu</item>
+        <item name="textAppearanceLargePopupMenu">@style/TextAppearance.Presence.Body</item>
+        <item name="textAppearanceSmallPopupMenu">@style/TextAppearance.Presence.Body</item>
     </style>
 
     <style name="Theme.Presence.Splash" parent="Theme.SplashScreen.IconBackground">

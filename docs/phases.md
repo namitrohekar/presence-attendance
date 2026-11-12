@@ -73,26 +73,37 @@ Run-checks:
 ## Phase 2: auth, roles, courses
 
 Delivers: Google sign-in via Credential Manager, role derivation, AppContainer,
-AppExecutors, AppError mapping, role-specific home, course create with unique
-join code, join by code with confirm sheet, sign-out, connectivity gating,
-debug-only emulator host config.
+AppError mapping, role-specific home, course create with unique join code,
+join by code with confirm sheet, sign-out, connectivity gating, debug-only
+emulator host config, `contracts/documents.json`.
 
-You need to provide before review: Firebase project with Google provider
-enabled, SHA-1/SHA-256 of the shared debug keystore registered,
-`app/google-services.json`, one faculty email in `teacherAllowlist`, rules
-deployed (steps will be in `docs/setup.md`), two Google accounts.
+Changed from the original plan: `joinCodes/{code}` gained a `teacherId` field
+(D-017), so the rules must be redeployed. AppExecutors moves to the first phase
+that does background work (nothing in this phase leaves the main thread except
+inside the Firebase SDK).
 
-Automated gate: standing gate + `npm test`; JUnit for join-code generator,
-AppError mapping, auth and course ViewModels.
+You need to provide before review: rules redeployed (`cd firebase && npm run
+deploy`), and both Google accounts added to the test device (Settings >
+Passwords and accounts > Add account). An emulator without a Google account
+opens Google's add-account flow instead of the account sheet.
+
+Automated gate: standing gate + `npm test` + `npm run test:mutation`; JUnit for
+join codes, AppError mapping, the four ViewModels and the document mappers.
 
 Run-checks (demo step 1):
-1. Allowlisted account lands on the faculty home; other account on the student home.
-2. Faculty creates a course; a 6-character join code is shown.
-3. Student enters the code, sees course and teacher on the confirm sheet, joins;
+1. Allowlisted account lands on the faculty home ("+" in the toolbar); the
+   other account on the student home ("Join" in the toolbar).
+2. Faculty creates a course; a 6-character join code is shown, and again on the
+   course row.
+3. Student enters the code, sees course and teacher on the confirm step, joins;
    the course appears on the student home.
-4. Wrong code shows a specific message. Joining twice does not duplicate.
+4. Wrong code shows "No course uses that code". Joining twice shows "You've
+   already joined this course" and does not duplicate.
 5. Airplane mode: create and join are disabled with an explanation.
-6. Sign out returns to sign-in; reopening the app keeps you signed in.
+6. Account menu > Sign out returns to sign-in; reopening the app while signed
+   in goes straight to the courses.
+7. In the Firebase console: `users/{uid}` has role FACULTY for the allowlisted
+   account and STUDENT for the other.
 
 ## Phase 3: session, rotating QR, live roster
 

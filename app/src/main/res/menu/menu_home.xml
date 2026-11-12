@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <!-- Title and icon depend on the role and are set once the user is known. -->
+    <item
+        android:id="@+id/action_primary"
+        android:title="@string/home_join"
+        android:visible="false"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_account"
+        android:icon="@drawable/ic_person"
+        android:title="@string/home_account"
+        app:showAsAction="ifRoom" />
+</menu>

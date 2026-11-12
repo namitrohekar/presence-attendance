@@ -1,0 +1,7 @@
+{
+  "users": "name,email,role,createdAt",
+  "courses": "teacherId,name,code,threshold,joinCode,createdAt",
+  "joinCodes": "courseId,courseName,teacherName,teacherId",
+  "memberships": "courseId,teacherId,studentId,name,email,joinCode,joinedAt",
+  "memberships.optional": "rollNo"
+}

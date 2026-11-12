@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Shows which account is signed in; the title is set at runtime. -->
+    <item
+        android:id="@+id/account_email"
+        android:enabled="false"
+        android:title="@string/home_account" />
+    <item
+        android:id="@+id/action_sign_out"
+        android:title="@string/home_sign_out" />
+</menu>

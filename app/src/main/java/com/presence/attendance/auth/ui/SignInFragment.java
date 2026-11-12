@@ -5,8 +5,15 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.NavController;
+import androidx.navigation.NavDestination;
+import androidx.navigation.fragment.NavHostFragment;
 import com.presence.attendance.BuildConfig;
 import com.presence.attendance.R;
+import com.presence.attendance.core.AppError;
+import com.presence.attendance.core.ui.AppErrorMessages;
+import com.presence.attendance.core.ui.ViewModels;
 import com.presence.attendance.core.ui.WindowInsetsPadding;
 import com.presence.attendance.databinding.FragmentSignInBinding;
 
@@ -22,14 +29,52 @@ public final class SignInFragment extends Fragment {
         // The binding is scoped to this view, so nothing outlives onDestroyView.
         final FragmentSignInBinding binding = FragmentSignInBinding.bind(view);
         WindowInsetsPadding.apply(binding.getRoot());
-        binding.signInContinue.setOnClickListener(v -> onContinueClicked(binding));
+
+        if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isEmpty()) {
+            // No ViewModel here: its repository needs Firebase, which cannot start in a build
+            // without google-services.json or without the Google provider enabled.
+            binding.signInContinue.setOnClickListener(
+                    v -> showError(binding, AppError.NOT_CONFIGURED));
+            return;
+        }
+
+        final SignInViewModel viewModel =
+                new ViewModelProvider(this, ViewModels.factory(c -> new SignInViewModel(c.auth())))
+                        .get(SignInViewModel.class);
+        binding.signInContinue.setOnClickListener(v -> {
+            viewModel.onSignInStarted();
+            // The ViewModel, not this fragment, receives the result, so a rotation
+            // while Google's sheet is open does not lose it.
+            GoogleIdTokenRequester.request(requireActivity(), viewModel::onGoogleIdToken);
+        });
+        viewModel.getState().observe(getViewLifecycleOwner(), state -> render(binding, state));
     }
 
-    private void onContinueClicked(@NonNull FragmentSignInBinding binding) {
-        // A build without google-services.json has no OAuth client to sign in with.
-        if (!BuildConfig.FIREBASE_CONFIGURED) {
-            binding.signInError.setText(R.string.sign_in_error_not_configured);
-            binding.signInError.setVisibility(View.VISIBLE);
+    private void render(
+            @NonNull FragmentSignInBinding binding, @NonNull SignInViewModel.State state) {
+        final boolean signingIn = state.status == SignInViewModel.Status.SIGNING_IN;
+        binding.signInContinue.setEnabled(!signingIn);
+        binding.signInProgress.setVisibility(signingIn ? View.VISIBLE : View.GONE);
+        if (state.error != null) {
+            showError(binding, state.error);
+        } else {
+            binding.signInError.setVisibility(View.GONE);
+        }
+        if (state.status == SignInViewModel.Status.SIGNED_IN) {
+            openHome();
+        }
+    }
+
+    private static void showError(@NonNull FragmentSignInBinding binding, @NonNull AppError error) {
+        binding.signInError.setText(AppErrorMessages.of(error));
+        binding.signInError.setVisibility(View.VISIBLE);
+    }
+
+    private void openHome() {
+        final NavController navController = NavHostFragment.findNavController(this);
+        final NavDestination current = navController.getCurrentDestination();
+        if (current != null && current.getId() == R.id.signInFragment) {
+            navController.navigate(SignInFragmentDirections.actionSignInToHome());
         }
     }
 }

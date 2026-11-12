@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/join_scroll"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clipToPadding="false">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/screen_margin"
+        android:paddingBottom="@dimen/space_24">
+
+        <include layout="@layout/view_sheet_handle" />
+
+        <!-- Step 1: enter the code. -->
+        <LinearLayout
+            android:id="@+id/join_enter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                android:accessibilityHeading="true"
+                android:text="@string/join_title"
+                android:textAppearance="@style/TextAppearance.Presence.Title" />
+
+            <TextView
+                style="@style/Widget.Presence.FieldLabel"
+                android:labelFor="@id/join_code"
+                android:text="@string/join_code_label" />
+
+            <EditText
+                android:id="@+id/join_code"
+                style="@style/Widget.Presence.TextField"
+                android:autofillHints=""
+                android:fontFeatureSettings="tnum"
+                android:imeOptions="actionDone"
+                android:importantForAutofill="no"
+                android:inputType="textCapCharacters|textNoSuggestions"
+                android:maxLength="@integer/join_code_length" />
+
+            <TextView
+                android:id="@+id/join_code_error"
+                style="@style/Widget.Presence.InlineError"
+                android:text="@string/join_code_invalid" />
+
+            <TextView
+                android:id="@+id/join_enter_status"
+                style="@style/Widget.Presence.InlineError"
+                android:layout_marginTop="@dimen/space_20" />
+
+            <com.presence.attendance.core.ui.SpringButton
+                android:id="@+id/join_continue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_24"
+                android:text="@string/join_continue" />
+        </LinearLayout>
+
+        <!-- Step 2: confirm the course and teacher before joining. -->
+        <LinearLayout
+            android:id="@+id/join_confirm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/join_course_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                android:accessibilityHeading="true"
+                android:accessibilityLiveRegion="polite"
+                android:textAppearance="@style/TextAppearance.Presence.Title" />
+
+            <TextView
+                android:id="@+id/join_teacher"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_4"
+                android:textAppearance="@style/TextAppearance.Presence.Body"
+                android:textColor="@color/text_secondary" />
+
+            <TextView
+                style="@style/Widget.Presence.FieldLabel"
+                android:labelFor="@id/join_roll_no"
+                android:text="@string/join_roll_no_label" />
+
+            <EditText
+                android:id="@+id/join_roll_no"
+                style="@style/Widget.Presence.TextField"
+                android:autofillHints=""
+                android:imeOptions="actionDone"
+                android:importantForAutofill="no"
+                android:inputType="textCapCharacters|textNoSuggestions"
+                android:maxLength="@integer/roll_no_max" />
+
+            <TextView
+                android:id="@+id/join_confirm_status"
+                style="@style/Widget.Presence.InlineError"
+                android:layout_marginTop="@dimen/space_20" />
+
+            <com.presence.attendance.core.ui.SpringButton
+                android:id="@+id/join_submit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_24"
+                android:text="@string/join_submit" />
+
+            <com.presence.attendance.core.ui.SpringButton
+                android:id="@+id/join_back"
+                style="@style/Widget.Presence.Button.Text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_4"
+                android:text="@string/join_different_code" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

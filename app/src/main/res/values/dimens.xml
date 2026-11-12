@@ -18,6 +18,13 @@
     <dimen name="separator">0.5dp</dimen>
     <dimen name="ring_stroke">4dp</dimen>
     <dimen name="hairline_stroke">1dp</dimen>
+    <dimen name="icon">24dp</dimen>
+    <dimen name="handle_width">36dp</dimen>
+    <dimen name="handle_height">5dp</dimen>
+    <dimen name="handle_radius">2.5dp</dimen>
+    <dimen name="large_title_bar_height">116dp</dimen>
+    <!-- Content column (560) plus the screen margin on each side. -->
+    <dimen name="column_max_width">600dp</dimen>
 
     <dimen name="radius_field">12dp</dimen>
     <dimen name="radius_control">14dp</dimen>

@@ -36,6 +36,7 @@ const newJoinCode = (overrides = {}) => ({
   courseId: NEW_COURSE,
   courseName: 'Operating Systems',
   teacherName: TEACHER.name,
+  teacherId: TEACHER.uid,
   ...overrides,
 });
 
@@ -62,7 +63,7 @@ describe('INV-2 course create', () => {
 
   test('denied: a student creates a course', async () => {
     const course = newCourse({ teacherId: STUDENT.uid });
-    const joinCode = newJoinCode({ teacherName: STUDENT.name });
+    const joinCode = newJoinCode({ teacherName: STUDENT.name, teacherId: STUDENT.uid });
     await assertFails(createCourse(t.as(STUDENT), course, joinCode));
   });
 
@@ -110,6 +111,8 @@ describe('INV-2 course create', () => {
     ['points at another course', { courseId: COURSE }],
     ['carries a different course name', { courseName: 'Something Else' }],
     ['carries a teacher name not in the token', { teacherName: 'Someone Else' }],
+    ['names another teacher', { teacherId: OTHER_TEACHER.uid }],
+    ['is missing the teacher id', { teacherId: DROP }],
     ['has an extra field', { hidden: true }],
   ])('denied when the join code document %s', async (_, change) => {
     await assertFails(createCourse(t.as(TEACHER), newCourse(), h.patch(newJoinCode(), change)));
@@ -134,6 +137,10 @@ describe('INV-2 course update', () => {
 
   test('denied: renaming the course and leaving the join code stale', async () => {
     await assertFails(updateDoc(courseRef(t.as(TEACHER)), { name: 'Data Structures II' }));
+  });
+
+  test('denied: handing the join code to another teacher', async () => {
+    await assertFails(updateDoc(codeRef(t.as(TEACHER)), { teacherId: OTHER_TEACHER.uid }));
   });
 
   test('denied: renaming only the join code', async () => {

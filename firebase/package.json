@@ -5,6 +5,7 @@
   "scripts": {
     "test": "firebase emulators:exec --only firestore --project demo-presence \"jest --runInBand\"",
     "test:mutation": "firebase emulators:exec --only firestore --project demo-presence \"node test/mutation-check.js\"",
+    "emulators": "firebase emulators:start --only auth,firestore",
     "deploy": "firebase deploy --only firestore"
   },
   "jest": {

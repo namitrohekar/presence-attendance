@@ -164,9 +164,12 @@ service cloud.firestore {
       }
 
       function validJoinCode(data) {
-        return hasExactly(data, ['courseId', 'courseName', 'teacherName'])
+        return hasExactly(data, ['courseId', 'courseName', 'teacherName', 'teacherId'])
           && isId(data.courseId)
           && courseAfter(data.courseId).teacherId == uid()
+          // A student cannot read the course before joining, so the join code
+          // is where they learn the teacherId their membership must carry.
+          && data.teacherId == courseAfter(data.courseId).teacherId
           && courseAfter(data.courseId).joinCode == code
           && courseAfter(data.courseId).name == data.courseName
           && data.teacherName == request.auth.token.name;

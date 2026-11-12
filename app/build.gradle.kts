@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.navigation.safeargs)
@@ -5,10 +7,39 @@ plugins {
 }
 
 // The project must build, lint and unit-test without Firebase credentials; only runtime needs them.
-val firebaseConfigured = file("google-services.json").exists()
+val googleServicesJson =
+    providers.fileContents(layout.projectDirectory.file("google-services.json")).asText.orNull
+val firebaseConfigured = googleServicesJson != null
 if (firebaseConfigured) {
     apply(plugin = libs.plugins.google.services.get().pluginId)
 }
+
+// Google sign-in needs the project's web OAuth client (client_type 3). It is present only after
+// the Google provider is enabled and the SHA fingerprints are registered, so it can be missing
+// even when the file exists. Reading it here avoids depending on a generated string resource.
+fun webClientId(json: String?): String {
+    if (json == null) return ""
+    val root = groovy.json.JsonSlurper().parseText(json) as? Map<*, *> ?: return ""
+    val clients = root["client"] as? List<*> ?: return ""
+    return clients
+        .flatMap { ((it as? Map<*, *>)?.get("oauth_client") as? List<*>).orEmpty() }
+        .mapNotNull { it as? Map<*, *> }
+        .firstOrNull { (it["client_type"] as? Number)?.toInt() == 3 }
+        ?.get("client_id") as? String ?: ""
+}
+
+// Debug builds can talk to local Firebase emulators. The host comes from local.properties
+// (firebase.emulator.host=10.0.2.2 for the Android emulator, or the computer's LAN address for
+// a phone), so no address is committed. Empty means the real project.
+val emulatorHost: String =
+    providers.fileContents(rootProject.layout.projectDirectory.file("local.properties"))
+        .asText
+        .map { text ->
+            Properties().apply { load(text.reader()) }
+                .getProperty("firebase.emulator.host", "")
+                .trim()
+        }
+        .getOrElse("")
 
 android {
     namespace = "com.presence.attendance"
@@ -24,6 +55,8 @@ android {
         versionName = "1.0"
 
         buildConfigField("boolean", "FIREBASE_CONFIGURED", firebaseConfigured.toString())
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${webClientId(googleServicesJson)}\"")
+        buildConfigField("String", "FIREBASE_EMULATOR_HOST", "\"\"")
     }
 
     signingConfigs {
@@ -37,6 +70,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "FIREBASE_EMULATOR_HOST", "\"$emulatorHost\"")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -49,6 +85,11 @@ android {
     buildFeatures {
         viewBinding = true
         buildConfig = true
+    }
+    testOptions {
+        // Firebase model classes touch android.util in static initialisers; without this the
+        // Android stubs throw and those classes cannot be loaded in local unit tests.
+        unitTests.isReturnDefaultValues = true
     }
     lint {
         warningsAsErrors = true
@@ -87,10 +128,20 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.fragment)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.recyclerview)
+    implementation(libs.androidx.lifecycle.viewmodel)
+    implementation(libs.androidx.lifecycle.livedata)
     implementation(libs.androidx.navigation.fragment)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.dynamicanimation)
     implementation(libs.material)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
 
     testImplementation(libs.junit)
+    testImplementation(libs.androidx.arch.core.testing)
 }

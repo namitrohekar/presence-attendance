@@ -194,3 +194,83 @@ Each entry: context, decision, alternatives, consequence. Newest last.
 - Alternatives: add `org.json:json` as a test dependency.
 - Consequence: if a contract ever needs nesting, add the library and delete the
   reader.
+
+## D-017 Join codes carry `teacherId` (contract change)
+
+- Context: a membership must store the course's `teacherId`, and the rules
+  check it against the course. But a student cannot read a course before
+  joining it, and the specified join code document
+  (`courseId, courseName, teacherName`) does not contain the teacher's id. As
+  specified, no client could ever write a valid membership.
+- Decision: `joinCodes/{code}` is `{courseId, courseName, teacherName,
+  teacherId}`. The rules require `teacherId` to equal the course's teacher on
+  create and update.
+- Alternatives: let any signed-in user read any course (weaker: exposes the
+  join code and threshold to anyone who learns a course id).
+- Consequence: the only change to a Phase 1 rule. A uid is revealed to people
+  who already hold the join code. Covered by three new rules tests and one new
+  mutation; the rules must be redeployed.
+
+## D-018 The app discovers its role by asking the rules
+
+- Context: role is derived from an allowlist no client can read, so the app
+  cannot know which role to write into the profile.
+- Decision: at sign-in the app proposes a role in a transaction: the stored
+  role, or STUDENT for a new profile. If the rules deny it, it proposes the
+  other role. A second denial means the account is not allowed and the user is
+  signed out again. The home screen is chosen from the accepted role.
+- Alternatives: a callable function (no server allowed); letting clients read
+  their own allowlist entry (leaks which emails are faculty by probing).
+- Consequence: a faculty member's first sign-in costs one denied write. The
+  role is refreshed at sign-in, not while the app stays signed in, so an
+  allowlist change needs a sign-out and sign-in to change the home screen.
+  Writes are unaffected: the rules re-derive the role every time.
+
+## D-019 `contracts/documents.json`
+
+- Context: the rules whitelist each document's exact fields, and the Android
+  mappers build those documents by hand. A mismatch only shows at runtime as a
+  bare PERMISSION_DENIED.
+- Decision: a third contract file lists the fields of every document the app
+  writes. JUnit holds the Java mappers to it; the rules suite builds its
+  app-flow documents from it and replays the app's transactions.
+- Alternatives: instrumented tests against the emulators (no instrumentation
+  libraries are in the allowed list).
+- Consequence: Java, contract and rules cannot drift apart silently. Each later
+  phase adds its documents to the file.
+
+## D-020 One home fragment for both roles
+
+- Context: faculty and students must see different home screens.
+- Decision: one `HomeFragment` and `HomeViewModel`, configured by role: toolbar
+  action ("+" or "Join"), which sheet opens, which courses load, what a row
+  shows (the join code only for faculty), and the empty-state copy.
+- Alternatives: two fragments sharing a layout and adapter.
+- Consequence: less duplication now. Split if later phases make the two diverge
+  further (the student's sticky "Scan QR", the faculty "Live" indicator).
+
+## D-021 Debug emulator support
+
+- Context: debug builds should be able to use local Firebase emulators,
+  including from a phone over the LAN, without a committed address or any
+  cleartext allowance in release.
+- Decision: `firebase.emulator.host` in `local.properties` becomes
+  `BuildConfig.FIREBASE_EMULATOR_HOST` in debug builds only (always empty in
+  release). A debug-only manifest adds a network security config that permits
+  cleartext. `npm run emulators` starts Auth and Firestore.
+- Alternatives: a fixed `10.0.2.2` entry (works only on the Android emulator).
+- Consequence: `firebase.json` binds the emulators to 127.0.0.1, which the
+  Android emulator reaches as `10.0.2.2`. For a phone over the LAN, change the
+  two `host` values to `0.0.0.0` locally. Verified: the release APK contains no
+  network security config. Not verified: an app session against the emulators,
+  which still needs a real Google account on the device.
+
+## D-022 Libraries: one transitive use, one unused allowance
+
+- Context: every library outside the allowed list needs a justification.
+- Decision: `CoordinatorLayout` (for the collapsing large title) is used
+  through Material Components, which depends on it; no new dependency is
+  declared. Mockito is allowed but not added: hand-written fakes of the two
+  repository interfaces are shorter and clearer than stubbing them.
+- Alternatives: declare `androidx.coordinatorlayout` explicitly.
+- Consequence: none.

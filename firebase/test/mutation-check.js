@@ -15,6 +15,7 @@ const MUTATIONS = [
   ['role accepted as written by the client', 'identity', "&& data.role == (isAllowlisted() ? 'FACULTY' : 'STUDENT')", "&& data.role in ['FACULTY', 'STUDENT']"],
   ['course create open to non-faculty', 'courses', '&& isAllowlisted()\n', '\n'],
   ['course create without its join code', 'courses', '&& joinCodeAfter(request.resource.data.joinCode).courseId == courseId', ''],
+  ['join code may name any teacher', 'courses', '&& data.teacherId == courseAfter(data.courseId).teacherId', ''],
   ['membership without resolving the join code', 'memberships', '&& get(/databases/$(database)/documents/joinCodes/$(request.resource.data.joinCode)).data.courseId\n            == request.resource.data.courseId', ''],
   ['membership with a client-chosen join time', 'memberships', '&& request.resource.data.joinedAt == request.time', ''],
   ['session start time chosen by the client', 'sessions', '&& request.resource.data.startedAt == request.time', ''],

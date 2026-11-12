@@ -61,6 +61,17 @@
                 android:textColor="@color/danger_text"
                 android:visibility="gone" />
 
+            <TextView
+                android:id="@+id/sign_in_progress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/space_12"
+                android:accessibilityLiveRegion="polite"
+                android:text="@string/sign_in_in_progress"
+                android:textAppearance="@style/TextAppearance.Presence.Footnote"
+                android:textColor="@color/text_secondary"
+                android:visibility="gone" />
+
             <com.presence.attendance.core.ui.SpringButton
                 android:id="@+id/sign_in_continue"
                 style="@style/Widget.Presence.Button.Google"

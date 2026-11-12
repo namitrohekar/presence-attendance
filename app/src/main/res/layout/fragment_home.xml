@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The whole screen, app bar included, sits in one centred column so the title lines up with the list. -->
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_max="@dimen/column_max_width">
+
+        <com.google.android.material.appbar.AppBarLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/background"
+            android:fitsSystemWindows="true"
+            app:elevation="0dp"
+            app:liftOnScroll="false">
+
+            <com.google.android.material.appbar.CollapsingToolbarLayout
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/large_title_bar_height"
+                app:collapsedTitleTextAppearance="@style/TextAppearance.Presence.Headline"
+                app:contentScrim="@color/background"
+                app:expandedTitleMarginBottom="@dimen/space_8"
+                app:expandedTitleMarginStart="@dimen/screen_margin"
+                app:expandedTitleTextAppearance="@style/TextAppearance.Presence.LargeTitle"
+                app:layout_scrollFlags="scroll|exitUntilCollapsed|snap"
+                app:title="@string/home_title"
+                app:titleCollapseMode="scale">
+
+                <com.google.android.material.appbar.MaterialToolbar
+                    android:id="@+id/home_toolbar"
+                    style="@style/Widget.Presence.Toolbar"
+                    android:layout_width="match_parent"
+                    android:layout_height="?attr/actionBarSize"
+                    app:layout_collapseMode="pin"
+                    app:menu="@menu/menu_home" />
+            </com.google.android.material.appbar.CollapsingToolbarLayout>
+        </com.google.android.material.appbar.AppBarLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/home_content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingHorizontal="@dimen/screen_margin"
+            android:paddingTop="@dimen/space_8"
+            android:paddingBottom="@dimen/space_24"
+            app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+            <!-- One inset-grouped section: a rounded surface that hugs its rows. -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/home_list"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_group"
+                android:visibility="gone"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                app:layout_constrainedHeight="true"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="0" />
+
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/home_progress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_24"
+                android:contentDescription="@string/home_loading"
+                android:indeterminate="true"
+                app:indicatorColor="@color/accent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:trackThickness="@dimen/ring_stroke" />
+
+            <!-- Empty and error states share this block: title, explanation, one action. -->
+            <LinearLayout
+                android:id="@+id/home_message"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <TextView
+                    android:id="@+id/home_message_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:accessibilityHeading="true"
+                    android:textAppearance="@style/TextAppearance.Presence.Headline" />
+
+                <TextView
+                    android:id="@+id/home_message_body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:textAppearance="@style/TextAppearance.Presence.Body"
+                    android:textColor="@color/text_secondary" />
+
+                <com.presence.attendance.core.ui.SpringButton
+                    android:id="@+id/home_message_action"
+                    style="@style/Widget.Presence.Button.Text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:paddingStart="0dp"
+                    android:paddingEnd="0dp" />
+            </LinearLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

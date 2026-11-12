@@ -28,6 +28,7 @@ const t = h.setup(() => ({
   [`joinCodes/${OTHER_CODE}`]: h.joinCodeDoc({
     courseId: OTHER_COURSE,
     teacherName: OTHER_TEACHER.name,
+    teacherId: OTHER_TEACHER.uid,
   }),
 }));
 

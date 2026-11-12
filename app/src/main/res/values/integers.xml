@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Input limits. The security rules enforce the same bounds on the stored fields. -->
+    <integer name="course_name_max">80</integer>
+    <integer name="course_code_max">20</integer>
+    <integer name="roll_no_max">20</integer>
+    <integer name="join_code_length">6</integer>
+</resources>

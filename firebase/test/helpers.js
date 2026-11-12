@@ -84,7 +84,13 @@ function courseDoc(overrides = {}) {
 }
 
 function joinCodeDoc(overrides = {}) {
-  return { courseId: COURSE, courseName: 'Data Structures', teacherName: TEACHER.name, ...overrides };
+  return {
+    courseId: COURSE,
+    courseName: 'Data Structures',
+    teacherName: TEACHER.name,
+    teacherId: TEACHER.uid,
+    ...overrides,
+  };
 }
 
 function membershipDoc(student, overrides = {}) {

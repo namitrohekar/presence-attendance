@@ -2,7 +2,67 @@
 <resources>
     <string name="app_name">Presence</string>
 
+    <!-- Sign-in -->
     <string name="sign_in_statement">Mark attendance by scanning the QR code shown in class.</string>
     <string name="sign_in_continue_google">Continue with Google</string>
-    <string name="sign_in_error_not_configured">This build has no Firebase configuration. Add app/google-services.json and rebuild.</string>
+    <string name="sign_in_in_progress">Signing in…</string>
+
+    <!-- Home -->
+    <string name="home_title">Courses</string>
+    <string name="home_account">Account</string>
+    <string name="home_sign_out">Sign out</string>
+    <string name="home_create_course">Create course</string>
+    <string name="home_join">Join</string>
+    <string name="home_join_course">Join a course</string>
+    <string name="home_loading">Loading your courses</string>
+    <string name="home_empty_title">No courses yet</string>
+    <string name="home_empty_faculty">Create a course to get a join code for your students.</string>
+    <string name="home_empty_student">Join a course with the code from your teacher.</string>
+    <string name="home_error_title">Couldn\'t load your courses</string>
+    <string name="action_try_again">Try again</string>
+    <!-- Course code, then join code. Shown to the teacher on each course row. -->
+    <string name="course_row_faculty">%1$s · Join code %2$s</string>
+
+    <!-- Create course sheet -->
+    <string name="create_title">New course</string>
+    <string name="create_name_label">Course name</string>
+    <string name="create_code_label">Course code</string>
+    <string name="create_code_hint">For example CS201</string>
+    <string name="create_name_missing">Enter a course name.</string>
+    <string name="create_code_missing">Enter a course code.</string>
+    <string name="create_submit">Create course</string>
+    <string name="create_submitting">Creating…</string>
+    <string name="create_offline">You\'re offline. Connect to the internet to create a course.</string>
+    <string name="create_done_title">Course created</string>
+    <string name="create_done_body">Share this join code with your students.</string>
+    <!-- Read by TalkBack. %1$s is the join code with a space between each character. -->
+    <string name="join_code_spoken">Join code %1$s</string>
+    <string name="action_done">Done</string>
+
+    <!-- Join course sheet -->
+    <string name="join_title">Join a course</string>
+    <string name="join_code_label">Join code</string>
+    <string name="join_code_invalid">Enter the 6-character code from your teacher.</string>
+    <string name="join_continue">Continue</string>
+    <string name="join_checking">Checking…</string>
+    <string name="join_offline">You\'re offline. Connect to the internet to join a course.</string>
+    <string name="join_taught_by">Taught by %1$s</string>
+    <string name="join_roll_no_label">Roll number (optional)</string>
+    <string name="join_submit">Join course</string>
+    <string name="join_submitting">Joining…</string>
+    <string name="join_different_code">Use a different code</string>
+
+    <!-- Errors, one per AppError -->
+    <string name="error_not_configured">This build has no Google sign-in configuration. Add app/google-services.json and rebuild.</string>
+    <string name="error_offline">You\'re offline. Check your connection and try again.</string>
+    <string name="error_timeout">That took too long. Try again.</string>
+    <string name="error_permission_denied">You don\'t have permission to do that.</string>
+    <string name="error_unauthenticated">You\'ve been signed out. Sign in again.</string>
+    <string name="error_sign_in_failed">Couldn\'t sign in. Try again.</string>
+    <string name="error_no_google_account">No Google account on this device. Add one in Settings, then try again.</string>
+    <string name="error_account_not_allowed">This account can\'t be used with Presence.</string>
+    <string name="error_join_code_not_found">No course uses that code. Check it with your teacher.</string>
+    <string name="error_already_joined">You\'ve already joined this course.</string>
+    <string name="error_own_course">You teach this course, so you can\'t join it.</string>
+    <string name="error_unknown">Something went wrong. Try again.</string>
 </resources>

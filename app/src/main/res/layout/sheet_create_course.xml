@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/create_scroll"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clipToPadding="false">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/screen_margin"
+        android:paddingBottom="@dimen/space_24">
+
+        <include layout="@layout/view_sheet_handle" />
+
+        <LinearLayout
+            android:id="@+id/create_form"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                android:accessibilityHeading="true"
+                android:text="@string/create_title"
+                android:textAppearance="@style/TextAppearance.Presence.Title" />
+
+            <TextView
+                style="@style/Widget.Presence.FieldLabel"
+                android:labelFor="@id/create_name"
+                android:text="@string/create_name_label" />
+
+            <EditText
+                android:id="@+id/create_name"
+                style="@style/Widget.Presence.TextField"
+                android:autofillHints=""
+                android:imeOptions="actionNext"
+                android:importantForAutofill="no"
+                android:inputType="textCapWords"
+                android:maxLength="@integer/course_name_max" />
+
+            <TextView
+                android:id="@+id/create_name_error"
+                style="@style/Widget.Presence.InlineError"
+                android:text="@string/create_name_missing" />
+
+            <TextView
+                style="@style/Widget.Presence.FieldLabel"
+                android:labelFor="@id/create_code"
+                android:text="@string/create_code_label" />
+
+            <EditText
+                android:id="@+id/create_code"
+                style="@style/Widget.Presence.TextField"
+                android:autofillHints=""
+                android:hint="@string/create_code_hint"
+                android:imeOptions="actionDone"
+                android:importantForAutofill="no"
+                android:inputType="textCapCharacters|textNoSuggestions"
+                android:maxLength="@integer/course_code_max" />
+
+            <TextView
+                android:id="@+id/create_code_error"
+                style="@style/Widget.Presence.InlineError"
+                android:text="@string/create_code_missing" />
+
+            <TextView
+                android:id="@+id/create_status"
+                style="@style/Widget.Presence.InlineError"
+                android:layout_marginTop="@dimen/space_20" />
+
+            <com.presence.attendance.core.ui.SpringButton
+                android:id="@+id/create_submit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_24"
+                android:text="@string/create_submit" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/create_done"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/create_done_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                android:accessibilityHeading="true"
+                android:accessibilityLiveRegion="polite"
+                android:text="@string/create_done_title"
+                android:textAppearance="@style/TextAppearance.Presence.Title" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_4"
+                android:text="@string/create_done_body"
+                android:textAppearance="@style/TextAppearance.Presence.Body"
+                android:textColor="@color/text_secondary" />
+
+            <TextView
+                android:id="@+id/create_join_code"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_20"
+                android:textAppearance="@style/TextAppearance.Presence.Code"
+                android:textIsSelectable="true" />
+
+            <com.presence.attendance.core.ui.SpringButton
+                android:id="@+id/create_done_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_24"
+                android:text="@string/action_done" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

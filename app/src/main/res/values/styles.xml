@@ -33,4 +33,88 @@
         <item name="iconPadding">@dimen/space_12</item>
         <item name="iconGravity">textStart</item>
     </style>
+
+    <!-- Accent label, no fill. 17sp semibold keeps accent text at the 3:1 large-text ratio. -->
+    <style name="Widget.Presence.Button.Text" parent="Widget.Material3.Button.TextButton">
+        <item name="android:minHeight">@dimen/touch_target</item>
+        <item name="android:textAppearance">@style/TextAppearance.Presence.Headline</item>
+        <item name="android:textColor">@color/button_accent_text</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.Presence.Control</item>
+    </style>
+
+    <!-- Filled field with the label above and the error below, both as separate TextViews. -->
+    <style name="Widget.Presence.TextField" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">@dimen/row_min_height</item>
+        <item name="android:layout_marginTop">@dimen/space_8</item>
+        <item name="android:paddingStart">@dimen/space_16</item>
+        <item name="android:paddingEnd">@dimen/space_16</item>
+        <item name="android:paddingTop">@dimen/space_12</item>
+        <item name="android:paddingBottom">@dimen/space_12</item>
+        <item name="android:background">@drawable/bg_field</item>
+        <item name="android:textAppearance">@style/TextAppearance.Presence.Body</item>
+        <item name="android:textColorHint">@color/text_secondary</item>
+        <item name="android:maxLines">1</item>
+    </style>
+
+    <style name="Widget.Presence.FieldLabel" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">@dimen/space_20</item>
+        <item name="android:textAppearance">@style/TextAppearance.Presence.Footnote</item>
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+
+    <!-- Inline message under a field or above an action. Announced by TalkBack when it appears. -->
+    <style name="Widget.Presence.InlineError" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">@dimen/space_8</item>
+        <item name="android:textAppearance">@style/TextAppearance.Presence.Footnote</item>
+        <item name="android:textColor">@color/danger_text</item>
+        <item name="android:accessibilityLiveRegion">polite</item>
+        <item name="android:visibility">gone</item>
+    </style>
+
+    <style name="Widget.Presence.Toolbar" parent="Widget.Material3.Toolbar">
+        <item name="android:background">@android:color/transparent</item>
+        <item name="titleTextAppearance">@style/TextAppearance.Presence.Headline</item>
+        <item name="titleMarginStart">@dimen/screen_margin</item>
+        <item name="contentInsetStart">0dp</item>
+        <item name="materialThemeOverlay">@style/ThemeOverlay.Presence.Toolbar</item>
+    </style>
+
+    <style name="ThemeOverlay.Presence.Toolbar" parent="">
+        <item name="actionMenuTextColor">@color/accent</item>
+        <item name="actionMenuTextAppearance">@style/TextAppearance.Presence.Headline</item>
+    </style>
+
+    <style name="Widget.Presence.PopupMenu" parent="Widget.Material3.PopupMenu">
+        <item name="android:popupBackground">@drawable/bg_popup</item>
+        <item name="android:popupElevation">0dp</item>
+    </style>
+
+    <style name="ShapeAppearance.Presence.Sheet" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">@dimen/radius_sheet</item>
+        <item name="cornerSizeTopRight">@dimen/radius_sheet</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
+    </style>
+
+    <style name="Widget.Presence.BottomSheet" parent="Widget.Material3.BottomSheet.Modal">
+        <item name="backgroundTint">@color/surface</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Presence.Sheet</item>
+        <item name="android:elevation">0dp</item>
+        <item name="android:maxWidth">@dimen/column_max_width</item>
+    </style>
+
+    <style name="ThemeOverlay.Presence.BottomSheetDialog" parent="ThemeOverlay.Material3.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.Presence.BottomSheet</item>
+        <!-- Material's dialog overlay swaps the default button for a text button; put ours back. -->
+        <item name="materialButtonStyle">@style/Widget.Presence.Button.Primary</item>
+        <item name="android:windowSoftInputMode">adjustResize</item>
+    </style>
 </resources>
