@@ -21,9 +21,26 @@ const CONTRACTS_DIR = path.join(__dirname, '..', '..', 'contracts');
 
 const TEACHER = { uid: 'teacherA', email: 'asha.kulkarni@example.edu', name: 'Asha Kulkarni' };
 const OTHER_TEACHER = { uid: 'teacherB', email: 'vikram.rao@example.edu', name: 'Vikram Rao' };
-const STUDENT = { uid: 'studentA', email: 'meera.joshi@example.edu', name: 'Meera Joshi' };
-const OTHER_STUDENT = { uid: 'studentB', email: 'rohan.patil@example.edu', name: 'Rohan Patil' };
-const OUTSIDER = { uid: 'studentC', email: 'isha.nair@example.edu', name: 'Isha Nair' };
+
+// Fictional students. Roll numbers are opaque nine-digit identifiers.
+const student = (uid, local, name, rollNo) => ({
+  uid,
+  email: `${local}@mc.vjti.ac.in`,
+  name,
+  rollNo,
+  cohort: 'MC26',
+});
+// Registered and enrolled in the course.
+const STUDENT = student('studentA', 'mjoshi_mc26', 'Meera Joshi', '262011001');
+const OTHER_STUDENT = student('studentB', 'rpatil_mc26', 'Rohan Patil', '262010002');
+// Registered, but not enrolled in the course.
+const OUTSIDER = student('studentC', 'inair_mc26', 'Isha Nair', '262011003');
+// On the roster, but has not registered yet.
+const LISTED = student('studentD', 'kdesai_mc26', 'Kunal Desai', '262010004');
+// A VJTI address that faculty have not added to the roster.
+const UNLISTED = { uid: 'studentE', email: 'sshah_mc26@mc.vjti.ac.in', name: 'Sana Shah' };
+// Neither a VJTI address nor on the faculty allowlist.
+const STRANGER = { uid: 'strangerA', email: 'some.one@gmail.com', name: 'Some One' };
 
 const COURSE = 'courseA';
 const JOIN_CODE = 'ABC234';
@@ -38,6 +55,7 @@ const DROP = Symbol('drop');
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
+const DAY = 24 * 60 * MINUTE;
 
 const ago = (ms) => Timestamp.fromMillis(Date.now() - ms);
 const fromNow = (ms) => Timestamp.fromMillis(Date.now() + ms);
@@ -93,6 +111,48 @@ function joinCodeDoc(overrides = {}) {
   };
 }
 
+/** A roster entry as faculty add it: not yet claimed by the student. */
+function registryDoc(who, overrides = {}) {
+  return {
+    email: who.email,
+    rollNo: who.rollNo,
+    cohort: who.cohort,
+    addedBy: TEACHER.uid,
+    addedAt: ago(40 * DAY),
+    revision: 0,
+    ...overrides,
+  };
+}
+
+/** A roster entry after the student has registered. */
+function claimedRegistryDoc(who, overrides = {}) {
+  return registryDoc(who, { registeredUid: who.uid, registeredAt: ago(30 * DAY), ...overrides });
+}
+
+const registryPath = (who) => `studentRegistry/${who.email}`;
+const rollIndexPath = (who) => `rollIndex/${who.cohort}_${who.rollNo}`;
+
+/** The two documents faculty write for one student, with the entry claimed or not. */
+function rosterDocs(who, claimed) {
+  return {
+    [registryPath(who)]: claimed ? claimedRegistryDoc(who) : registryDoc(who),
+    [rollIndexPath(who)]: { email: who.email },
+  };
+}
+
+/** A registered student's profile. */
+function studentProfileDoc(who, overrides = {}) {
+  return {
+    name: who.name,
+    email: who.email,
+    role: 'STUDENT',
+    createdAt: ago(30 * DAY),
+    rollNo: who.rollNo,
+    cohort: who.cohort,
+    ...overrides,
+  };
+}
+
 function membershipDoc(student, overrides = {}) {
   return {
     courseId: COURSE,
@@ -100,6 +160,8 @@ function membershipDoc(student, overrides = {}) {
     studentId: student.uid,
     name: student.name,
     email: student.email,
+    rollNo: student.rollNo,
+    cohort: student.cohort,
     joinCode: JOIN_CODE,
     joinedAt: ago(20 * 24 * 60 * MINUTE),
     ...overrides,
@@ -119,14 +181,19 @@ function sessionDoc(overrides = {}) {
 }
 
 /**
- * The standard world: an allowlisted teacher with one course, two enrolled
- * students, one live session and one token issued two seconds ago.
+ * The standard world: an allowlisted teacher with one course, a roster of four
+ * students (three registered, one not yet), two of them enrolled, one live
+ * session and one token issued two seconds ago.
  */
 function world(overrides = {}) {
   return {
     [`teacherAllowlist/${TEACHER.email}`]: {},
     [`teacherAllowlist/${OTHER_TEACHER.email}`]: {},
     'appConfig/campus': GEOFENCE,
+    ...rosterDocs(STUDENT, true),
+    ...rosterDocs(OTHER_STUDENT, true),
+    ...rosterDocs(OUTSIDER, true),
+    ...rosterDocs(LISTED, false),
     [`courses/${COURSE}`]: courseDoc(),
     [`joinCodes/${JOIN_CODE}`]: joinCodeDoc(),
     [`memberships/${COURSE}_${STUDENT.uid}`]: membershipDoc(STUDENT),
@@ -226,6 +293,9 @@ module.exports = {
   STUDENT,
   OTHER_STUDENT,
   OUTSIDER,
+  LISTED,
+  UNLISTED,
+  STRANGER,
   COURSE,
   JOIN_CODE,
   SESSION,
@@ -235,6 +305,7 @@ module.exports = {
   DROP,
   SECOND,
   MINUTE,
+  DAY,
   ago,
   fromNow,
   setup,
@@ -242,6 +313,12 @@ module.exports = {
   courseDoc,
   joinCodeDoc,
   membershipDoc,
+  registryDoc,
+  claimedRegistryDoc,
+  registryPath,
+  rollIndexPath,
+  rosterDocs,
+  studentProfileDoc,
   sessionDoc,
   liveMark,
   queuedMark,

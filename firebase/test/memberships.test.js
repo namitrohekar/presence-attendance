@@ -1,6 +1,7 @@
-// Invariant 3: memberships. A student creates only their own membership, only
-// with a join code that resolves to that course, with server-true teacher,
-// name, email and time. No updates or deletes.
+// Invariant 3: memberships. A registered student creates only their own
+// membership, only with a join code that resolves to that course, with
+// server-true teacher, name, email and time, and with the roll number and
+// cohort the roster holds for them. No updates or deletes.
 
 const {
   collection,
@@ -16,7 +17,8 @@ const {
 } = require('firebase/firestore');
 const h = require('./helpers');
 
-const { TEACHER, OTHER_TEACHER, STUDENT, OTHER_STUDENT, OUTSIDER, COURSE, JOIN_CODE, DROP } = h;
+const { TEACHER, OTHER_TEACHER, STUDENT, OTHER_STUDENT, OUTSIDER, LISTED, UNLISTED } = h;
+const { COURSE, JOIN_CODE, DROP } = h;
 const { assertFails, assertSucceeds } = h;
 
 const OTHER_COURSE = 'courseB';
@@ -38,6 +40,8 @@ const join = (student = OUTSIDER, overrides = {}) => ({
   studentId: student.uid,
   name: student.name,
   email: student.email,
+  rollNo: student.rollNo,
+  cohort: student.cohort,
   joinCode: JOIN_CODE,
   joinedAt: serverTimestamp(),
   ...overrides,
@@ -46,12 +50,12 @@ const ref = (db, student = OUTSIDER, course = COURSE) =>
   doc(db, 'memberships', `${course}_${student.uid}`);
 
 describe('INV-3 membership create', () => {
-  test('a student joins with a valid code', async () => {
-    await assertSucceeds(setDoc(ref(t.as(OUTSIDER)), join()));
-  });
-
-  test('a student joins with an optional roll number', async () => {
-    await assertSucceeds(setDoc(ref(t.as(OUTSIDER)), join(OUTSIDER, { rollNo: '21CS045' })));
+  test('a registered student joins with a valid code and their roster roll number', async () => {
+    const db = t.as(OUTSIDER);
+    await assertSucceeds(setDoc(ref(db), join()));
+    const stored = (await getDoc(ref(db))).data();
+    expect(stored.rollNo).toBe(OUTSIDER.rollNo);
+    expect(stored.cohort).toBe(OUTSIDER.cohort);
   });
 
   test.each([
@@ -65,9 +69,12 @@ describe('INV-3 membership create', () => {
     ['studentId is another user', { studentId: OTHER_STUDENT.uid }],
     ['an extra field is present', { role: 'TA' }],
     ['a required field is missing', { joinCode: DROP }],
-    ['the roll number is empty', { rollNo: '' }],
-    ['the roll number is longer than 20 characters', { rollNo: '9'.repeat(21) }],
-    ['the roll number is not a string', { rollNo: 45 }],
+    ['the roll number is another student\'s', { rollNo: OTHER_STUDENT.rollNo }],
+    ['the roll number is not on the roster', { rollNo: '262019999' }],
+    ['the roll number is missing', { rollNo: DROP }],
+    ['the roll number is a number', { rollNo: 262011003 }],
+    ['the cohort is not the roster\'s', { cohort: 'MC25' }],
+    ['the cohort is missing', { cohort: DROP }],
   ])('denied when %s', async (_, change) => {
     await assertFails(setDoc(ref(t.as(OUTSIDER)), h.patch(join(), change)));
   });
@@ -86,13 +93,29 @@ describe('INV-3 membership create', () => {
   });
 
   test('denied: a teacher joining their own course', async () => {
-    await assertFails(setDoc(ref(t.as(TEACHER), TEACHER), join(TEACHER)));
+    const data = join(TEACHER, { rollNo: '262010009', cohort: 'MC26' });
+    await assertFails(setDoc(ref(t.as(TEACHER), TEACHER), data));
+  });
+
+  test('denied: a student on the roster who has not registered', async () => {
+    await assertFails(setDoc(ref(t.as(LISTED), LISTED), join(LISTED)));
+  });
+
+  test('denied: a VJTI student who is not on the roster', async () => {
+    const data = join(UNLISTED, { rollNo: '262010009', cohort: 'MC26' });
+    await assertFails(setDoc(ref(t.as(UNLISTED), UNLISTED), data));
+  });
+
+  test('denied: a roster entry registered to a different sign-in', async () => {
+    const taken = h.claimedRegistryDoc(OUTSIDER, { registeredUid: 'someoneElse' });
+    await t.seed({ [h.registryPath(OUTSIDER)]: taken });
+    await assertFails(setDoc(ref(t.as(OUTSIDER)), join()));
   });
 
   test('denied: joining twice (the second write is an update)', async () => {
     const db = t.as(OUTSIDER);
     await assertSucceeds(setDoc(ref(db), join()));
-    await assertFails(setDoc(ref(db), join(OUTSIDER, { rollNo: '21CS046' })));
+    await assertFails(setDoc(ref(db), join()));
   });
 });
 
@@ -102,7 +125,7 @@ describe('INV-3 membership is immutable', () => {
     ['the teacher', TEACHER],
   ])('denied: %s updates or deletes a membership', async (_, user) => {
     const db = t.as(user);
-    await assertFails(updateDoc(ref(db, STUDENT), { rollNo: '21CS001' }));
+    await assertFails(updateDoc(ref(db, STUDENT), { rollNo: '262010009' }));
     await assertFails(deleteDoc(ref(db, STUDENT)));
   });
 });

@@ -274,3 +274,134 @@ Each entry: context, decision, alternatives, consequence. Newest last.
   repository interfaces are shorter and clearer than stubbing them.
 - Alternatives: declare `androidx.coordinatorlayout` explicitly.
 - Consequence: none.
+
+## D-023 Students must use the VJTI student domain; faculty are allowlisted
+
+- Context: Presence is institution-specific. Until now any Google account
+  could become a student, and the optional `INSTITUTE_DOMAIN` constant would
+  have applied to faculty as well.
+- Decision: an account may use the app only if its verified address is on the
+  faculty allowlist or is in exactly `mc.vjti.ac.in` (`STUDENT_DOMAIN`, in the
+  contract). The match is on the text after a single `@`, lower-cased, so
+  sub-domains, look-alikes and a second `@` fail. Where the role matters the
+  allowlist takes precedence: an allowlisted address is FACULTY and can
+  neither claim a roster entry nor hold a student profile.
+- Alternatives: a hosted-domain hint on the Google account sheet (client-side
+  only, and faculty use other domains).
+- Consequence: `INSTITUTE_DOMAIN` is gone. Faculty on other domains cost one
+  allowlist lookup per request, since the cheap domain test fails for them.
+  The lookup budget is now at most 4 per request (roster corrections).
+
+## D-024 A faculty-managed roster is the authority for roll numbers
+
+- Context: a typed email and roll number cannot be assumed to belong together,
+  and the address does not encode the roll number.
+- Decision: `studentRegistry/{email}` maps an official address to one roll
+  number and a faculty-supplied cohort. `rollIndex/{cohort}_{rollNo}` makes a
+  roll number unique within its cohort. Only allowlisted faculty write them,
+  always as a pair in one write, and the roster is shared by all faculty. A
+  roll number is exactly 9 digits and is treated as opaque: the app never
+  decodes or shows the year, programme or gender digits it contains. Students
+  can read their own entry and nothing else; nobody can list the roll index.
+- Alternatives: first-come self-registration (a student could take someone
+  else's number); deriving the cohort from the address suffix (rejected by the
+  project owner: faculty supply it).
+- Consequence: a student cannot register until faculty have added them. One
+  email has one roll number because the address is the document id; a second
+  write to an address or to a roll key is an update, which is denied, so
+  nothing is silently overwritten.
+
+## D-025 Registration is a claim plus a profile that must equal the roster
+
+- Context: a student enters their roll number once. The address must come
+  from the sign-in token, never from input.
+- Decision: registration is one transaction: the student binds the roster
+  entry for their token's address to their sign-in (`registeredUid`), once,
+  and writes a profile whose `rollNo` and `cohort` equal the roster's. The
+  rules compare the profile with the roster on every profile write, so the
+  stored roll number can only change if faculty correct the roster first.
+  Memberships take the roll number and cohort from the roster too. The app
+  proposes FACULTY first at sign-in; a denial sends a VJTI address to
+  registration and any other address away.
+- Alternatives: showing the roster's roll number for confirmation instead of
+  asking for it (no mismatch could then be detected or reported).
+- Consequence: the typed number adds no security; the roster decides. It is a
+  cross-check that surfaces roster mistakes. A profile written before the
+  roster existed is upgraded in place by registering.
+
+## D-026 Roster changes are audited, atomic and release the claim
+
+- Context: a claimed entry may be wrong, or a student may get a new Google
+  account. Fixing paired roster and index documents by hand is error-prone.
+- Decision: faculty change an existing entry only through one of three
+  actions, UPDATE, RELEASE or REMOVE, each a single write that includes an
+  immutable `registryCorrections` record with a required reason. The record's
+  id is fixed by the rules as `{email}_{addedAt millis}_{next revision}`, so a
+  change cannot exist without its record or the record without its change,
+  and nothing depends on the client's clock. Every correction drops the
+  claim; the student registers again against the corrected entry.
+- Alternatives: editing in the Firebase console (no audit trail, not atomic).
+- Consequence: memberships written before a correction keep the old roll
+  number, since memberships are immutable. Reports must read roll numbers
+  from the roster.
+
+## D-027 Identity alerts are self-reported and verified by the rules
+
+- Context: faculty must be told about rejected identity attempts, but with no
+  server nothing observes a rejected write except the client that made it.
+- Decision: the rejected account writes the alert. The rules accept it only if
+  the address, uid and time equal the sign-in token and server clock, the
+  violation is true (checked against the allowlist and roster), and the
+  document id equals `{uid}_{type}_{server date}`. A second alert of the same
+  type that day is an update, and there is no update rule. Types:
+  `NON_VJTI_EMAIL` and `NOT_ON_REGISTER` (to all faculty), `ROLL_MISMATCH` and
+  `DUPLICATE_CLAIM` (to the teacher who added the student). Students cannot
+  read alerts, including their own.
+- Alternatives: Cloud Functions on rejected writes (needs Blaze, not allowed).
+  A separate alert type for "another student's roll number" was dropped: it
+  would let students probe which numbers exist. The faculty app labels a
+  mismatch by looking the entered number up in the roster instead.
+- Consequence: alerts are best-effort. A modified app can skip sending one;
+  the rejection itself still holds. Real push is impossible on Spark; the
+  faculty app can only raise a local notification on its next background
+  check. Alerts carry no course, because joins no longer take a typed roll
+  number and so cannot produce an identity violation.
+
+## D-028 Retention
+
+- Context: roster data and alerts contain personal data and must not be kept
+  or deleted arbitrarily. Spark has no scheduled jobs.
+- Decision: identity alerts cannot be deleted for 90 days and correction
+  records for 365 days (`ALERT_RETENTION_DAYS`, `CORRECTION_RETENTION_DAYS` in
+  the contract). After that a faculty app may delete them, and does so when
+  it opens the relevant screen. Roster entries do not expire; they are removed
+  only through an audited REMOVE.
+- Alternatives: time-to-live policies (a paid feature).
+- Consequence: purging happens only when a faculty app runs. Nothing can be
+  removed early, by anyone, from a client.
+
+## D-029 A write that loses a race is denied, so flows read again once
+
+- Context: when two clients race (two sign-ins for one address, or a double
+  submit), the loser's write is evaluated against the winner's committed data
+  and is refused by the rules rather than retried by the SDK. The refusal
+  carries no reason.
+- Decision: the registration and add-student transactions run once more after
+  a PERMISSION_DENIED. The second run reads the new state and returns the
+  precise outcome (for example DUPLICATE_CLAIM or ROLL_TAKEN) without writing.
+- Alternatives: showing a generic error for a race.
+- Consequence: found by the race tests in Stage A; the Java repositories in
+  Stages B and C must do the same, and `firebase/test/flows.js` is the
+  reference they are held to.
+
+## D-030 The contract is migrated in stages
+
+- Context: Stage A changes the rules before the app. `contracts/documents.json`
+  must describe what the rules accept, while the Java mappers still write the
+  earlier membership shape.
+- Decision: the file holds the final shapes. The shape the app still writes is
+  kept under `memberships.legacy`, and the Java mapper test is bound to that
+  key until Stage C replaces the mapper and deletes the key.
+- Alternatives: changing rules and app in one step (not reviewable in stages).
+- Consequence: between deploying the new rules and finishing Stage C, a build
+  from before this extension cannot sign a student in or join a course.

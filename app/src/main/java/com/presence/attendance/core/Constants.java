@@ -51,5 +51,20 @@ public final class Constants {
 
     public static final String QR_PREFIX = "prs1";
 
+    /** Students must sign in with an address in exactly this domain. Faculty are allowlisted. */
+    public static final String STUDENT_DOMAIN = "mc.vjti.ac.in";
+
+    /** A roll number is this many digits. It is an opaque identifier and is never decoded. */
+    public static final int ROLL_NO_LENGTH = 9;
+
+    public static final int COHORT_MIN_LEN = 2;
+    public static final int COHORT_MAX_LEN = 8;
+
+    /** Days an identity alert must be kept before a faculty app may purge it. */
+    public static final int ALERT_RETENTION_DAYS = 90;
+
+    /** Days a roster correction record must be kept before a faculty app may purge it. */
+    public static final int CORRECTION_RETENTION_DAYS = 365;
+
     private Constants() {}
 }

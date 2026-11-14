@@ -1,9 +1,12 @@
-// Invariant 1: identity. Verified email required; role derived from the
-// allowlist on create and update, never chosen by the client.
+// Invariant 1: profiles and role. The role is derived from the allowlist on
+// create and update, never chosen by the client, and the allowlist takes
+// precedence over the student domain. Student profiles are registrations and
+// are covered in registration.test.js.
 
 const {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -13,114 +16,110 @@ const {
 } = require('firebase/firestore');
 const h = require('./helpers');
 
-const { TEACHER, STUDENT, OTHER_STUDENT, DROP, assertFails, assertSucceeds } = h;
+const { TEACHER, STUDENT, OTHER_STUDENT, UNLISTED, STRANGER, DROP } = h;
+const { assertFails, assertSucceeds } = h;
 const t = h.setup();
 
-const profile = (user, role, overrides = {}) => ({
+const facultyProfile = (user, overrides = {}) => ({
   name: user.name,
   email: user.email,
-  role,
+  role: 'FACULTY',
   createdAt: serverTimestamp(),
   ...overrides,
 });
-const storedProfile = (user, role) => profile(user, role, { createdAt: h.ago(h.MINUTE) });
 const userRef = (db, user) => doc(db, 'users', user.uid);
 
-describe('INV-1 profile create', () => {
-  test('a verified, non-allowlisted user creates their profile as STUDENT', async () => {
-    await assertSucceeds(setDoc(userRef(t.as(STUDENT), STUDENT), profile(STUDENT, 'STUDENT')));
-  });
-
+describe('INV-1 faculty profile create', () => {
   test('an allowlisted user creates their profile as FACULTY', async () => {
-    await assertSucceeds(setDoc(userRef(t.as(TEACHER), TEACHER), profile(TEACHER, 'FACULTY')));
+    await assertSucceeds(setDoc(userRef(t.as(TEACHER), TEACHER), facultyProfile(TEACHER)));
   });
 
   test('the allowlist lookup ignores the case of the email', async () => {
     const mixedCase = { ...TEACHER, email: 'Asha.Kulkarni@Example.edu' };
-    await assertSucceeds(setDoc(userRef(t.as(mixedCase), mixedCase), profile(mixedCase, 'FACULTY')));
+    await assertSucceeds(setDoc(userRef(t.as(mixedCase), mixedCase), facultyProfile(mixedCase)));
   });
 
   test.each([
-    ['a student claims FACULTY', STUDENT, { role: 'FACULTY' }],
-    ['an allowlisted teacher claims STUDENT', TEACHER, { role: 'STUDENT' }],
-    ['the role is an unknown value', STUDENT, { role: 'ADMIN' }],
-    ['the name differs from the sign-in token', STUDENT, { name: 'Someone Else' }],
-    ['the email differs from the sign-in token', STUDENT, { email: 'other@example.edu' }],
-    ['createdAt is a client-chosen time', STUDENT, { createdAt: h.ago(h.SECOND) }],
-    ['an extra field is present', STUDENT, { isAdmin: true }],
-    ['a required field is missing', STUDENT, { createdAt: DROP }],
-  ])('denied when %s', async (_, user, change) => {
-    const role = user === TEACHER ? 'FACULTY' : 'STUDENT';
-    await assertFails(setDoc(userRef(t.as(user), user), h.patch(profile(user, role), change)));
+    ['the role is STUDENT', { role: 'STUDENT' }],
+    ['the role is an unknown value', { role: 'ADMIN' }],
+    ['the name differs from the sign-in token', { name: 'Someone Else' }],
+    ['the email differs from the sign-in token', { email: 'other@example.edu' }],
+    ['createdAt is a client-chosen time', { createdAt: h.ago(h.SECOND) }],
+    ['an extra field is present', { isAdmin: true }],
+    ['a required field is missing', { createdAt: DROP }],
+    ['student fields are attached', { rollNo: '262010009', cohort: 'MC26' }],
+  ])('denied when %s', async (_, change) => {
+    const data = h.patch(facultyProfile(TEACHER), change);
+    await assertFails(setDoc(userRef(t.as(TEACHER), TEACHER), data));
+  });
+
+  test.each([
+    ['a registered student', STUDENT],
+    ['a VJTI student not on the roster', UNLISTED],
+    ['an account outside the institute', STRANGER],
+  ])('denied: %s writes a FACULTY profile', async (_, user) => {
+    await assertFails(setDoc(userRef(t.as(user), user), facultyProfile(user)));
   });
 
   test('denied for another uid', async () => {
-    await assertFails(
-      setDoc(userRef(t.as(STUDENT), OTHER_STUDENT), profile(STUDENT, 'STUDENT')),
-    );
+    await assertFails(setDoc(userRef(t.as(TEACHER), STUDENT), facultyProfile(TEACHER)));
   });
 
-  test('denied when the email is not verified', async () => {
-    const db = t.as(STUDENT, { email_verified: false });
-    await assertFails(setDoc(userRef(db, STUDENT), profile(STUDENT, 'STUDENT')));
-    await assertFails(getDoc(doc(db, 'appConfig/campus')));
-  });
-
-  test('denied when signed out', async () => {
-    await assertFails(setDoc(userRef(t.anon(), STUDENT), profile(STUDENT, 'STUDENT')));
-    await assertFails(getDoc(doc(t.anon(), 'appConfig/campus')));
+  test('denied when the email is not verified, or signed out', async () => {
+    const unverified = t.as(TEACHER, { email_verified: false });
+    await assertFails(setDoc(userRef(unverified, TEACHER), facultyProfile(TEACHER)));
+    await assertFails(setDoc(userRef(t.anon(), TEACHER), facultyProfile(TEACHER)));
   });
 });
 
-describe('INV-1 profile update', () => {
+describe('INV-1 role follows the allowlist on every profile write', () => {
+  const stored = (user) => facultyProfile(user, { createdAt: h.ago(h.MINUTE) });
+
   beforeEach(async () => {
-    await t.seed({ [`users/${STUDENT.uid}`]: storedProfile(STUDENT, 'STUDENT') });
+    await t.seed({
+      [`users/${TEACHER.uid}`]: stored(TEACHER),
+      [`users/${STUDENT.uid}`]: h.studentProfileDoc(STUDENT),
+    });
   });
 
-  test('a student can refresh their name from the sign-in token', async () => {
-    const db = t.as(STUDENT, { name: 'Meera S. Joshi' });
-    await assertSucceeds(updateDoc(userRef(db, STUDENT), { name: 'Meera S. Joshi' }));
+  test('faculty refresh their name from the sign-in token', async () => {
+    const db = t.as(TEACHER, { name: 'Asha R. Kulkarni' });
+    await assertSucceeds(updateDoc(userRef(db, TEACHER), { name: 'Asha R. Kulkarni' }));
   });
 
   test('denied: a student promotes themselves to FACULTY', async () => {
-    await assertFails(updateDoc(userRef(t.as(STUDENT), STUDENT), { role: 'FACULTY' }));
+    const db = t.as(STUDENT);
+    await assertFails(updateDoc(userRef(db, STUDENT), { role: 'FACULTY' }));
+    const asFaculty = { role: 'FACULTY', rollNo: deleteField(), cohort: deleteField() };
+    await assertFails(updateDoc(userRef(db, STUDENT), asFaculty));
   });
 
-  test('a user added to the allowlist becomes FACULTY on the next profile write', async () => {
+  test('allowlist precedence: a VJTI address added to the allowlist becomes FACULTY', async () => {
     await t.seed({ [`teacherAllowlist/${STUDENT.email}`]: {} });
-    await assertSucceeds(updateDoc(userRef(t.as(STUDENT), STUDENT), { role: 'FACULTY' }));
+    const db = t.as(STUDENT);
+    // The student shape is no longer valid for this account...
+    await assertFails(updateDoc(userRef(db, STUDENT), { name: STUDENT.name }));
+    // ...only the faculty shape is.
+    const asFaculty = { role: 'FACULTY', rollNo: deleteField(), cohort: deleteField() };
+    await assertSucceeds(updateDoc(userRef(db, STUDENT), asFaculty));
   });
 
-  test('denied: an allowlisted user keeps writing STUDENT', async () => {
-    await t.seed({ [`teacherAllowlist/${STUDENT.email}`]: {} });
-    await assertFails(updateDoc(userRef(t.as(STUDENT), STUDENT), { name: STUDENT.name }));
+  test('denied: a user removed from the allowlist keeps writing FACULTY', async () => {
+    await t.seed({ [`users/${UNLISTED.uid}`]: stored(UNLISTED) });
+    await assertFails(updateDoc(userRef(t.as(UNLISTED), UNLISTED), { name: UNLISTED.name }));
   });
 
-  test('denied: a user removed from the allowlist keeps FACULTY', async () => {
-    await t.seed({ [`users/${OTHER_STUDENT.uid}`]: storedProfile(OTHER_STUDENT, 'FACULTY') });
-    await assertFails(
-      updateDoc(userRef(t.as(OTHER_STUDENT), OTHER_STUDENT), { name: OTHER_STUDENT.name }),
-    );
-  });
-
-  test('denied: changing createdAt', async () => {
-    await assertFails(
-      updateDoc(userRef(t.as(STUDENT), STUDENT), { createdAt: serverTimestamp() }),
-    );
-  });
-
-  test('denied: updating another user', async () => {
-    await assertFails(updateDoc(userRef(t.as(OTHER_STUDENT), STUDENT), { name: 'Changed' }));
-  });
-
-  test('denied: deleting a profile', async () => {
-    await assertFails(deleteDoc(userRef(t.as(STUDENT), STUDENT)));
+  test('denied: changing createdAt, updating another user, deleting a profile', async () => {
+    const db = t.as(TEACHER);
+    await assertFails(updateDoc(userRef(db, TEACHER), { createdAt: serverTimestamp() }));
+    await assertFails(updateDoc(userRef(db, STUDENT), { name: 'Changed' }));
+    await assertFails(deleteDoc(userRef(db, TEACHER)));
   });
 });
 
 describe('INV-1 least-privilege reads', () => {
   beforeEach(async () => {
-    await t.seed({ [`users/${STUDENT.uid}`]: storedProfile(STUDENT, 'STUDENT') });
+    await t.seed({ [`users/${STUDENT.uid}`]: h.studentProfileDoc(STUDENT) });
   });
 
   test('a user reads their own profile', async () => {

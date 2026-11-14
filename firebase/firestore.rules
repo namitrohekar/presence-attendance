@@ -7,7 +7,7 @@ rules_version = '2';
 // own checks exist only to give precise messages.
 //
 // Anything not matched below is denied. request.time is the only clock.
-// Lookup budget: no request path uses more than 3 get()/exists()/getAfter()
+// Lookup budget: no request path uses more than 4 get()/exists()/getAfter()
 // calls (limit 10); the count is noted beside each write rule.
 
 service cloud.firestore {
@@ -28,26 +28,43 @@ service cloud.firestore {
     function THRESHOLD_MAX() { return 100; }
     function NOTE_MAX_LEN() { return 140; }
     function METERS_PER_DEGREE() { return 111320; }
+    function ALERT_RETENTION_DAYS() { return 90; }
+    function CORRECTION_RETENTION_DAYS() { return 365; }
 
-    // Empty disables the check. Set to a domain such as 'college.edu' to
-    // accept only accounts from that domain.
-    function INSTITUTE_DOMAIN() { return ''; }
+    // Students must sign in with an address in exactly this domain. Faculty
+    // are identified by the allowlist and may use any domain.
+    function STUDENT_DOMAIN() { return 'mc.vjti.ac.in'; }
 
     // ---- Identity (invariant 1) -----------------------------------------
     function uid() { return request.auth.uid; }
     function email() { return request.auth.token.email.lower(); }
 
-    function signedIn() {
+    // A Google account with a verified address. Not yet allowed to do
+    // anything except report its own rejected sign-in (see identityAlerts).
+    function verified() {
       return request.auth != null
         && request.auth.token.email_verified == true
-        && request.auth.token.email is string
-        && (INSTITUTE_DOMAIN() == '' || email().split('@')[1] == INSTITUTE_DOMAIN());
+        && request.auth.token.email is string;
+    }
+
+    // Exact match on the part after a single '@', so sub-domains and
+    // look-alike domains fail.
+    function hasStudentEmail() {
+      return email().split('@').size() == 2
+        && email().split('@')[1] == STUDENT_DOMAIN();
     }
 
     // Role is derived from the allowlist on every use; it is never read from
     // a field the client wrote.
     function isAllowlisted() {
       return exists(/databases/$(database)/documents/teacherAllowlist/$(email()));
+    }
+
+    // Who may use the app at all: allowlisted faculty, or a student address.
+    // The cheap domain test runs first so students cost no lookup here. Where
+    // the role matters, the allowlist takes precedence (see users).
+    function signedIn() {
+      return verified() && (hasStudentEmail() || isAllowlisted());
     }
 
     // ---- Shared validators ----------------------------------------------
@@ -68,6 +85,24 @@ service cloud.firestore {
       return v is string && v.matches('^[A-Za-z0-9_-]{22}$');
     }
 
+    // An opaque institute identifier. Never decoded.
+    function isRollNo(v) {
+      return v is string && v.matches('^[0-9]{9}$');
+    }
+
+    function isCohort(v) {
+      return v is string && v.matches('^[A-Z0-9]{2,8}$');
+    }
+
+    // A roster address: lower case, one '@', exactly the student domain.
+    function isStudentEmail(v) {
+      return v is string
+        && v == v.lower()
+        && v.split('@').size() == 2
+        && v.split('@')[0].matches('^[a-z0-9._-]{1,64}$')
+        && v.split('@')[1] == STUDENT_DOMAIN();
+    }
+
     function hasExactly(data, fields) {
       return data.keys().hasOnly(fields) && data.keys().hasAll(fields);
     }
@@ -83,6 +118,46 @@ service cloud.firestore {
       return id.matches('^[A-Za-z0-9]+_' + uid() + '$');
     }
 
+    // ---- Roster paths ----------------------------------------------------
+    // studentRegistry/{email} is the authoritative email -> roll number map.
+    // rollIndex/{cohort}_{rollNo} makes a roll number unique in its cohort.
+    // The two are only ever written together.
+    function rosterEntry(studentEmail) {
+      return get(/databases/$(database)/documents/studentRegistry/$(studentEmail)).data;
+    }
+
+    function rosterEntryAfter(studentEmail) {
+      return getAfter(/databases/$(database)/documents/studentRegistry/$(studentEmail)).data;
+    }
+
+    function rosterEntryExistsAfter(studentEmail) {
+      return existsAfter(/databases/$(database)/documents/studentRegistry/$(studentEmail));
+    }
+
+    function rollIndexKey(cohort, rollNo) {
+      return cohort + '_' + rollNo;
+    }
+
+    function rollIndexAfter(cohort, rollNo) {
+      return getAfter(/databases/$(database)/documents/rollIndex/$(rollIndexKey(cohort, rollNo))).data;
+    }
+
+    function rollIndexExistsAfter(cohort, rollNo) {
+      return existsAfter(/databases/$(database)/documents/rollIndex/$(rollIndexKey(cohort, rollNo)));
+    }
+
+    // The audit record for the next change to a roster entry has a fixed id:
+    // the address, when the entry was added, and the next revision number.
+    // Nothing in it comes from the client's clock, and it can only be used
+    // once, so every change is paired with exactly one record.
+    function correctionId(studentEmail, entry) {
+      return studentEmail + '_' + string(entry.addedAt.toMillis()) + '_' + string(entry.revision + 1);
+    }
+
+    function correctionAfter(studentEmail, entry) {
+      return getAfter(/databases/$(database)/documents/registryCorrections/$(correctionId(studentEmail, entry))).data;
+    }
+
     // ---- appConfig: read by signed-in users, written from the console only
     match /appConfig/campus {
       allow get: if signedIn();
@@ -93,28 +168,294 @@ service cloud.firestore {
 
     // ---- users (invariant 1) --------------------------------------------
     match /users/{userId} {
-      function validUser(data) {
-        return hasExactly(data, ['name', 'email', 'role', 'createdAt'])
-          && isText(data.name, 1, 100)
+      function baseFields() {
+        return ['name', 'email', 'role', 'createdAt'];
+      }
+
+      function tokenIdentity(data) {
+        return isText(data.name, 1, 100)
           && data.name == request.auth.token.name
-          && data.email == request.auth.token.email
-          && data.role == (isAllowlisted() ? 'FACULTY' : 'STUDENT');
+          && data.email == request.auth.token.email;
+      }
+
+      // The allowlist decides: an allowlisted address is faculty, whatever
+      // its domain, and can never hold a student profile.
+      function validFaculty(data) {
+        return hasExactly(data, baseFields())
+          && tokenIdentity(data)
+          && data.role == 'FACULTY'
+          && isAllowlisted();
+      }
+
+      // A student profile is a registration: the roll number and cohort must
+      // equal the roster entry for the token's address, and that entry must
+      // be claimed by this sign-in (in this same write or an earlier one).
+      // The comparison is made on every write, so the roll number can only
+      // change if faculty correct the roster first.
+      function validStudent(data) {
+        let entry = rosterEntryAfter(email());
+        return hasExactly(data, baseFields().concat(['rollNo', 'cohort']))
+          && tokenIdentity(data)
+          && data.role == 'STUDENT'
+          && hasStudentEmail()
+          && !isAllowlisted()
+          && entry.rollNo == data.rollNo
+          && entry.cohort == data.cohort
+          && entry.registeredUid == uid();
       }
 
       allow get: if signedIn() && uid() == userId;
 
-      // Lookups: 1 (allowlist).
+      // Lookups: 2 (allowlist, roster entry).
       allow create: if signedIn()
         && uid() == userId
-        && validUser(request.resource.data)
+        && (validFaculty(request.resource.data) || validStudent(request.resource.data))
         && request.resource.data.createdAt == request.time;
 
-      // Lookups: 1 (allowlist). The role is re-derived, so adding or removing
-      // an allowlist entry takes effect the next time the profile is written.
+      // Lookups: 2. The role is re-derived, so adding or removing an
+      // allowlist entry takes effect the next time the profile is written.
       allow update: if signedIn()
         && uid() == userId
-        && validUser(request.resource.data)
+        && (validFaculty(request.resource.data) || validStudent(request.resource.data))
         && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    // ---- student roster --------------------------------------------------
+    match /studentRegistry/{entryEmail} {
+      // A student may read their own entry and nothing else; it cannot be
+      // listed by them. Faculty read and list the whole roster.
+      allow get: if signedIn() && (entryEmail == email() || isAllowlisted());
+      allow list: if signedIn() && isAllowlisted();
+
+      // Lookups: 2 (allowlist, roll index after this write). The index must be
+      // created in the same batch. A second write to an existing address is
+      // an update, so nothing is ever silently overwritten.
+      allow create: if signedIn()
+        && isAllowlisted()
+        && hasExactly(request.resource.data,
+            ['email', 'rollNo', 'cohort', 'addedBy', 'addedAt', 'revision'])
+        && isStudentEmail(request.resource.data.email)
+        && entryEmail == request.resource.data.email
+        && isRollNo(request.resource.data.rollNo)
+        && isCohort(request.resource.data.cohort)
+        && request.resource.data.addedBy == uid()
+        && request.resource.data.addedAt == request.time
+        && request.resource.data.revision == 0
+        && rollIndexAfter(request.resource.data.cohort, request.resource.data.rollNo).email
+            == entryEmail;
+
+      // The student whose address this is binds the entry to their sign-in,
+      // once. Lookups: 1 (allowlist: faculty never register as students).
+      function isClaim() {
+        return entryEmail == email()
+          && hasStudentEmail()
+          && !isAllowlisted()
+          && !('registeredUid' in resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['registeredUid', 'registeredAt'])
+          && request.resource.data.registeredUid == uid()
+          && request.resource.data.registeredAt == request.time;
+      }
+
+      // Faculty change an existing entry only together with its audit record.
+      // Every correction releases the claim, so the student registers again
+      // against the corrected entry. Lookups: 4 (allowlist, audit record,
+      // new index, old index).
+      function isCorrection() {
+        let before = resource.data;
+        let after = request.resource.data;
+        let record = correctionAfter(entryEmail, before);
+        let changed = after.rollNo != before.rollNo || after.cohort != before.cohort;
+        return isAllowlisted()
+          && hasExactly(after, ['email', 'rollNo', 'cohort', 'addedBy', 'addedAt', 'revision'])
+          && after.email == before.email
+          && after.addedBy == before.addedBy
+          && after.addedAt == before.addedAt
+          && after.revision == before.revision + 1
+          && isRollNo(after.rollNo)
+          && isCohort(after.cohort)
+          && record.correctedBy == uid()
+          && record.correctedAt == request.time
+          && ((record.action == 'UPDATE'
+                && changed
+                && rollIndexAfter(after.cohort, after.rollNo).email == entryEmail
+                && !rollIndexExistsAfter(before.cohort, before.rollNo))
+              || (record.action == 'RELEASE'
+                && !changed
+                && 'registeredUid' in before));
+      }
+
+      allow update: if signedIn() && (isClaim() || isCorrection());
+
+      // Lookups: 3 (allowlist, audit record, old index).
+      allow delete: if signedIn()
+        && isAllowlisted()
+        && correctionAfter(entryEmail, resource.data).action == 'REMOVE'
+        && correctionAfter(entryEmail, resource.data).correctedBy == uid()
+        && correctionAfter(entryEmail, resource.data).correctedAt == request.time
+        && !rollIndexExistsAfter(resource.data.cohort, resource.data.rollNo);
+    }
+
+    match /rollIndex/{key} {
+      // get only, faculty only: used to check a roll number is free. Nobody
+      // can list it, and students cannot read it at all.
+      allow get: if signedIn() && isAllowlisted();
+
+      // Lookups: 2 (allowlist, roster entry after this write). A key that
+      // already exists makes this an update, which fails, so a roll number
+      // maps to one address per cohort.
+      allow create: if signedIn()
+        && isAllowlisted()
+        && hasExactly(request.resource.data, ['email'])
+        && isStudentEmail(request.resource.data.email)
+        && key == rollIndexKey(
+            rosterEntryAfter(request.resource.data.email).cohort,
+            rosterEntryAfter(request.resource.data.email).rollNo);
+
+      // Lookups: 2. Only once the roster entry no longer points here, which
+      // itself requires an audited correction or removal.
+      allow delete: if signedIn()
+        && isAllowlisted()
+        && (!rosterEntryExistsAfter(resource.data.email)
+            || key != rollIndexKey(
+                rosterEntryAfter(resource.data.email).cohort,
+                rosterEntryAfter(resource.data.email).rollNo));
+    }
+
+    // Immutable audit trail of every change to an existing roster entry.
+    match /registryCorrections/{recordId} {
+      allow read: if signedIn() && isAllowlisted();
+
+      // Lookups: 3 (allowlist, roster entry before, roster entry after). The
+      // record must describe the entry as it was, and the entry must change
+      // in this same batch, so a record cannot exist without its change.
+      function validRecord(data) {
+        let before = rosterEntry(data.email);
+        return data.keys().hasOnly(
+              ['email', 'action', 'reason', 'correctedBy', 'correctedAt', 'beforeRollNo',
+               'beforeCohort', 'releasedUid', 'afterRollNo', 'afterCohort'])
+          && data.keys().hasAll(
+              ['email', 'action', 'reason', 'correctedBy', 'correctedAt', 'beforeRollNo',
+               'beforeCohort'])
+          && isStudentEmail(data.email)
+          && recordId == correctionId(data.email, before)
+          && isText(data.reason, 1, NOTE_MAX_LEN())
+          && data.correctedBy == uid()
+          && data.correctedAt == request.time
+          && data.beforeRollNo == before.rollNo
+          && data.beforeCohort == before.cohort
+          && (('registeredUid' in before)
+              ? data.releasedUid == before.registeredUid
+              : !('releasedUid' in data))
+          && ((data.action == 'REMOVE'
+                && !('afterRollNo' in data)
+                && !('afterCohort' in data)
+                && !rosterEntryExistsAfter(data.email))
+              || (data.action in ['UPDATE', 'RELEASE']
+                && rosterEntryAfter(data.email).revision == before.revision + 1
+                && data.afterRollNo == rosterEntryAfter(data.email).rollNo
+                && data.afterCohort == rosterEntryAfter(data.email).cohort));
+      }
+
+      allow create: if signedIn() && isAllowlisted() && validRecord(request.resource.data);
+
+      // Retention: kept for at least CORRECTION_RETENTION_DAYS, then a
+      // faculty app may purge it. No update rule exists.
+      allow delete: if signedIn()
+        && isAllowlisted()
+        && resource.data.correctedAt
+            < request.time - duration.value(CORRECTION_RETENTION_DAYS(), 'd');
+    }
+
+    // ---- identity alerts -------------------------------------------------
+    // Written by the account whose attempt was rejected, because nothing
+    // else can observe a rejection. Every field is checked against the
+    // sign-in token and the roster, so an account can only report a
+    // violation that is true and is its own. Students cannot read alerts.
+    match /identityAlerts/{alertId} {
+      function serverDay() {
+        return string(request.time.year()) + '-' + string(request.time.month())
+          + '-' + string(request.time.day());
+      }
+
+      function baseFields() {
+        return ['type', 'email', 'uid', 'audience', 'createdAt'];
+      }
+
+      function attemptFields() {
+        return baseFields().concat(['enteredRollNo']);
+      }
+
+      // Lookups: 1 (allowlist).
+      function nonVjtiEmail(data) {
+        return hasExactly(data, baseFields())
+          && data.audience == 'ALL'
+          && !hasStudentEmail()
+          && !isAllowlisted();
+      }
+
+      // Lookups: 1 (roster entry).
+      function notOnRegister(data) {
+        return hasExactly(data, attemptFields())
+          && isRollNo(data.enteredRollNo)
+          && data.audience == 'ALL'
+          && hasStudentEmail()
+          && !exists(/databases/$(database)/documents/studentRegistry/$(email()));
+      }
+
+      // Lookups: 1 (roster entry). Goes to the faculty member who added the
+      // student.
+      function rollMismatch(data) {
+        return hasExactly(data, attemptFields())
+          && isRollNo(data.enteredRollNo)
+          && hasStudentEmail()
+          && rosterEntry(email()).rollNo != data.enteredRollNo
+          && data.audience == rosterEntry(email()).addedBy;
+      }
+
+      // Lookups: 1 (roster entry). The entry is already bound to a different
+      // sign-in.
+      function duplicateClaim(data) {
+        return hasExactly(data, attemptFields())
+          && isRollNo(data.enteredRollNo)
+          && hasStudentEmail()
+          && rosterEntry(email()).registeredUid != uid()
+          && data.audience == rosterEntry(email()).addedBy;
+      }
+
+      // The id is rebuilt here from the sender, the type and the server's
+      // date. A second alert of the same type on the same day is therefore
+      // an update, and no update rule exists: one per account, type and day,
+      // whatever date or id the client supplies.
+      allow create: if verified()
+        && alertId == uid() + '_' + request.resource.data.type + '_' + serverDay()
+        && request.resource.data.uid == uid()
+        && request.resource.data.email == email()
+        && request.resource.data.createdAt == request.time
+        && ((request.resource.data.type == 'NON_VJTI_EMAIL'
+              && nonVjtiEmail(request.resource.data))
+            || (request.resource.data.type == 'NOT_ON_REGISTER'
+              && notOnRegister(request.resource.data))
+            || (request.resource.data.type == 'ROLL_MISMATCH'
+              && rollMismatch(request.resource.data))
+            || (request.resource.data.type == 'DUPLICATE_CLAIM'
+              && duplicateClaim(request.resource.data)));
+
+      function isAudience() {
+        return resource.data.audience == uid() || resource.data.audience == 'ALL';
+      }
+
+      // Lookups: 1 (allowlist). Faculty only, and only alerts addressed to
+      // them or to all faculty.
+      allow read: if signedIn() && isAllowlisted() && isAudience();
+
+      // Retention: kept for at least ALERT_RETENTION_DAYS, then a faculty app
+      // may purge it. No update rule exists.
+      allow delete: if signedIn()
+        && isAllowlisted()
+        && isAudience()
+        && resource.data.createdAt
+            < request.time - duration.value(ALERT_RETENTION_DAYS(), 'd');
     }
 
     // ---- courses and join codes (invariant 2) ---------------------------
@@ -196,12 +537,20 @@ service cloud.firestore {
       allow list: if signedIn()
         && (resource.data.studentId == uid() || resource.data.teacherId == uid());
 
-      // Lookups: 2 (join code, course).
+      // Only a registered student can enrol, and the roll number and cohort
+      // are the roster's, not something typed at join time.
+      function registeredAs(data) {
+        let entry = rosterEntry(email());
+        return entry.registeredUid == uid()
+          && entry.rollNo == data.rollNo
+          && entry.cohort == data.cohort;
+      }
+
+      // Lookups: 3 (join code, course, roster entry).
       allow create: if signedIn()
-        && request.resource.data.keys().hasOnly(
-            ['courseId', 'teacherId', 'studentId', 'name', 'email', 'rollNo', 'joinCode', 'joinedAt'])
-        && request.resource.data.keys().hasAll(
-            ['courseId', 'teacherId', 'studentId', 'name', 'email', 'joinCode', 'joinedAt'])
+        && hasExactly(request.resource.data,
+            ['courseId', 'teacherId', 'studentId', 'name', 'email', 'rollNo', 'cohort',
+             'joinCode', 'joinedAt'])
         && isId(request.resource.data.courseId)
         && membershipId == request.resource.data.courseId + '_' + uid()
         && request.resource.data.studentId == uid()
@@ -213,7 +562,7 @@ service cloud.firestore {
             == request.resource.data.teacherId
         && request.resource.data.name == request.auth.token.name
         && request.resource.data.email == request.auth.token.email
-        && (!('rollNo' in request.resource.data) || isText(request.resource.data.rollNo, 1, 20))
+        && registeredAs(request.resource.data)
         && request.resource.data.joinedAt == request.time;
     }
 

@@ -105,6 +105,43 @@ Run-checks (demo step 1):
 7. In the Firebase console: `users/{uid}` has role FACULTY for the allowlisted
    account and STUDENT for the other.
 
+## Phase 2 extension: student identity
+
+A security-sensitive extension of Phase 2, in five stages, each reviewed
+before the next. Phase 3 starts only after Stage E is verified. Design in
+`docs/decisions.md`, D-023 to D-030.
+
+Every stage ends with: `npm test`, `npm run test:mutation`, JUnit, and the
+standing Gradle gate.
+
+**Stage A: rules and contracts.** No app screens. Not deployed.
+- Student domain or allowlist on every rule; allowlist precedence.
+- Roster (`studentRegistry`, `rollIndex`), audited corrections, registration
+  claim, roster-verified memberships, identity alerts, retention.
+- Review: run the two rules suites. The transactions the app will perform are
+  in `firebase/test/flows.js`.
+
+**Stage B: roster (faculty).** Roster screen, Add Student, CSV import
+(`email,rollNo,cohort`) with full-file validation, preview and per-row result,
+correction and removal with a required reason.
+- Review: add the demo student in-app (`262010016`, `MC26`); import a CSV with
+  a duplicate, a wrong domain and a malformed row and see each rejected.
+
+**Stage C: student registration.** FACULTY-first sign-in, registration screen
+(verified address shown, roll number entered once), join without a roll field,
+alert written after each rejected attempt. Deploy the rules after this stage.
+- Review: a Gmail account sees "Please sign in using your official VJTI
+  student ID."; a wrong roll number is refused; the right one registers.
+
+**Stage D: faculty alerts.** Alerts screen with a live listener and unread
+count, retention purge, optional background check with a local notification
+labelled best-effort.
+
+**Stage E: migration and verification.** Redeploy rules and indexes; delete
+the one pre-roster membership in the console; register and re-join; recheck
+the alerts query on production. Faculty account, course and join code are
+untouched.
+
 ## Phase 3: session, rotating QR, live roster
 
 Delivers: start-session sheet, token writer (12 s from ack, one write in

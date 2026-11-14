@@ -33,6 +33,8 @@ const ENFORCED_BY_RULES = [
   'THRESHOLD_MAX',
   'NOTE_MAX_LEN',
   'METERS_PER_DEGREE',
+  'ALERT_RETENTION_DAYS',
+  'CORRECTION_RETENTION_DAYS',
 ];
 
 describe('constants parity (rules)', () => {
@@ -56,6 +58,18 @@ describe('constants parity (rules)', () => {
     expect(rules).toContain(`'^[A-Za-z0-9_-]{${constants.TOKEN_LENGTH}}$'`);
     // 16 random bytes are 22 base64url characters without padding.
     expect(Math.ceil((constants.TOKEN_BYTES * 8) / 6)).toBe(constants.TOKEN_LENGTH);
+  });
+
+  test('the student domain matches the contract', () => {
+    expect(rules).toContain(`function STUDENT_DOMAIN() { return '${constants.STUDENT_DOMAIN}'; }`);
+    expect(constants.STUDENT_DOMAIN).toBe(constants.STUDENT_DOMAIN.toLowerCase());
+  });
+
+  test('the roll number and cohort patterns match the contract lengths', () => {
+    expect(rules).toContain(`'^[0-9]{${constants.ROLL_NO_LENGTH}}$'`);
+    expect(rules).toContain(
+      `'^[A-Z0-9]{${constants.COHORT_MIN_LEN},${constants.COHORT_MAX_LEN}}$'`,
+    );
   });
 
   test('the join code alphabet excludes look-alike characters', () => {

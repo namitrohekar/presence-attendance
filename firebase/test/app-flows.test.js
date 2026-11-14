@@ -1,69 +1,26 @@
-// Replays the Firestore writes the Android app makes, in the same order and
-// inside the same transactions, against the rules. The documents are built
-// from contracts/documents.json, the field lists that MapperContractTest
-// holds the app's mappers to. If the app, the contract and the rules ever
-// disagree about a document's shape, either this file or that test fails.
+// End-to-end replay of what the Android app does, in order, against the
+// rules: sign-in, the faculty roster, student registration, joining a course,
+// and reporting a rejected attempt. The transactions live in flows.js and
+// build every document from contracts/documents.json.
 
-const fs = require('fs');
-const path = require('path');
-const {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  runTransaction,
-  serverTimestamp,
-  where,
-} = require('firebase/firestore');
+const { collection, doc, getDoc, getDocs, query, runTransaction, serverTimestamp, where } =
+  require('firebase/firestore');
 const h = require('./helpers');
+const flows = require('./flows');
 
-const { TEACHER, STUDENT, OUTSIDER, assertFails, assertSucceeds } = h;
+const { TEACHER, STUDENT, UNLISTED, STRANGER, assertFails, assertSucceeds } = h;
 const t = h.setup();
 
-const contract = JSON.parse(
-  fs.readFileSync(path.join(h.CONTRACTS_DIR, 'documents.json'), 'utf8'),
-);
-
-/** A document with exactly the contract's fields for a collection, plus any optional ones given. */
-function build(collectionName, values, optional = {}) {
-  const out = {};
-  for (const field of contract[collectionName].split(',')) {
-    if (!(field in values)) {
-      throw new Error(`${collectionName}.${field} is in the contract but the test has no value`);
-    }
-    out[field] = values[field];
-  }
-  const allowed = (contract[`${collectionName}.optional`] ?? '').split(',');
-  for (const [field, value] of Object.entries(optional)) {
-    if (!allowed.includes(field)) {
-      throw new Error(`${collectionName}.${field} is not an optional field in the contract`);
-    }
-    out[field] = value;
-  }
-  return out;
-}
-
-/** FirebaseAuthRepository.writeProfile: create with a proposed role, or update the stored one. */
-function writeProfile(db, user, proposedRole) {
-  const ref = doc(db, 'users', user.uid);
-  return runTransaction(db, async (tx) => {
-    const snapshot = await tx.get(ref);
-    if (snapshot.exists()) {
-      tx.update(ref, { name: user.name, email: user.email, role: proposedRole });
-    } else {
-      tx.set(
-        ref,
-        build('users', {
-          name: user.name,
-          email: user.email,
-          role: proposedRole,
-          createdAt: serverTimestamp(),
-        }),
-      );
-    }
-  });
-}
+// A student faculty add during the test, then who registers and joins.
+const NEW = {
+  uid: 'studentN',
+  email: 'apawar_mc26@mc.vjti.ac.in',
+  name: 'Aditi Pawar',
+  rollNo: '262011005',
+  cohort: 'MC26',
+};
+const COURSE_ID = 'courseFlow';
+const CODE = 'HJK482';
 
 /** FirestoreCourseRepository.createCourse. Resolves to false when the join code is taken. */
 function createCourse(db, teacher, courseId, joinCode) {
@@ -75,7 +32,7 @@ function createCourse(db, teacher, courseId, joinCode) {
     }
     tx.set(
       courseRef,
-      build('courses', {
+      flows.build('courses', {
         teacherId: teacher.uid,
         name: 'Compiler Design',
         code: 'CS402',
@@ -86,7 +43,7 @@ function createCourse(db, teacher, courseId, joinCode) {
     );
     tx.set(
       joinCodeRef,
-      build('joinCodes', {
+      flows.build('joinCodes', {
         courseId,
         courseName: 'Compiler Design',
         teacherName: teacher.name,
@@ -97,99 +54,96 @@ function createCourse(db, teacher, courseId, joinCode) {
   });
 }
 
-/** FirestoreCourseRepository.joinCourse. Resolves to false when already a member. */
-function joinCourse(db, student, info, rollNo) {
-  const ref = doc(db, 'memberships', `${info.courseId}_${student.uid}`);
-  return runTransaction(db, async (tx) => {
-    if ((await tx.get(ref)).exists()) {
-      return false;
-    }
-    const values = {
-      courseId: info.courseId,
-      teacherId: info.teacherId,
-      studentId: student.uid,
-      name: student.name,
-      email: student.email,
-      joinCode: info.code,
-      joinedAt: serverTimestamp(),
-    };
-    tx.set(ref, build('memberships', values, rollNo ? { rollNo } : {}));
-    return true;
-  });
-}
-
-describe('app flow: sign-in profile and role', () => {
-  test('a new student: the first proposal (STUDENT) is accepted', async () => {
-    await assertSucceeds(writeProfile(t.as(STUDENT), STUDENT, 'STUDENT'));
-  });
-
-  test('a new teacher: STUDENT is denied, then FACULTY is accepted', async () => {
+describe('app flow: sign-in', () => {
+  test('faculty: the FACULTY proposal is accepted, first time and every time after', async () => {
     const db = t.as(TEACHER);
-    await assertFails(writeProfile(db, TEACHER, 'STUDENT'));
-    await assertSucceeds(writeProfile(db, TEACHER, 'FACULTY'));
-  });
-
-  test('a returning user: the stored role is proposed again and accepted', async () => {
-    const db = t.as(TEACHER);
-    await assertSucceeds(writeProfile(db, TEACHER, 'FACULTY'));
-    await assertSucceeds(writeProfile(db, TEACHER, 'FACULTY'));
+    await assertSucceeds(flows.writeFacultyProfile(db, TEACHER));
+    await assertSucceeds(flows.writeFacultyProfile(db, TEACHER));
     expect((await getDoc(doc(db, 'users', TEACHER.uid))).data().role).toBe('FACULTY');
   });
 
-  test('a student later added to the allowlist is moved to FACULTY at the next sign-in', async () => {
-    const db = t.as(STUDENT);
-    await assertSucceeds(writeProfile(db, STUDENT, 'STUDENT'));
-    await t.seed({ [`teacherAllowlist/${STUDENT.email}`]: {} });
-    await assertFails(writeProfile(db, STUDENT, 'STUDENT'));
-    await assertSucceeds(writeProfile(db, STUDENT, 'FACULTY'));
+  test('a student: the FACULTY proposal is denied, which sends them to registration', async () => {
+    await assertFails(flows.writeFacultyProfile(t.as(NEW), NEW));
+  });
+
+  test('an account outside the institute: denied, and its alert is recorded', async () => {
+    const db = t.as(STRANGER);
+    await assertFails(flows.writeFacultyProfile(db, STRANGER));
+    await assertSucceeds(flows.reportAlert(db, STRANGER, 'NON_VJTI_EMAIL', 'ALL'));
   });
 });
 
-describe('app flow: create a course, then join it', () => {
-  const COURSE_ID = 'courseFlow';
-  const CODE = 'HJK482';
+describe('app flow: roster, registration, course, join', () => {
+  test('the whole path for a new student', async () => {
+    const faculty = t.as(TEACHER);
+    const student = t.as(NEW);
 
-  test('the teacher creates a course and sees it in their list', async () => {
+    // Before faculty add them, the student is told they are not on the roster.
+    expect(await flows.register(student, NEW, NEW.rollNo)).toBe('NOT_ON_REGISTER');
+    await assertSucceeds(
+      flows.reportAlert(student, NEW, 'NOT_ON_REGISTER', 'ALL', { enteredRollNo: NEW.rollNo }),
+    );
+
+    // Faculty add the student; adding again changes nothing.
+    expect(await assertSucceeds(flows.addStudent(faculty, TEACHER, NEW))).toBe('ADDED');
+    expect(await flows.addStudent(faculty, TEACHER, NEW)).toBe('EMAIL_EXISTS');
+    const sameRoll = { ...NEW, email: 'bkale_mc26@mc.vjti.ac.in' };
+    expect(await flows.addStudent(faculty, TEACHER, sameRoll)).toBe('ROLL_TAKEN');
+
+    // A wrong roll number is refused and reported to the teacher who added them.
+    expect(await flows.register(student, NEW, '262019999')).toBe('ROLL_MISMATCH');
+    const entry = (await getDoc(doc(student, 'studentRegistry', NEW.email))).data();
+    await assertSucceeds(
+      flows.reportAlert(student, NEW, 'ROLL_MISMATCH', entry.addedBy, {
+        enteredRollNo: '262019999',
+      }),
+    );
+
+    // The right one registers them.
+    expect(await assertSucceeds(flows.register(student, NEW, NEW.rollNo))).toBe('REGISTERED');
+
+    // The teacher creates a course; the student resolves the code and joins.
+    expect(await assertSucceeds(createCourse(faculty, TEACHER, COURSE_ID, CODE))).toBe(true);
+    await assertFails(getDoc(doc(student, 'courses', COURSE_ID)));
+    const code = await assertSucceeds(getDoc(doc(student, 'joinCodes', CODE)));
+    const info = { code: code.id, ...code.data() };
+    expect(await assertSucceeds(flows.joinCourse(student, NEW, info))).toBe(true);
+    expect(await assertSucceeds(flows.joinCourse(student, NEW, info))).toBe(false);
+
+    // The student's home screen: memberships first, then each course.
+    const mine = query(collection(student, 'memberships'), where('studentId', '==', NEW.uid));
+    const memberships = (await assertSucceeds(getDocs(mine))).docs.map((d) => d.data());
+    expect(memberships).toHaveLength(1);
+    expect(memberships[0]).toMatchObject({ courseId: COURSE_ID, rollNo: NEW.rollNo, cohort: 'MC26' });
+    const course = await assertSucceeds(getDoc(doc(student, 'courses', COURSE_ID)));
+    expect(course.data().name).toBe('Compiler Design');
+
+    // The teacher's alerts list shows both rejected attempts.
+    const inbox = query(
+      collection(faculty, 'identityAlerts'),
+      where('audience', 'in', [TEACHER.uid, 'ALL']),
+    );
+    const types = (await assertSucceeds(getDocs(inbox))).docs.map((d) => d.data().type).sort();
+    expect(types).toEqual(['NOT_ON_REGISTER', 'ROLL_MISMATCH']);
+  });
+
+  test('a student who has not registered cannot join', async () => {
+    await createCourse(t.as(TEACHER), TEACHER, COURSE_ID, CODE);
+    const who = { ...UNLISTED, rollNo: '262010009', cohort: 'MC26' };
+    const info = { code: CODE, courseId: COURSE_ID, teacherId: TEACHER.uid };
+    await assertFails(flows.joinCourse(t.as(who), who, info));
+  });
+
+  test('the teacher creates a course and sees it; a taken join code is detected', async () => {
     const db = t.as(TEACHER);
     expect(await assertSucceeds(createCourse(db, TEACHER, COURSE_ID, CODE))).toBe(true);
+    expect(await createCourse(db, TEACHER, 'courseOther', h.JOIN_CODE)).toBe(false);
     const mine = query(collection(db, 'courses'), where('teacherId', '==', TEACHER.uid));
     const ids = (await assertSucceeds(getDocs(mine))).docs.map((d) => d.id);
     expect(ids).toContain(COURSE_ID);
   });
 
-  test('a taken join code is detected, so the app can pick another', async () => {
-    expect(await createCourse(t.as(TEACHER), TEACHER, COURSE_ID, h.JOIN_CODE)).toBe(false);
-  });
-
-  test('a student is denied when a non-teacher tries the same transaction', async () => {
+  test('denied: a student runs the course-creation transaction', async () => {
     await assertFails(createCourse(t.as(STUDENT), STUDENT, COURSE_ID, CODE));
-  });
-
-  test('a student resolves the code, joins, and then can read the course', async () => {
-    await createCourse(t.as(TEACHER), TEACHER, COURSE_ID, CODE);
-    const db = t.as(OUTSIDER);
-
-    // Before joining, the join code is the only thing the student can read.
-    await assertFails(getDoc(doc(db, 'courses', COURSE_ID)));
-    const code = await assertSucceeds(getDoc(doc(db, 'joinCodes', CODE)));
-    const info = { code: code.id, ...code.data() };
-    expect(info.teacherId).toBe(TEACHER.uid);
-
-    expect(await assertSucceeds(joinCourse(db, OUTSIDER, info, '21CS045'))).toBe(true);
-
-    // The home screen: memberships first, then each course.
-    const memberships = query(collection(db, 'memberships'), where('studentId', '==', OUTSIDER.uid));
-    const joined = (await assertSucceeds(getDocs(memberships))).docs.map((d) => d.data().courseId);
-    expect(joined).toEqual([COURSE_ID]);
-    const course = await assertSucceeds(getDoc(doc(db, 'courses', COURSE_ID)));
-    expect(course.data().name).toBe('Compiler Design');
-  });
-
-  test('joining without a roll number, and joining twice', async () => {
-    await createCourse(t.as(TEACHER), TEACHER, COURSE_ID, CODE);
-    const db = t.as(OUTSIDER);
-    const info = { code: CODE, courseId: COURSE_ID, teacherId: TEACHER.uid };
-    expect(await assertSucceeds(joinCourse(db, OUTSIDER, info))).toBe(true);
-    expect(await assertSucceeds(joinCourse(db, OUTSIDER, info))).toBe(false);
   });
 });
