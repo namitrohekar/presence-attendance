@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/start_scroll"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clipToPadding="false">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/screen_margin"
+        android:paddingBottom="@dimen/space_24">
+
+        <include layout="@layout/view_sheet_handle" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_16"
+            android:accessibilityHeading="true"
+            android:text="@string/start_title"
+            android:textAppearance="@style/TextAppearance.Presence.Title" />
+
+        <TextView
+            android:id="@+id/start_duration_label"
+            style="@style/Widget.Presence.FieldLabel"
+            android:fontFeatureSettings="tnum" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/start_duration"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:stepSize="5"
+            android:valueFrom="5"
+            android:valueTo="180"
+            app:labelBehavior="gone" />
+
+        <TextView
+            style="@style/Widget.Presence.FieldLabel"
+            android:text="@string/start_location_label" />
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/start_mode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/start_mode_campus"
+                style="@style/Widget.Presence.Segment"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/start_campus" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/start_mode_here"
+                style="@style/Widget.Presence.Segment"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/start_here" />
+
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <!-- Only for "Here": how far around the teacher counts as present. -->
+        <LinearLayout
+            android:id="@+id/start_here_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/start_radius_label"
+                style="@style/Widget.Presence.FieldLabel"
+                android:fontFeatureSettings="tnum" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/start_radius"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:stepSize="10"
+                android:valueFrom="50"
+                android:valueTo="250"
+                app:labelBehavior="gone" />
+
+            <TextView
+                android:id="@+id/start_location_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:accessibilityLiveRegion="polite"
+                android:fontFeatureSettings="tnum"
+                android:textAppearance="@style/TextAppearance.Presence.Footnote"
+                android:textColor="@color/text_secondary" />
+
+            <com.presence.attendance.core.ui.SpringButton
+                android:id="@+id/start_allow_location"
+                style="@style/Widget.Presence.Button.Text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:text="@string/start_allow_location"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/start_status"
+            style="@style/Widget.Presence.InlineError"
+            android:layout_marginTop="@dimen/space_20" />
+
+        <com.presence.attendance.core.ui.SpringButton
+            android:id="@+id/start_submit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_24"
+            android:text="@string/start_submit" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

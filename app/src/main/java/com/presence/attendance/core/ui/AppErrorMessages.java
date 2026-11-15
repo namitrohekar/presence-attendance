@@ -27,6 +27,11 @@ public final class AppErrorMessages {
             case ROLL_MISMATCH -> R.string.error_roll_mismatch;
             case DUPLICATE_CLAIM -> R.string.error_duplicate_claim;
             case FILE_UNREADABLE -> R.string.error_file_unreadable;
+            case LOCATION_PERMISSION_REQUIRED -> R.string.error_location_permission;
+            case LOCATION_UNAVAILABLE -> R.string.error_location_unavailable;
+            case CAMPUS_NOT_CONFIGURED -> R.string.error_campus_not_configured;
+            case SESSION_NOT_FOUND -> R.string.error_session_not_found;
+            case SESSION_ENDED -> R.string.error_session_ended;
             case JOIN_CODE_NOT_FOUND -> R.string.error_join_code_not_found;
             case ALREADY_JOINED -> R.string.error_already_joined;
             case OWN_COURSE -> R.string.error_own_course;

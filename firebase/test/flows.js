@@ -9,7 +9,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { doc, runTransaction, serverTimestamp, setDoc } = require('firebase/firestore');
+const { doc, runTransaction, serverTimestamp, setDoc, Timestamp } = require('firebase/firestore');
 const { CONTRACTS_DIR } = require('./helpers');
 
 const contract = JSON.parse(fs.readFileSync(path.join(CONTRACTS_DIR, 'documents.json'), 'utf8'));
@@ -269,7 +269,67 @@ function reportAlert(db, who, type, audience, extra = {}) {
   );
 }
 
+/** FirestoreSessionRepository.startSession: the device picks the end, the server the start. */
+function startSession(db, teacher, sessionId, courseId, durationMin, geofence) {
+  const ref = doc(db, 'sessions', sessionId);
+  return runTransaction(db, async (tx) => {
+    tx.set(
+      ref,
+      build('sessions', {
+        courseId,
+        teacherId: teacher.uid,
+        status: 'ACTIVE',
+        startedAt: serverTimestamp(),
+        endsAt: Timestamp.fromMillis(Date.now() + durationMin * 60 * 1000),
+        geofence: build('sessions.geofence', geofence),
+      }),
+    );
+  });
+}
+
+/** FirestoreSessionRepository.writeToken: a blind write in a transaction, so it never queues. */
+function writeToken(db, sessionId, token) {
+  const ref = doc(db, 'sessions', sessionId, 'tokens', token);
+  return runTransaction(db, async (tx) => {
+    tx.set(ref, build('tokens', { validFrom: serverTimestamp() }));
+  });
+}
+
+/**
+ * FirestoreSessionRepository.endSession. Ending early stamps the server time; closing an
+ * expired session leaves the end alone. The app tries the form its own clock suggests and, if
+ * the rules refuse it, the other one. Resolves to ENDED_EARLY, CLOSED or ALREADY_ENDED.
+ */
+async function endSession(db, sessionId) {
+  const ref = doc(db, 'sessions', sessionId);
+  const attempt = (followOwnClock) =>
+    runTransaction(db, async (tx) => {
+      const session = (await tx.get(ref)).data();
+      if (session.status === 'ENDED') {
+        return 'ALREADY_ENDED';
+      }
+      const stillRunning = Date.now() < session.endsAt.toMillis();
+      if (stillRunning === followOwnClock) {
+        tx.update(ref, { status: 'ENDED', endsAt: serverTimestamp() });
+        return 'ENDED_EARLY';
+      }
+      tx.update(ref, { status: 'ENDED' });
+      return 'CLOSED';
+    });
+  try {
+    return await attempt(true);
+  } catch (error) {
+    if (error.code !== 'permission-denied') {
+      throw error;
+    }
+    return attempt(false);
+  }
+}
+
 module.exports = {
+  startSession,
+  writeToken,
+  endSession,
   build,
   utcDay,
   correctionId,

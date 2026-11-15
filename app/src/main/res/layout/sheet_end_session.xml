@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="@dimen/screen_margin"
+    android:paddingBottom="@dimen/space_24">
+
+    <include layout="@layout/view_sheet_handle" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_16"
+        android:accessibilityHeading="true"
+        android:text="@string/end_title"
+        android:textAppearance="@style/TextAppearance.Presence.Title" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_4"
+        android:text="@string/end_body"
+        android:textAppearance="@style/TextAppearance.Presence.Body"
+        android:textColor="@color/text_secondary" />
+
+    <com.presence.attendance.core.ui.SpringButton
+        android:id="@+id/end_confirm"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_24"
+        android:text="@string/live_end" />
+
+    <com.presence.attendance.core.ui.SpringButton
+        android:id="@+id/end_keep"
+        style="@style/Widget.Presence.Button.Text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_4"
+        android:text="@string/end_keep" />
+</LinearLayout>

@@ -79,6 +79,7 @@ public final class LineAdapter extends ListAdapter<Line, RecyclerView.ViewHolder
         binding.lineBadge.setBackgroundTintList(
                 ColorStateList.valueOf(binding.getRoot().getContext().getColor(fill(line.tone))));
         binding.lineRoot.setBackgroundResource(background(line.place));
+        binding.lineChevron.setVisibility(line.chevron ? View.VISIBLE : View.GONE);
         final boolean endsSection =
                 line.place == Line.Place.LAST || line.place == Line.Place.SINGLE;
         binding.lineSeparator.setVisibility(endsSection ? View.GONE : View.VISIBLE);

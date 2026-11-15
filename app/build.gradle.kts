@@ -102,8 +102,18 @@ android {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    // dangling-doc-comments is excluded because AGP's generated BuildConfig.java trips it.
-    options.compilerArgs.addAll(listOf("-Xlint:all", "-Xlint:-dangling-doc-comments", "-Werror"))
+    // Every javac warning is an error, except three categories that only generated code trips:
+    // dangling-doc-comments (AGP's BuildConfig.java) and rawtypes/unchecked (the raw HashMap in
+    // Safe Args' generated Args and Directions classes). javac cannot exempt a directory.
+    options.compilerArgs.addAll(
+        listOf(
+            "-Xlint:all",
+            "-Xlint:-dangling-doc-comments",
+            "-Xlint:-rawtypes",
+            "-Xlint:-unchecked",
+            "-Werror",
+        ),
+    )
 }
 
 tasks.withType<Test>().configureEach {
@@ -141,6 +151,8 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
+    implementation(libs.zxing.core)
+    implementation(libs.play.services.location)
 
     testImplementation(libs.junit)
     testImplementation(libs.androidx.arch.core.testing)

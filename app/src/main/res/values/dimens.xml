@@ -19,6 +19,9 @@
     <dimen name="ring_stroke">4dp</dimen>
     <dimen name="hairline_stroke">1dp</dimen>
     <dimen name="icon">24dp</dimen>
+    <dimen name="ring_size">24dp</dimen>
+    <!-- The QR fills the column up to this size: over 80% of a phone screen\'s width. -->
+    <dimen name="qr_max_size">360dp</dimen>
     <dimen name="handle_width">36dp</dimen>
     <dimen name="handle_height">5dp</dimen>
     <dimen name="handle_radius">2.5dp</dimen>

@@ -47,6 +47,15 @@
             android:paddingVertical="@dimen/space_4"
             android:textAppearance="@style/TextAppearance.Presence.Caption"
             android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/line_chevron"
+            android:layout_width="@dimen/icon"
+            android:layout_height="@dimen/icon"
+            android:layout_marginStart="@dimen/space_4"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_chevron"
+            android:visibility="gone" />
     </LinearLayout>
 
     <View

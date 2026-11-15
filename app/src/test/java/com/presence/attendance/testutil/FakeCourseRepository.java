@@ -9,6 +9,7 @@ import com.presence.attendance.core.Outcome;
 import com.presence.attendance.course.domain.Course;
 import com.presence.attendance.course.domain.CourseRepository;
 import com.presence.attendance.course.domain.JoinCodeInfo;
+import com.presence.attendance.course.domain.Member;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -65,5 +66,16 @@ public final class FakeCourseRepository implements CourseRepository {
         calls.add("joinCourse:" + joinCode.getCode());
         lastJoiner = student;
         callback.onResult(joinOutcome);
+    }
+
+    public Outcome<List<Member>> membersOutcome = Outcome.success(new ArrayList<>());
+
+    @Override
+    public void loadMembers(
+            @NonNull String teacherId,
+            @NonNull String courseId,
+            @NonNull Callback<List<Member>> callback) {
+        calls.add("loadMembers:" + teacherId + ":" + courseId);
+        callback.onResult(membersOutcome);
     }
 }

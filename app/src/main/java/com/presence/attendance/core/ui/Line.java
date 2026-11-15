@@ -9,7 +9,8 @@ import java.util.Objects;
 
 /**
  * One item of an inset-grouped list: a section header, or a row with a title, an optional detail
- * line and an optional badge. Screens map their own data to lines and share one adapter. Immutable.
+ * line, an optional badge and an optional chevron. Screens map their own data to lines and share
+ * one adapter. Immutable.
  */
 public final class Line {
 
@@ -36,6 +37,7 @@ public final class Line {
     @Nullable final String badge;
     @NonNull final Tone tone;
     @NonNull final Place place;
+    final boolean chevron;
 
     private Line(
             @NonNull String key,
@@ -44,7 +46,8 @@ public final class Line {
             @Nullable String detail,
             @Nullable String badge,
             @NonNull Tone tone,
-            @NonNull Place place) {
+            @NonNull Place place,
+            boolean chevron) {
         this.key = key;
         this.header = header;
         this.title = title;
@@ -52,11 +55,12 @@ public final class Line {
         this.badge = badge;
         this.tone = tone;
         this.place = place;
+        this.chevron = chevron;
     }
 
     @NonNull
     public static Line header(@NonNull String key, @NonNull String title) {
-        return new Line(key, true, title, null, null, Tone.NEUTRAL, Place.SINGLE);
+        return new Line(key, true, title, null, null, Tone.NEUTRAL, Place.SINGLE, false);
     }
 
     @NonNull
@@ -71,7 +75,13 @@ public final class Line {
             @Nullable String detail,
             @Nullable String badge,
             @NonNull Tone tone) {
-        return new Line(key, false, title, detail, badge, tone, Place.SINGLE);
+        return new Line(key, false, title, detail, badge, tone, Place.SINGLE, false);
+    }
+
+    /** This row with a trailing chevron, for rows that open another screen. */
+    @NonNull
+    public Line navigates() {
+        return new Line(key, header, title, detail, badge, tone, place, true);
     }
 
     /**
@@ -101,7 +111,8 @@ public final class Line {
                             line.detail,
                             line.badge,
                             line.tone,
-                            place));
+                            place,
+                            line.chevron));
         }
         return Collections.unmodifiableList(out);
     }
@@ -113,6 +124,7 @@ public final class Line {
         }
         final Line line = (Line) other;
         return header == line.header
+                && chevron == line.chevron
                 && key.equals(line.key)
                 && title.equals(line.title)
                 && Objects.equals(detail, line.detail)
@@ -123,6 +135,6 @@ public final class Line {
 
     @Override
     public int hashCode() {
-        return Objects.hash(key, header, title, detail, badge, tone, place);
+        return Objects.hash(key, header, title, detail, badge, tone, place, chevron);
     }
 }

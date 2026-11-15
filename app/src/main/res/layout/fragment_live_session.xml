@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The live session: the rotating QR, the countdown to the next code, who has marked, and
+    the action to end it. Shares the list screens' column, app bar and state blocks.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_max="@dimen/column_max_width">
+
+        <com.google.android.material.appbar.AppBarLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/background"
+            android:fitsSystemWindows="true"
+            app:elevation="0dp"
+            app:liftOnScroll="false">
+
+            <com.google.android.material.appbar.MaterialToolbar
+                android:id="@+id/live_toolbar"
+                style="@style/Widget.Presence.Toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                app:navigationContentDescription="@string/action_back"
+                app:navigationIcon="@drawable/ic_back"
+                app:titleMarginStart="@dimen/space_4" />
+        </com.google.android.material.appbar.AppBarLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/live_content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingHorizontal="@dimen/screen_margin"
+            android:paddingBottom="@dimen/space_16"
+            app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/live_scroll"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone"
+                app:layout_constraintBottom_toTopOf="@id/live_footer"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingBottom="@dimen/space_16">
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <!-- White in both themes, with padding on top of the code's own quiet zone. -->
+                        <FrameLayout
+                            android:id="@+id/live_qr_card"
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            android:background="@drawable/bg_qr"
+                            android:padding="@dimen/space_12"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintDimensionRatio="1:1"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintWidth_max="@dimen/qr_max_size">
+
+                            <ImageView
+                                android:id="@+id/live_qr"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription="@string/live_qr_blank"
+                                android:scaleType="fitCenter" />
+                        </FrameLayout>
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_16"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/ring_size"
+                        android:orientation="horizontal">
+
+                        <!-- Empties over the 12 seconds until the code changes. -->
+                        <com.google.android.material.progressindicator.CircularProgressIndicator
+                            android:id="@+id/live_ring"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:importantForAccessibility="no"
+                            android:max="1000"
+                            app:indicatorColor="@color/accent"
+                            app:indicatorSize="@dimen/ring_size"
+                            app:trackColor="@color/separator"
+                            app:trackThickness="@dimen/ring_stroke" />
+
+                        <TextView
+                            android:id="@+id/live_status"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/space_12"
+                            android:layout_weight="1"
+                            android:accessibilityLiveRegion="polite"
+                            android:fontFeatureSettings="tnum"
+                            android:textAppearance="@style/TextAppearance.Presence.Subhead"
+                            android:textColor="@color/text_secondary" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/live_count"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_20"
+                        android:accessibilityLiveRegion="polite"
+                        android:fontFeatureSettings="tnum"
+                        android:textAppearance="@style/TextAppearance.Presence.Title" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:accessibilityHeading="true"
+                        android:paddingStart="@dimen/space_16"
+                        android:paddingTop="@dimen/space_20"
+                        android:paddingEnd="@dimen/space_16"
+                        android:paddingBottom="@dimen/space_8"
+                        android:text="@string/live_latest_header"
+                        android:textAppearance="@style/TextAppearance.Presence.Footnote"
+                        android:textColor="@color/text_secondary" />
+
+                    <TextView
+                        android:id="@+id/live_none"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="@dimen/space_16"
+                        android:text="@string/live_none_yet"
+                        android:textAppearance="@style/TextAppearance.Presence.Body"
+                        android:textColor="@color/text_secondary" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/live_recycler"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false"
+                        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+                </LinearLayout>
+            </androidx.core.widget.NestedScrollView>
+
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/live_progress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_24"
+                android:contentDescription="@string/state_loading"
+                android:indeterminate="true"
+                app:indicatorColor="@color/accent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:trackThickness="@dimen/ring_stroke" />
+
+            <LinearLayout
+                android:id="@+id/live_message"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
+                android:orientation="vertical"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <TextView
+                    android:id="@+id/live_message_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:accessibilityHeading="true"
+                    android:textAppearance="@style/TextAppearance.Presence.Headline" />
+
+                <TextView
+                    android:id="@+id/live_message_body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:textAppearance="@style/TextAppearance.Presence.Body"
+                    android:textColor="@color/text_secondary" />
+
+                <com.presence.attendance.core.ui.SpringButton
+                    android:id="@+id/live_message_action"
+                    style="@style/Widget.Presence.Button.Text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:paddingStart="0dp"
+                    android:paddingEnd="0dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/live_footer"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent">
+
+                <TextView
+                    android:id="@+id/live_summary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:accessibilityLiveRegion="polite"
+                    android:fontFeatureSettings="tnum"
+                    android:paddingVertical="@dimen/space_12"
+                    android:textAppearance="@style/TextAppearance.Presence.Footnote"
+                    android:textColor="@color/text_secondary" />
+
+                <com.presence.attendance.core.ui.SpringButton
+                    android:id="@+id/live_primary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

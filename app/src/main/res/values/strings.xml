@@ -156,4 +156,60 @@
     <string name="alert_detail">%1$s · %2$s</string>
     <string name="alert_detail_entered">%1$s entered %2$s · %3$s</string>
     <string name="alert_detail_belongs">%1$s entered %2$s, which belongs to %3$s · %4$s</string>
+    <!-- Course (faculty) -->
+    <string name="course_join_code_header">Join code</string>
+    <string name="course_sessions_header">Sessions</string>
+    <string name="course_no_sessions_title">No sessions yet</string>
+    <string name="course_no_sessions_body">Start a session to show the attendance QR code.</string>
+    <string name="course_error_title">Couldn\'t load this course</string>
+    <string name="course_start_session">Start session</string>
+    <string name="course_open_live">Open live session</string>
+    <string name="session_live">Live</string>
+    <string name="session_ended">Ended</string>
+    <string name="home_live">Live</string>
+
+    <!-- Start session sheet -->
+    <string name="start_title">Start session</string>
+    <string name="start_duration_label">Duration in minutes: %1$d</string>
+    <string name="start_location_label">Where students must be</string>
+    <string name="start_campus">Campus</string>
+    <string name="start_here">Here</string>
+    <string name="start_radius_label">Radius in metres: %1$d</string>
+    <string name="start_locating">Getting your location…</string>
+    <string name="start_location_ready">Location ready. Accuracy in metres: %1$d</string>
+    <string name="start_permission">Presence needs your precise location to set the area around you.</string>
+    <string name="start_allow_location">Allow location</string>
+    <string name="start_submit">Start session</string>
+    <string name="start_submitting">Starting…</string>
+    <string name="start_offline">You\'re offline. Connect to the internet to start a session.</string>
+
+    <!-- Live session -->
+    <string name="live_qr_description">Attendance QR code. It changes every 12 seconds.</string>
+    <string name="live_qr_blank">No QR code is showing right now.</string>
+    <string name="live_preparing">Preparing the first code…</string>
+    <string name="live_reconnecting">Reconnecting…</string>
+    <string name="live_ends_at">Ends at %1$s</string>
+    <plurals name="live_present">
+        <item quantity="one">%1$d student present</item>
+        <item quantity="other">%1$d students present</item>
+    </plurals>
+    <string name="live_latest_header">Latest marks</string>
+    <string name="live_none_yet">No one has marked yet.</string>
+    <string name="live_unknown_student">Student not on the course list</string>
+    <string name="live_late_sync">Late sync</string>
+    <string name="live_manual">Manual</string>
+    <string name="live_end">End session</string>
+    <string name="live_ended_title">Session ended</string>
+    <string name="live_ended_body">Students can no longer mark attendance for this session.</string>
+    <string name="live_error_title">Couldn\'t open this session</string>
+    <string name="end_title">End this session?</string>
+    <string name="end_body">Students won\'t be able to mark attendance after this.</string>
+    <string name="end_keep">Keep it running</string>
+    <string name="end_ending">Ending…</string>
+
+    <string name="error_location_permission">Allow precise location for Presence in Settings, then try again.</string>
+    <string name="error_location_unavailable">Couldn\'t get your location. Turn on Location and try again.</string>
+    <string name="error_campus_not_configured">The campus location isn\'t set up yet. Choose Here instead.</string>
+    <string name="error_session_not_found">That session no longer exists.</string>
+    <string name="error_session_ended">This session has ended.</string>
 </resources>

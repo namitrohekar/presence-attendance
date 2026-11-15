@@ -147,3 +147,84 @@ describe('app flow: roster, registration, course, join', () => {
     await assertFails(createCourse(t.as(STUDENT), STUDENT, COURSE_ID, CODE));
   });
 });
+
+describe('app flow: a session from start to end', () => {
+  const SESSION_ID = 'sessFlow';
+  const TOKEN_1 = 'flowToken_000000-00001';
+  const TOKEN_2 = 'flowToken_000000-00002';
+  const HERE = { lat: 19.076, lng: 72.8777, radiusM: 120, cosLat: Math.cos((19.076 * Math.PI) / 180) };
+
+  test('start, rotate tokens, a student marks, the teacher sees it, end', async () => {
+    const faculty = t.as(TEACHER);
+    await assertSucceeds(flows.startSession(faculty, TEACHER, SESSION_ID, h.COURSE, 60, HERE));
+
+    // The teacher's home and course screens.
+    const active = query(
+      collection(faculty, 'sessions'),
+      where('teacherId', '==', TEACHER.uid),
+      where('status', '==', 'ACTIVE'),
+    );
+    const ids = (await assertSucceeds(getDocs(active))).docs.map((d) => d.id);
+    expect(ids).toContain(SESSION_ID);
+
+    await assertSucceeds(flows.writeToken(faculty, SESSION_ID, TOKEN_1));
+    await assertSucceeds(flows.writeToken(faculty, SESSION_ID, TOKEN_2));
+
+    // An enrolled student inside the area marks with the current token.
+    const student = t.as(STUDENT);
+    const mark = h.liveMark(STUDENT, { sessionId: SESSION_ID, token: TOKEN_2 });
+    await assertSucceeds(
+      runTransaction(student, async (tx) => {
+        const ref = doc(student, 'attendance', `${SESSION_ID}_${STUDENT.uid}`);
+        if (!(await tx.get(ref)).exists()) {
+          tx.set(ref, mark);
+        }
+      }),
+    );
+
+    // The live roster query.
+    const roster = query(
+      collection(faculty, 'attendance'),
+      where('sessionId', '==', SESSION_ID),
+      where('teacherId', '==', TEACHER.uid),
+    );
+    expect((await assertSucceeds(getDocs(roster))).size).toBe(1);
+
+    // Ending early stamps the server time; afterwards no token can be written.
+    expect(await assertSucceeds(flows.endSession(faculty, SESSION_ID))).toBe('ENDED_EARLY');
+    await assertFails(flows.writeToken(faculty, SESSION_ID, 'flowToken_000000-00003'));
+    expect(await flows.endSession(faculty, SESSION_ID)).toBe('ALREADY_ENDED');
+  });
+
+  test('closing a session whose time has run out keeps its original end', async () => {
+    const endedAt = h.ago(h.MINUTE);
+    await t.seed({
+      [`sessions/${SESSION_ID}`]: h.sessionDoc({ startedAt: h.ago(61 * h.MINUTE), endsAt: endedAt }),
+    });
+    const faculty = t.as(TEACHER);
+    expect(await assertSucceeds(flows.endSession(faculty, SESSION_ID))).toBe('CLOSED');
+    const stored = (await getDoc(doc(faculty, 'sessions', SESSION_ID))).data();
+    expect(stored.status).toBe('ENDED');
+    expect(stored.endsAt.toMillis()).toBe(endedAt.toMillis());
+  });
+
+  test('the device clock is wrong about a session being over: the second form is used', async () => {
+    // The device thinks the session still has time; the server knows it ended a moment ago.
+    const realNow = Date.now;
+    await t.seed({ [`sessions/${SESSION_ID}`]: h.sessionDoc({ endsAt: h.ago(2 * h.SECOND) }) });
+    const faculty = t.as(TEACHER);
+    Date.now = () => realNow() - 5 * h.MINUTE;
+    try {
+      expect(await assertSucceeds(flows.endSession(faculty, SESSION_ID))).toBe('CLOSED');
+    } finally {
+      Date.now = realNow;
+    }
+  });
+
+  test('denied: a student runs the start, token or end transactions', async () => {
+    const student = t.as(STUDENT);
+    await assertFails(flows.startSession(student, STUDENT, SESSION_ID, h.COURSE, 60, HERE));
+    await assertFails(flows.writeToken(student, h.SESSION, TOKEN_1));
+    await assertFails(flows.endSession(student, h.SESSION));
+  });
+});

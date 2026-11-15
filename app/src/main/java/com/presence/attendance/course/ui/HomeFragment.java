@@ -12,21 +12,24 @@ import androidx.navigation.NavController;
 import androidx.navigation.NavDestination;
 import androidx.navigation.NavDirections;
 import androidx.navigation.fragment.NavHostFragment;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import com.google.android.material.divider.MaterialDividerItemDecoration;
 import com.presence.attendance.R;
 import com.presence.attendance.auth.domain.Role;
 import com.presence.attendance.auth.domain.User;
 import com.presence.attendance.auth.ui.GoogleIdTokenRequester;
 import com.presence.attendance.core.AppError;
 import com.presence.attendance.core.ui.AppErrorMessages;
+import com.presence.attendance.core.ui.Line;
+import com.presence.attendance.core.ui.LineAdapter;
 import com.presence.attendance.core.ui.ViewModels;
 import com.presence.attendance.core.ui.WindowInsetsPadding;
+import com.presence.attendance.course.domain.Course;
 import com.presence.attendance.databinding.FragmentHomeBinding;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * The home screen for both roles. Faculty see the courses they teach and can create one; students
- * see the courses they joined and can join one.
+ * The home screen for both roles. Faculty see the courses they teach, which one is live, and can
+ * create one; students see the courses they joined and can join one.
  */
 public final class HomeFragment extends Fragment {
 
@@ -51,15 +54,16 @@ public final class HomeFragment extends Fragment {
         viewModel =
                 new ViewModelProvider(
                                 this,
-                                ViewModels.factory(c -> new HomeViewModel(c.auth(), c.courses())))
+                                ViewModels.factory(c ->
+                                        new HomeViewModel(
+                                                c.auth(),
+                                                c.courses(),
+                                                c.sessions(),
+                                                System::currentTimeMillis)))
                         .get(HomeViewModel.class);
 
-        final CourseAdapter adapter = new CourseAdapter();
+        final LineAdapter adapter = new LineAdapter(this::openCourse);
         binding.homeList.setAdapter(adapter);
-        // Clips rows to the group's rounded corners. The XML attribute needs API 31.
-        binding.homeList.setClipToOutline(true);
-        binding.homeList.addItemDecoration(separator());
-
         binding.homeToolbar.setOnMenuItemClickListener(item -> onMenuItem(binding, item));
         binding.homeMessageAction.setOnClickListener(v -> onMessageAction());
         getChildFragmentManager()
@@ -73,9 +77,19 @@ public final class HomeFragment extends Fragment {
                 .observe(getViewLifecycleOwner(), state -> render(binding, adapter, state));
     }
 
+    @Override
+    public void onStart() {
+        super.onStart();
+        // Coming back from a course or a session: a session may have started or ended.
+        final HomeViewModel.State state = viewModel.getState().getValue();
+        if (state != null && state.status == HomeViewModel.Status.CONTENT) {
+            viewModel.refresh();
+        }
+    }
+
     private void render(
             @NonNull FragmentHomeBinding binding,
-            @NonNull CourseAdapter adapter,
+            @NonNull LineAdapter adapter,
             @NonNull HomeViewModel.State state) {
         if (state.status == HomeViewModel.Status.SIGNED_OUT) {
             GoogleIdTokenRequester.clearState(requireContext());
@@ -90,8 +104,7 @@ public final class HomeFragment extends Fragment {
                 binding.homeToolbar.getMenu().findItem(R.id.action_primary), state.user);
 
         final boolean isFaculty = state.user != null && state.user.getRole() == Role.FACULTY;
-        adapter.setShowJoinCode(isFaculty);
-        adapter.submitList(state.courses);
+        adapter.submitList(lines(state, isFaculty));
 
         binding.homeProgress.setVisibility(visibleIf(state.status == HomeViewModel.Status.LOADING));
         binding.homeList.setVisibility(visibleIf(state.status == HomeViewModel.Status.CONTENT));
@@ -109,6 +122,49 @@ public final class HomeFragment extends Fragment {
             binding.homeMessageTitle.setText(R.string.home_error_title);
             binding.homeMessageBody.setText(AppErrorMessages.of(cause));
             binding.homeMessageAction.setText(R.string.action_try_again);
+        }
+    }
+
+    /**
+     * One row per course. Faculty rows show the join code, a "Live" badge while a session is
+     * running, and open the course; a student has already used the code.
+     */
+    @NonNull
+    private List<Line> lines(@NonNull HomeViewModel.State state, boolean isFaculty) {
+        final List<Line> lines = new ArrayList<>();
+        for (Course course : state.courses) {
+            final boolean live = state.liveSessionByCourse.containsKey(course.getId());
+            final String detail =
+                    isFaculty
+                            ? getString(
+                                    R.string.course_row_faculty,
+                                    course.getCode(),
+                                    course.getJoinCode())
+                            : course.getCode();
+            final Line row =
+                    Line.row(
+                            course.getId(),
+                            course.getName(),
+                            detail,
+                            live ? getString(R.string.home_live) : null,
+                            Line.Tone.SUCCESS);
+            lines.add(isFaculty ? row.navigates() : row);
+        }
+        return Line.grouped(lines);
+    }
+
+    private void openCourse(@NonNull String courseId) {
+        final HomeViewModel.State state = viewModel.getState().getValue();
+        if (state == null || state.user == null || state.user.getRole() != Role.FACULTY) {
+            return;
+        }
+        for (Course course : state.courses) {
+            if (course.getId().equals(courseId)) {
+                leave(
+                        HomeFragmentDirections.actionHomeToCourse(
+                                course.getId(), course.getName(), course.getJoinCode()));
+                return;
+            }
         }
     }
 
@@ -198,18 +254,6 @@ public final class HomeFragment extends Fragment {
         if (current != null && current.getId() == R.id.homeFragment) {
             navController.navigate(directions);
         }
-    }
-
-    /** Hairline between rows, inset to line up with the row text, none after the last row. */
-    @NonNull
-    private MaterialDividerItemDecoration separator() {
-        final MaterialDividerItemDecoration separator =
-                new MaterialDividerItemDecoration(requireContext(), LinearLayoutManager.VERTICAL);
-        separator.setDividerThicknessResource(requireContext(), R.dimen.separator);
-        separator.setDividerInsetStartResource(requireContext(), R.dimen.space_16);
-        separator.setDividerColorResource(requireContext(), R.color.separator);
-        separator.setLastItemDecorated(false);
-        return separator;
     }
 
     private static int visibleIf(boolean visible) {

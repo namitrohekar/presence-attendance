@@ -24,5 +24,13 @@ public enum AppError {
     ALREADY_JOINED,
     OWN_COURSE,
     FILE_UNREADABLE,
+    /** Precise location has not been granted. */
+    LOCATION_PERMISSION_REQUIRED,
+    /** No usable fix: location is off, or none arrived in time. */
+    LOCATION_UNAVAILABLE,
+    /** appConfig/campus has not been created in the console. */
+    CAMPUS_NOT_CONFIGURED,
+    SESSION_NOT_FOUND,
+    SESSION_ENDED,
     UNKNOWN
 }

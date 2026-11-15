@@ -10,5 +10,8 @@
   "registryCorrections": "email,action,reason,correctedBy,correctedAt,beforeRollNo,beforeCohort",
   "registryCorrections.optional": "releasedUid,afterRollNo,afterCohort",
   "identityAlerts": "type,email,uid,audience,createdAt",
-  "identityAlerts.optional": "enteredRollNo"
+  "identityAlerts.optional": "enteredRollNo",
+  "sessions": "courseId,teacherId,status,startedAt,endsAt,geofence",
+  "sessions.geofence": "lat,lng,radiusM,cosLat",
+  "tokens": "validFrom"
 }

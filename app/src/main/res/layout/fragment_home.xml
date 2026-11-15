@@ -54,12 +54,10 @@
             android:paddingBottom="@dimen/space_24"
             app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-            <!-- One inset-grouped section: a rounded surface that hugs its rows. -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/home_list"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_group"
                 android:visibility="gone"
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
                 app:layout_constrainedHeight="true"

@@ -39,4 +39,11 @@ public interface CourseRepository {
             @NonNull User student,
             @NonNull JoinCodeInfo joinCode,
             @NonNull Callback<JoinCodeInfo> callback);
+
+    /** The students enrolled in one of the teacher's courses, sorted by roll number. */
+    @MainThread
+    void loadMembers(
+            @NonNull String teacherId,
+            @NonNull String courseId,
+            @NonNull Callback<List<Member>> callback);
 }

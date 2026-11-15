@@ -8,6 +8,7 @@ import com.presence.attendance.auth.domain.User;
 import com.presence.attendance.core.data.Snapshots;
 import com.presence.attendance.course.domain.Course;
 import com.presence.attendance.course.domain.JoinCodeInfo;
+import com.presence.attendance.course.domain.Member;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -47,6 +48,19 @@ final class CourseMappers {
             return null;
         }
         return new Course(snapshot.getId(), teacherId, name, code, threshold.intValue(), joinCode);
+    }
+
+    /** The member in a membership snapshot, or null if the document is malformed. */
+    @Nullable
+    static Member member(@NonNull DocumentSnapshot snapshot) {
+        final String studentId = Snapshots.string(snapshot, STUDENT_ID);
+        final String name = Snapshots.string(snapshot, NAME);
+        final String email = Snapshots.string(snapshot, EMAIL);
+        if (studentId == null || name == null || email == null) {
+            return null;
+        }
+        final String rollNo = Snapshots.string(snapshot, ROLL_NO);
+        return new Member(studentId, name, email, rollNo != null ? rollNo : "");
     }
 
     @NonNull

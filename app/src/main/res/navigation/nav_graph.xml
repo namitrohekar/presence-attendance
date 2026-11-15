@@ -58,6 +58,42 @@
         <action
             android:id="@+id/action_home_to_alerts"
             app:destination="@id/alertsFragment" />
+        <action
+            android:id="@+id/action_home_to_course"
+            app:destination="@id/courseFragment" />
+        <action
+            android:id="@+id/action_home_to_live"
+            app:destination="@id/liveSessionFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/courseFragment"
+        android:name="com.presence.attendance.session.ui.CourseFragment"
+        tools:layout="@layout/fragment_list">
+        <argument
+            android:name="courseId"
+            app:argType="string" />
+        <argument
+            android:name="courseName"
+            app:argType="string" />
+        <argument
+            android:name="joinCode"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_course_to_live"
+            app:destination="@id/liveSessionFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/liveSessionFragment"
+        android:name="com.presence.attendance.session.ui.LiveSessionFragment"
+        tools:layout="@layout/fragment_live_session">
+        <argument
+            android:name="sessionId"
+            app:argType="string" />
+        <argument
+            android:name="courseName"
+            app:argType="string" />
     </fragment>
 
     <fragment

@@ -8,19 +8,17 @@ import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.WriteBatch;
 import com.presence.attendance.core.Constants;
 import com.presence.attendance.core.Log;
 import com.presence.attendance.core.Outcome;
-import com.presence.attendance.core.data.FirebaseErrors;
+import com.presence.attendance.core.data.QueryLiveData;
 import com.presence.attendance.roster.domain.AlertIds;
 import com.presence.attendance.roster.domain.AlertRepository;
 import com.presence.attendance.roster.domain.IdentityAlert;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -70,10 +68,11 @@ public final class FirestoreAlertRepository implements AlertRepository {
     @NonNull
     @Override
     public LiveData<Outcome<List<IdentityAlert>>> observe(@NonNull String teacherUid) {
-        return new AlertsLiveData(
+        return new QueryLiveData<>(
                 inbox(teacherUid)
                         .orderBy(RosterMappers.CREATED_AT, Query.Direction.DESCENDING)
-                        .limit(PAGE));
+                        .limit(PAGE),
+                RosterMappers::alert);
     }
 
     @Override
@@ -106,43 +105,5 @@ public final class FirestoreAlertRepository implements AlertRepository {
 
     private CollectionReference alerts() {
         return firestore.collection(ALERTS);
-    }
-
-    /** Attaches the snapshot listener only while something is observing. */
-    private static final class AlertsLiveData extends LiveData<Outcome<List<IdentityAlert>>> {
-
-        private final Query query;
-        @Nullable private ListenerRegistration registration;
-
-        AlertsLiveData(@NonNull Query query) {
-            this.query = query;
-        }
-
-        @Override
-        protected void onActive() {
-            registration =
-                    query.addSnapshotListener((snapshot, error) -> {
-                        if (error != null || snapshot == null) {
-                            setValue(Outcome.failure(FirebaseErrors.toAppError(error)));
-                            return;
-                        }
-                        final List<IdentityAlert> alerts = new ArrayList<>();
-                        for (DocumentSnapshot document : snapshot.getDocuments()) {
-                            final IdentityAlert alert = RosterMappers.alert(document);
-                            if (alert != null) {
-                                alerts.add(alert);
-                            }
-                        }
-                        setValue(Outcome.success(alerts));
-                    });
-        }
-
-        @Override
-        protected void onInactive() {
-            if (registration != null) {
-                registration.remove();
-                registration = null;
-            }
-        }
     }
 }

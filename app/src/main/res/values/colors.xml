@@ -24,4 +24,8 @@
     <color name="badge_success">#2E34C759</color>
     <color name="badge_warning">#33FF9500</color>
     <color name="badge_danger">#29FF3B30</color>
+
+    <!-- A QR code is black on white in both themes; scanners need the contrast. -->
+    <color name="qr_light">#FFFFFF</color>
+    <color name="qr_dark">#000000</color>
 </resources>

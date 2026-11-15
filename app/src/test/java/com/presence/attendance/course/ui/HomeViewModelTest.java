@@ -9,8 +9,11 @@ import com.presence.attendance.core.AppError;
 import com.presence.attendance.core.Outcome;
 import com.presence.attendance.course.ui.HomeViewModel.State;
 import com.presence.attendance.course.ui.HomeViewModel.Status;
+import com.presence.attendance.session.domain.Geofence;
+import com.presence.attendance.session.domain.Session;
 import com.presence.attendance.testutil.FakeAuthRepository;
 import com.presence.attendance.testutil.FakeCourseRepository;
+import com.presence.attendance.testutil.FakeSessionRepository;
 import com.presence.attendance.testutil.Fixtures;
 import java.util.Arrays;
 import java.util.Collections;
@@ -23,9 +26,11 @@ public final class HomeViewModelTest {
 
     private final FakeAuthRepository auth = new FakeAuthRepository();
     private final FakeCourseRepository courses = new FakeCourseRepository();
+    private final FakeSessionRepository sessions = new FakeSessionRepository();
+    private static final long NOW = 1_000_000L;
 
     private State load() {
-        return new HomeViewModel(auth, courses).getState().getValue();
+        return new HomeViewModel(auth, courses, sessions, () -> NOW).getState().getValue();
     }
 
     @Test
@@ -97,9 +102,48 @@ public final class HomeViewModelTest {
     }
 
     @Test
+    public void facultySeeWhichCourseHasASessionRunning() {
+        auth.signedInAs(Fixtures.TEACHER);
+        courses.teacherCourses = Outcome.success(Arrays.asList(Fixtures.COURSE));
+        final Geofence area = Geofence.around(19.076, 72.8777, 100);
+        sessions.activeOutcome =
+                Outcome.success(
+                        Arrays.asList(
+                                new Session(
+                                        "sessLive",
+                                        "courseA",
+                                        "teacherA",
+                                        Session.Status.ACTIVE,
+                                        NOW - 60_000,
+                                        NOW + 60_000,
+                                        area),
+                                // Still ACTIVE on the server, but its end time has passed.
+                                new Session(
+                                        "sessStale",
+                                        "courseB",
+                                        "teacherA",
+                                        Session.Status.ACTIVE,
+                                        NOW - 120_000,
+                                        NOW - 1,
+                                        area)));
+        final State state = load();
+        assertEquals("sessLive", state.liveSessionByCourse.get("courseA"));
+        assertEquals(
+                "an expired session is not shown as live", 1, state.liveSessionByCourse.size());
+    }
+
+    @Test
+    public void studentsNeverQueryActiveSessions() {
+        auth.signedInAs(Fixtures.STUDENT);
+        courses.studentCourses = Outcome.success(Arrays.asList(Fixtures.COURSE));
+        load();
+        assertTrue(sessions.calls.isEmpty());
+    }
+
+    @Test
     public void refreshPicksUpANewCourse() {
         auth.signedInAs(Fixtures.TEACHER);
-        final HomeViewModel viewModel = new HomeViewModel(auth, courses);
+        final HomeViewModel viewModel = new HomeViewModel(auth, courses, sessions, () -> NOW);
         assertEquals(Status.EMPTY, viewModel.getState().getValue().status);
 
         courses.teacherCourses = Outcome.success(Arrays.asList(Fixtures.COURSE));
@@ -110,7 +154,7 @@ public final class HomeViewModelTest {
     @Test
     public void signOutClearsTheSessionAndTheScreen() {
         auth.signedInAs(Fixtures.TEACHER);
-        final HomeViewModel viewModel = new HomeViewModel(auth, courses);
+        final HomeViewModel viewModel = new HomeViewModel(auth, courses, sessions, () -> NOW);
         viewModel.signOut();
         assertTrue(auth.signedOut);
         assertEquals(Status.SIGNED_OUT, viewModel.getState().getValue().status);

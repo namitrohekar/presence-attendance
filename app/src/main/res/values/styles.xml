@@ -117,4 +117,16 @@
         <item name="materialButtonStyle">@style/Widget.Presence.Button.Primary</item>
         <item name="android:windowSoftInputMode">adjustResize</item>
     </style>
+
+    <!-- One option of a two-way segmented control: fill when chosen, hairline outline otherwise. -->
+    <style name="Widget.Presence.Segment" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:minHeight">@dimen/touch_target</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:textAppearance">@style/TextAppearance.Presence.Subhead</item>
+        <item name="android:textColor">@color/text</item>
+        <item name="strokeColor">@color/separator</item>
+        <item name="backgroundTint">@color/segment_fill</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.Presence.Control</item>
+    </style>
 </resources>

@@ -8,8 +8,12 @@ import androidx.lifecycle.LiveData;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.presence.attendance.BuildConfig;
+import com.presence.attendance.attendance.data.FirestoreAttendanceRepository;
+import com.presence.attendance.attendance.domain.AttendanceRepository;
 import com.presence.attendance.auth.data.FirebaseAuthRepository;
 import com.presence.attendance.auth.domain.AuthRepository;
+import com.presence.attendance.core.location.FusedLocationSource;
+import com.presence.attendance.core.location.LocationSource;
 import com.presence.attendance.core.net.Connectivity;
 import com.presence.attendance.course.data.FirestoreCourseRepository;
 import com.presence.attendance.course.domain.CourseRepository;
@@ -17,6 +21,8 @@ import com.presence.attendance.roster.data.FirestoreAlertRepository;
 import com.presence.attendance.roster.data.FirestoreRosterRepository;
 import com.presence.attendance.roster.domain.AlertRepository;
 import com.presence.attendance.roster.domain.RosterRepository;
+import com.presence.attendance.session.data.FirestoreSessionRepository;
+import com.presence.attendance.session.domain.SessionRepository;
 import java.security.SecureRandom;
 
 /**
@@ -32,13 +38,18 @@ public final class AppContainer {
     private static final int FIRESTORE_EMULATOR_PORT = 8080;
 
     private final Connectivity connectivity;
+    private final Context appContext;
     @Nullable private AuthRepository auth;
     @Nullable private CourseRepository courses;
     @Nullable private RosterRepository roster;
     @Nullable private AlertRepository alerts;
+    @Nullable private SessionRepository sessions;
+    @Nullable private AttendanceRepository attendance;
+    @Nullable private LocationSource location;
     private final AppExecutors executors = new AppExecutors();
 
     public AppContainer(@NonNull Context context) {
+        appContext = context.getApplicationContext();
         connectivity = new Connectivity(context.getApplicationContext());
         if (BuildConfig.FIREBASE_CONFIGURED && !BuildConfig.FIREBASE_EMULATOR_HOST.isEmpty()) {
             // Must happen before the first use of either instance.
@@ -86,6 +97,33 @@ public final class AppContainer {
             alerts = new FirestoreAlertRepository(FirebaseFirestore.getInstance());
         }
         return alerts;
+    }
+
+    @MainThread
+    @NonNull
+    public SessionRepository sessions() {
+        if (sessions == null) {
+            sessions = new FirestoreSessionRepository(FirebaseFirestore.getInstance());
+        }
+        return sessions;
+    }
+
+    @MainThread
+    @NonNull
+    public AttendanceRepository attendance() {
+        if (attendance == null) {
+            attendance = new FirestoreAttendanceRepository(FirebaseFirestore.getInstance());
+        }
+        return attendance;
+    }
+
+    @MainThread
+    @NonNull
+    public LocationSource location() {
+        if (location == null) {
+            location = new FusedLocationSource(appContext);
+        }
+        return location;
     }
 
     @NonNull

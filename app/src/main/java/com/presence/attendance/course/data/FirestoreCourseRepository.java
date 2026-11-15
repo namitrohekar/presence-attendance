@@ -21,6 +21,7 @@ import com.presence.attendance.course.domain.Course;
 import com.presence.attendance.course.domain.CourseRepository;
 import com.presence.attendance.course.domain.JoinCodeInfo;
 import com.presence.attendance.course.domain.JoinCodes;
+import com.presence.attendance.course.domain.Member;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -182,6 +183,33 @@ public final class FirestoreCourseRepository implements CourseRepository {
                     } else {
                         callback.onResult(Outcome.failure(AppError.ALREADY_JOINED));
                     }
+                });
+    }
+
+    @Override
+    public void loadMembers(
+            @NonNull String teacherId,
+            @NonNull String courseId,
+            @NonNull Callback<List<Member>> callback) {
+        // The rules only allow a teacher to list memberships that carry their own id.
+        memberships()
+                .whereEqualTo(CourseMappers.TEACHER_ID, teacherId)
+                .whereEqualTo(CourseMappers.COURSE_ID, courseId)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        fail(callback, task.getException());
+                        return;
+                    }
+                    final List<Member> members = new ArrayList<>();
+                    for (DocumentSnapshot document : task.getResult().getDocuments()) {
+                        final Member member = CourseMappers.member(document);
+                        if (member != null) {
+                            members.add(member);
+                        }
+                    }
+                    members.sort(Comparator.comparing(Member::getRollNo));
+                    callback.onResult(Outcome.success(members));
                 });
     }
 
