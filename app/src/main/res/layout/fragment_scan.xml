@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Full-screen camera. Controls sit on solid dark scrims so they read over any picture. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/scan_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Dark until the first frame arrives, so the screen does not flash the app background. -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/scan_preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/qr_dark"
+        android:importantForAccessibility="no" />
+
+    <com.presence.attendance.scan.ui.ViewfinderView
+        android:id="@+id/scan_viewfinder"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no" />
+
+    <FrameLayout
+        android:id="@+id/scan_controls"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="@dimen/screen_margin">
+
+        <ImageButton
+            android:id="@+id/scan_close"
+            android:layout_width="@dimen/touch_target"
+            android:layout_height="@dimen/touch_target"
+            android:layout_gravity="top|start"
+            android:background="@drawable/bg_scan_control"
+            android:contentDescription="@string/scan_close"
+            android:src="@drawable/ic_close" />
+
+        <ImageButton
+            android:id="@+id/scan_torch"
+            android:layout_width="@dimen/touch_target"
+            android:layout_height="@dimen/touch_target"
+            android:layout_gravity="top|end"
+            android:background="@drawable/bg_scan_control"
+            android:contentDescription="@string/scan_torch_on"
+            android:src="@drawable/ic_torch"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/scan_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:accessibilityLiveRegion="polite"
+            android:background="@drawable/bg_scan_control"
+            android:paddingHorizontal="@dimen/space_16"
+            android:paddingVertical="@dimen/space_12"
+            android:text="@string/scan_locating"
+            android:textAppearance="@style/TextAppearance.Presence.Subhead"
+            android:textColor="@color/scan_on_scrim" />
+    </FrameLayout>
+
+    <!-- Shown instead of the camera until camera and precise location are both allowed. -->
+    <ScrollView
+        android:id="@+id/scan_permission"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/background"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/screen_margin"
+            android:paddingTop="@dimen/space_48"
+            android:paddingBottom="@dimen/space_24">
+
+            <TextView
+                android:id="@+id/scan_permission_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:accessibilityHeading="true"
+                android:textAppearance="@style/TextAppearance.Presence.Title" />
+
+            <TextView
+                android:id="@+id/scan_permission_body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
+                android:textAppearance="@style/TextAppearance.Presence.Body"
+                android:textColor="@color/text_secondary" />
+
+            <com.presence.attendance.core.ui.SpringButton
+                android:id="@+id/scan_permission_allow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_32"
+                android:text="@string/scan_permission_allow" />
+
+            <com.presence.attendance.core.ui.SpringButton
+                android:id="@+id/scan_permission_settings"
+                style="@style/Widget.Presence.Button.Text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_4"
+                android:text="@string/scan_permission_settings" />
+
+            <com.presence.attendance.core.ui.SpringButton
+                android:id="@+id/scan_permission_close"
+                style="@style/Widget.Presence.Button.Text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/action_back" />
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>

@@ -6,6 +6,12 @@
     <!-- Precise location: the teacher sets the session area, the student proves they are in it. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Faculty phones never scan, so a camera is not required to install. -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
 
     <application
         android:name=".PresenceApp"

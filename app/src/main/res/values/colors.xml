@@ -28,4 +28,8 @@
     <!-- A QR code is black on white in both themes; scanners need the contrast. -->
     <color name="qr_light">#FFFFFF</color>
     <color name="qr_dark">#000000</color>
+
+    <!-- Over the camera preview, in both themes: light controls on a dark, solid scrim. -->
+    <color name="scan_scrim">#99000000</color>
+    <color name="scan_on_scrim">#FFFFFF</color>
 </resources>

@@ -24,4 +24,20 @@ public final class FakeLocationSource implements LocationSource {
         requests++;
         callback.onResult(fixOutcome);
     }
+
+    public boolean enabled = true;
+    public java.util.function.Consumer<LocationFix> listener;
+    public int stops;
+
+    @Override
+    public boolean isLocationEnabled() {
+        return enabled;
+    }
+
+    @NonNull
+    @Override
+    public Runnable observe(@NonNull java.util.function.Consumer<LocationFix> newListener) {
+        listener = newListener;
+        return () -> stops++;
+    }
 }

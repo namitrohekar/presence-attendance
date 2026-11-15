@@ -32,5 +32,13 @@ public enum AppError {
     CAMPUS_NOT_CONFIGURED,
     SESSION_NOT_FOUND,
     SESSION_ENDED,
+    ALREADY_MARKED,
+    NOT_ENROLLED,
+    MOCK_LOCATION,
+    OUTSIDE_AREA,
+    /** The rules refused a mark that passed every check the app can make: the token is stale. */
+    QR_EXPIRED,
+    /** Location is switched off in system settings. */
+    LOCATION_OFF,
     UNKNOWN
 }

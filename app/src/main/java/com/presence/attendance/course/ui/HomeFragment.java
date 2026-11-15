@@ -66,6 +66,7 @@ public final class HomeFragment extends Fragment {
         binding.homeList.setAdapter(adapter);
         binding.homeToolbar.setOnMenuItemClickListener(item -> onMenuItem(binding, item));
         binding.homeMessageAction.setOnClickListener(v -> onMessageAction());
+        binding.homeScan.setOnClickListener(v -> leave(HomeFragmentDirections.actionHomeToScan()));
         getChildFragmentManager()
                 .setFragmentResultListener(
                         RESULT_COURSES_CHANGED,
@@ -105,6 +106,8 @@ public final class HomeFragment extends Fragment {
 
         final boolean isFaculty = state.user != null && state.user.getRole() == Role.FACULTY;
         adapter.submitList(lines(state, isFaculty));
+        // The student's one primary action. Faculty show the code instead of scanning it.
+        binding.homeScan.setVisibility(visibleIf(state.user != null && !isFaculty));
 
         binding.homeProgress.setVisibility(visibleIf(state.status == HomeViewModel.Status.LOADING));
         binding.homeList.setVisibility(visibleIf(state.status == HomeViewModel.Status.CONTENT));

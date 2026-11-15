@@ -32,6 +32,12 @@ public final class AppErrorMessages {
             case CAMPUS_NOT_CONFIGURED -> R.string.error_campus_not_configured;
             case SESSION_NOT_FOUND -> R.string.error_session_not_found;
             case SESSION_ENDED -> R.string.error_session_ended;
+            case ALREADY_MARKED -> R.string.error_already_marked;
+            case NOT_ENROLLED -> R.string.error_not_enrolled;
+            case MOCK_LOCATION -> R.string.error_mock_location;
+            case OUTSIDE_AREA -> R.string.error_outside_area;
+            case QR_EXPIRED -> R.string.error_qr_expired;
+            case LOCATION_OFF -> R.string.error_location_off;
             case JOIN_CODE_NOT_FOUND -> R.string.error_join_code_not_found;
             case ALREADY_JOINED -> R.string.error_already_joined;
             case OWN_COURSE -> R.string.error_own_course;

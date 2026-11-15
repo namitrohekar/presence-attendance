@@ -5,8 +5,8 @@ import android.os.Looper;
 import androidx.annotation.NonNull;
 import com.presence.attendance.session.domain.TokenRotation;
 
-/** Runs the token rotation's timers on the main thread. */
-final class HandlerScheduler implements TokenRotation.Scheduler {
+/** Runs a ViewModel's timers on the main thread. */
+public final class HandlerScheduler implements TokenRotation.Scheduler {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
 

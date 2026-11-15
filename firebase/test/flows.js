@@ -326,7 +326,38 @@ async function endSession(db, sessionId) {
   }
 }
 
+/**
+ * FirestoreAttendanceRepository.markLive: the student's mark, after the app's own checks.
+ * Resolves to MARKED or ALREADY_MARKED; rejects if the rules refuse it.
+ */
+function markLive(db, student, session, token, fix) {
+  const ref = doc(db, 'attendance', `${session.id}_${student.uid}`);
+  return runTransaction(db, async (tx) => {
+    if ((await tx.get(ref)).exists()) {
+      return 'ALREADY_MARKED';
+    }
+    tx.set(
+      ref,
+      build('attendance.live', {
+        sessionId: session.id,
+        courseId: session.courseId,
+        teacherId: session.teacherId,
+        studentId: student.uid,
+        status: 'PRESENT',
+        source: 'LIVE',
+        token,
+        markedAt: serverTimestamp(),
+        lat: fix.lat,
+        lng: fix.lng,
+        accuracyM: fix.accuracyM,
+      }),
+    );
+    return 'MARKED';
+  });
+}
+
 module.exports = {
+  markLive,
   startSession,
   writeToken,
   endSession,

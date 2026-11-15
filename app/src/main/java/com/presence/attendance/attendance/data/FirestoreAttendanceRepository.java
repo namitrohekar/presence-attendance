@@ -1,30 +1,36 @@
 package com.presence.attendance.attendance.data;
 
+import android.os.Handler;
+import android.os.Looper;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
-import com.google.firebase.Timestamp;
-import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.Source;
 import com.presence.attendance.attendance.domain.AttendanceRecord;
 import com.presence.attendance.attendance.domain.AttendanceRepository;
+import com.presence.attendance.auth.domain.User;
+import com.presence.attendance.core.AppError;
+import com.presence.attendance.core.Callback;
 import com.presence.attendance.core.Outcome;
+import com.presence.attendance.core.data.FirebaseErrors;
 import com.presence.attendance.core.data.QueryLiveData;
-import com.presence.attendance.core.data.Snapshots;
+import com.presence.attendance.core.location.LocationFix;
+import com.presence.attendance.session.domain.Session;
 import java.util.List;
 
 /** {@link AttendanceRepository} backed by Cloud Firestore. */
 public final class FirestoreAttendanceRepository implements AttendanceRepository {
 
     private static final String ATTENDANCE = "attendance";
-    private static final String SESSION_ID = "sessionId";
-    private static final String TEACHER_ID = "teacherId";
-    private static final String STUDENT_ID = "studentId";
-    private static final String STATUS = "status";
-    private static final String MARKED_AT = "markedAt";
+
+    /** How long a LIVE mark may take before the app stops waiting for the server. */
+    private static final long MARK_BUDGET_MS = 8_000;
 
     private final FirebaseFirestore firestore;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public FirestoreAttendanceRepository(@NonNull FirebaseFirestore firestore) {
         this.firestore = firestore;
@@ -37,25 +43,78 @@ public final class FirestoreAttendanceRepository implements AttendanceRepository
         // Both equality constraints are required by the rules; the order needs the composite
         // index in firestore.indexes.json.
         return new QueryLiveData<>(
-                firestore
-                        .collection(ATTENDANCE)
-                        .whereEqualTo(SESSION_ID, sessionId)
-                        .whereEqualTo(TEACHER_ID, teacherId)
-                        .orderBy(MARKED_AT, Query.Direction.DESCENDING),
-                FirestoreAttendanceRepository::record);
+                attendance()
+                        .whereEqualTo(AttendanceMappers.SESSION_ID, sessionId)
+                        .whereEqualTo(AttendanceMappers.TEACHER_ID, teacherId)
+                        .orderBy(AttendanceMappers.MARKED_AT, Query.Direction.DESCENDING),
+                AttendanceMappers::record);
     }
 
-    /** The record in the snapshot, or null if the document is malformed. */
-    @Nullable
-    private static AttendanceRecord record(@NonNull DocumentSnapshot snapshot) {
-        final String studentId = Snapshots.string(snapshot, STUDENT_ID);
-        final AttendanceRecord.Status status =
-                AttendanceRecord.Status.fromWire(Snapshots.string(snapshot, STATUS));
-        final Timestamp markedAt =
-                snapshot.getTimestamp(MARKED_AT, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE);
-        if (studentId == null || status == null || markedAt == null) {
-            return null;
-        }
-        return new AttendanceRecord(studentId, status, markedAt.toDate().getTime());
+    @Override
+    public void hasMarked(
+            @NonNull String sessionId,
+            @NonNull String studentId,
+            @NonNull Callback<Boolean> callback) {
+        // Server only: a cached "no" must not let a second scan go ahead.
+        record(sessionId, studentId)
+                .get(Source.SERVER)
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        callback.onResult(Outcome.success(task.getResult().exists()));
+                    } else {
+                        callback.onResult(
+                                Outcome.failure(FirebaseErrors.toAppError(task.getException())));
+                    }
+                });
+    }
+
+    @Override
+    public void markLive(
+            @NonNull User student,
+            @NonNull Session session,
+            @NonNull String token,
+            @NonNull LocationFix fix,
+            @NonNull Callback<MarkResult> callback) {
+        final DocumentReference ref = record(session.getId(), student.getUid());
+        // Whichever comes first, the server's answer or the end of the budget, is delivered;
+        // the other is ignored.
+        final boolean[] answered = {false};
+        final Runnable timeout =
+                () -> {
+                    if (!answered[0]) {
+                        answered[0] = true;
+                        callback.onResult(Outcome.failure(AppError.TIMEOUT));
+                    }
+                };
+        mainHandler.postDelayed(timeout, MARK_BUDGET_MS);
+        // A transaction, not a plain set: offline it fails instead of being silently queued.
+        firestore
+                .runTransaction(transaction -> {
+                    if (transaction.get(ref).exists()) {
+                        return MarkResult.ALREADY_MARKED;
+                    }
+                    transaction.set(ref, AttendanceMappers.liveMark(student, session, token, fix));
+                    return MarkResult.MARKED;
+                })
+                .addOnCompleteListener(task -> {
+                    if (answered[0]) {
+                        return;
+                    }
+                    answered[0] = true;
+                    mainHandler.removeCallbacks(timeout);
+                    callback.onResult(
+                            task.isSuccessful()
+                                    ? Outcome.success(task.getResult())
+                                    : Outcome.failure(
+                                            FirebaseErrors.toAppError(task.getException())));
+                });
+    }
+
+    private DocumentReference record(@NonNull String sessionId, @NonNull String studentId) {
+        return attendance().document(sessionId + "_" + studentId);
+    }
+
+    private CollectionReference attendance() {
+        return firestore.collection(ATTENDANCE);
     }
 }

@@ -212,4 +212,32 @@
     <string name="error_campus_not_configured">The campus location isn\'t set up yet. Choose Here instead.</string>
     <string name="error_session_not_found">That session no longer exists.</string>
     <string name="error_session_ended">This session has ended.</string>
+    <!-- Scan -->
+    <string name="home_scan">Scan QR</string>
+    <string name="scan_close">Close scanner</string>
+    <string name="scan_torch_on">Turn torch on</string>
+    <string name="scan_torch_off">Turn torch off</string>
+    <string name="scan_locating">Getting location…</string>
+    <string name="scan_location_ready">Location ready</string>
+    <string name="scan_checking">Checking…</string>
+    <string name="scan_permission_title">Camera and precise location are needed</string>
+    <string name="scan_permission_body">The camera reads the class QR code, and your precise location shows you are in the room. An approximate location is not enough.</string>
+    <string name="scan_permission_allow">Allow</string>
+    <string name="scan_permission_settings">Open settings</string>
+    <string name="scan_location_off_title">Location is turned off</string>
+    <string name="scan_location_off_body">Turn on Location in system settings, then come back.</string>
+    <string name="scan_camera_error">The camera couldn\'t start. Close other camera apps and try again.</string>
+
+    <!-- Result -->
+    <string name="result_marked_title">Attendance marked</string>
+    <string name="result_marked_body">You\'re recorded as present for this session.</string>
+    <string name="result_rejected_title">Not marked</string>
+    <string name="action_try_scan_again">Try again</string>
+
+    <string name="error_already_marked">You\'ve already marked attendance for this session.</string>
+    <string name="error_not_enrolled">You\'re not enrolled in this course.</string>
+    <string name="error_mock_location">Mock location is turned on. Turn it off to mark attendance.</string>
+    <string name="error_outside_area">You\'re outside the allowed area</string>
+    <string name="error_qr_expired">This QR has expired. Scan the current one.</string>
+    <string name="error_location_off">Location is turned off. Turn it on in system settings.</string>
 </resources>

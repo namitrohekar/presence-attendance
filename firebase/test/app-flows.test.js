@@ -170,17 +170,27 @@ describe('app flow: a session from start to end', () => {
     await assertSucceeds(flows.writeToken(faculty, SESSION_ID, TOKEN_1));
     await assertSucceeds(flows.writeToken(faculty, SESSION_ID, TOKEN_2));
 
-    // An enrolled student inside the area marks with the current token.
+    // An enrolled student inside the area scans the current code. The app first reads its own
+    // record (not found) and the session (allowed for a member), then marks.
     const student = t.as(STUDENT);
-    const mark = h.liveMark(STUDENT, { sessionId: SESSION_ID, token: TOKEN_2 });
-    await assertSucceeds(
-      runTransaction(student, async (tx) => {
-        const ref = doc(student, 'attendance', `${SESSION_ID}_${STUDENT.uid}`);
-        if (!(await tx.get(ref)).exists()) {
-          tx.set(ref, mark);
-        }
-      }),
-    );
+    const own = doc(student, 'attendance', `${SESSION_ID}_${STUDENT.uid}`);
+    expect((await assertSucceeds(getDoc(own))).exists()).toBe(false);
+    const snapshot = await assertSucceeds(getDoc(doc(student, 'sessions', SESSION_ID)));
+    const session = { id: snapshot.id, ...snapshot.data() };
+    expect(await assertSucceeds(flows.markLive(student, STUDENT, session, TOKEN_2, h.INSIDE))).toBe('MARKED');
+    expect(await assertSucceeds(flows.markLive(student, STUDENT, session, TOKEN_2, h.INSIDE))).toBe('ALREADY_MARKED');
+
+    // A student who is not enrolled cannot even read the session, which is how the app
+    // knows to say "not enrolled".
+    await assertFails(getDoc(doc(t.as(h.OUTSIDER), 'sessions', SESSION_ID)));
+
+    // An old code: the first token is still inside 20 s here, so age it, then try it.
+    await t.seed({ [`sessions/${SESSION_ID}/tokens/${TOKEN_1}`]: { validFrom: h.ago(21 * h.SECOND) } });
+    const other = t.as(h.OTHER_STUDENT);
+    await assertFails(flows.markLive(other, h.OTHER_STUDENT, session, TOKEN_1, h.INSIDE));
+    // Outside the area with the current code.
+    const outside = { ...h.INSIDE, lat: h.INSIDE.lat + 0.01 };
+    await assertFails(flows.markLive(other, h.OTHER_STUDENT, session, TOKEN_2, outside));
 
     // The live roster query.
     const roster = query(
