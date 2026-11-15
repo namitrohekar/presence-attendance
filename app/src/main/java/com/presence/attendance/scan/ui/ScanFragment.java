@@ -145,6 +145,8 @@ public final class ScanFragment extends Fragment {
         final boolean ready = cameraGranted && location.hasPrecisePermission();
         final boolean locationOn = location.isLocationEnabled();
         bound.scanPermission.setVisibility(ready && locationOn ? View.GONE : View.VISIBLE);
+        // Covered by the explanation, so hidden from TalkBack as well.
+        bound.scanControls.setVisibility(ready && locationOn ? View.VISIBLE : View.GONE);
         if (!ready) {
             bound.scanPermissionTitle.setText(R.string.scan_permission_title);
             bound.scanPermissionBody.setText(R.string.scan_permission_body);

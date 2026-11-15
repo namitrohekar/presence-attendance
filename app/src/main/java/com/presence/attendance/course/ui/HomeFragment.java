@@ -50,6 +50,10 @@ public final class HomeFragment extends Fragment {
         final FragmentHomeBinding binding = FragmentHomeBinding.bind(view);
         WindowInsetsPadding.applyHorizontal(binding.getRoot());
         WindowInsetsPadding.applyBottom(binding.homeContent);
+        // The content is laid out taller than the screen by however far the title can still
+        // collapse, so the button anchored to its bottom is lifted back into view.
+        binding.homeAppBar.addOnOffsetChangedListener((bar, offset) ->
+                binding.homeScan.setTranslationY(-(bar.getTotalScrollRange() + offset)));
 
         viewModel =
                 new ViewModelProvider(
