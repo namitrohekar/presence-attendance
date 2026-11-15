@@ -35,7 +35,8 @@
             android:stepSize="5"
             android:valueFrom="5"
             android:valueTo="180"
-            app:labelBehavior="gone" />
+            app:labelBehavior="gone"
+            app:tickVisible="false" />
 
         <TextView
             style="@style/Widget.Presence.FieldLabel"
@@ -87,7 +88,8 @@
                 android:stepSize="10"
                 android:valueFrom="50"
                 android:valueTo="250"
-                app:labelBehavior="gone" />
+                app:labelBehavior="gone"
+            app:tickVisible="false" />
 
             <TextView
                 android:id="@+id/start_location_status"
