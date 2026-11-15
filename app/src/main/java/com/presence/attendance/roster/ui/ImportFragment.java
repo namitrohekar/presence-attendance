@@ -130,8 +130,10 @@ public final class ImportFragment extends Fragment {
         final List<Line> others = new ArrayList<>();
         for (RosterCsv.Row row : state.rows) {
             final Result result = state.results.get(row.line);
+            // A malformed row has no trustworthy address, so it is named by its position.
+            final boolean unnamed = row.email.isEmpty() || row.check == RosterCsv.Check.MALFORMED;
             final String title =
-                    row.email.isEmpty() ? getString(R.string.import_row_line, row.line) : row.email;
+                    unnamed ? getString(R.string.import_row_line, row.line) : row.email;
             final String status = getString(result != null ? label(result) : label(row.check));
             final String detail =
                     row.rollNo.isEmpty()
