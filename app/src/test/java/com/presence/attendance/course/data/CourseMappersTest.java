@@ -1,6 +1,7 @@
 package com.presence.attendance.course.data;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
 import com.presence.attendance.testutil.DocumentContract;
 import com.presence.attendance.testutil.Fixtures;
@@ -11,10 +12,6 @@ import org.junit.Test;
 
 /** The documents the app writes must have exactly the fields the security rules whitelist. */
 public final class CourseMappersTest {
-
-    // The join flow moves to the roster-verified membership shape in Stage C of the identity
-    // extension. Until then the mapper is held to the shape it still writes.
-    private static final String LEGACY_MEMBERSHIP = "memberships.legacy";
 
     @Test
     public void aNewCourseHasExactlyTheContractFields() throws IOException {
@@ -36,25 +33,24 @@ public final class CourseMappersTest {
     }
 
     @Test
-    public void aMembershipWithoutARollNumberHasOnlyTheRequiredFields() throws IOException {
+    public void aMembershipCarriesTheStudentsRegisteredRollNumberAndCohort() throws IOException {
         final Map<String, Object> document =
-                CourseMappers.newMembership(Fixtures.STUDENT, Fixtures.JOIN_CODE, null);
+                CourseMappers.newMembership(Fixtures.STUDENT, Fixtures.JOIN_CODE);
         assertEquals(
-                DocumentContract.fields(LEGACY_MEMBERSHIP, false),
-                new TreeSet<>(document.keySet()));
+                DocumentContract.fields("memberships", false), new TreeSet<>(document.keySet()));
         assertEquals("the teacher comes from the join code", "teacherA", document.get("teacherId"));
         assertEquals("studentA", document.get("studentId"));
         assertEquals(Fixtures.STUDENT.getName(), document.get("name"));
         assertEquals(Fixtures.STUDENT.getEmail(), document.get("email"));
+        assertEquals("262011001", document.get("rollNo"));
+        assertEquals("MC26", document.get("cohort"));
         assertEquals("ABC234", document.get("joinCode"));
     }
 
     @Test
-    public void aMembershipWithARollNumberAddsOnlyThatField() throws IOException {
-        final Map<String, Object> document =
-                CourseMappers.newMembership(Fixtures.STUDENT, Fixtures.JOIN_CODE, "21CS045");
-        assertEquals(
-                DocumentContract.fields(LEGACY_MEMBERSHIP, true), new TreeSet<>(document.keySet()));
-        assertEquals("21CS045", document.get("rollNo"));
+    public void anUnregisteredAccountCannotBuildAMembership() {
+        assertThrows(
+                IllegalStateException.class,
+                () -> CourseMappers.newMembership(Fixtures.TEACHER, Fixtures.JOIN_CODE));
     }
 }

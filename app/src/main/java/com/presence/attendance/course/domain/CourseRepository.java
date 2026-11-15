@@ -2,7 +2,6 @@ package com.presence.attendance.course.domain;
 
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import com.presence.attendance.auth.domain.User;
 import com.presence.attendance.core.Callback;
 import java.util.List;
@@ -31,13 +30,13 @@ public interface CourseRepository {
     void findJoinCode(@NonNull String joinCode, @NonNull Callback<JoinCodeInfo> callback);
 
     /**
-     * Enrols the student in the course the join code resolves to. Fails with {@code ALREADY_JOINED}
-     * if they are already a member.
+     * Enrols a registered student in the course the join code resolves to, with the roll number and
+     * cohort from their registration. Fails with {@code ALREADY_JOINED} if they are already a
+     * member.
      */
     @MainThread
     void joinCourse(
             @NonNull User student,
             @NonNull JoinCodeInfo joinCode,
-            @Nullable String rollNo,
             @NonNull Callback<JoinCodeInfo> callback);
 }

@@ -13,9 +13,16 @@ public enum AppError {
     SIGN_IN_CANCELLED,
     SIGN_IN_FAILED,
     NO_GOOGLE_ACCOUNT,
-    ACCOUNT_NOT_ALLOWED,
+    /** Neither on the faculty allowlist nor an address in the student domain. */
+    NOT_VJTI_ACCOUNT,
+    /** A student address that has not registered a roll number yet. Not shown as an error. */
+    REGISTRATION_REQUIRED,
+    NOT_ON_ROSTER,
+    ROLL_MISMATCH,
+    DUPLICATE_CLAIM,
     JOIN_CODE_NOT_FOUND,
     ALREADY_JOINED,
     OWN_COURSE,
+    FILE_UNREADABLE,
     UNKNOWN
 }

@@ -4,8 +4,6 @@
   "courses": "teacherId,name,code,threshold,joinCode,createdAt",
   "joinCodes": "courseId,courseName,teacherName,teacherId",
   "memberships": "courseId,teacherId,studentId,name,email,rollNo,cohort,joinCode,joinedAt",
-  "memberships.legacy": "courseId,teacherId,studentId,name,email,joinCode,joinedAt",
-  "memberships.legacy.optional": "rollNo",
   "studentRegistry": "email,rollNo,cohort,addedBy,addedAt,revision",
   "studentRegistry.claim": "registeredUid,registeredAt",
   "rollIndex": "email",

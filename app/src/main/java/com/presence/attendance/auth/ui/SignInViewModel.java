@@ -9,13 +9,18 @@ import com.presence.attendance.auth.domain.AuthRepository;
 import com.presence.attendance.core.AppError;
 import com.presence.attendance.core.Outcome;
 
-/** State machine of the sign-in screen: IDLE -> SIGNING_IN -> SIGNED_IN, or back to IDLE. */
+/**
+ * State machine of the sign-in screen: IDLE -> SIGNING_IN -> SIGNED_IN or NEEDS_REGISTRATION, or
+ * back to IDLE with the reason.
+ */
 public final class SignInViewModel extends ViewModel {
 
     public enum Status {
         IDLE,
         SIGNING_IN,
-        SIGNED_IN
+        SIGNED_IN,
+        /** A student address that has not linked a roll number yet. */
+        NEEDS_REGISTRATION
     }
 
     /** Immutable screen state. {@code error} is only ever set together with IDLE. */
@@ -58,10 +63,14 @@ public final class SignInViewModel extends ViewModel {
         }
         auth.signInWithGoogle(
                 idToken.getValue(),
-                outcome ->
-                        state.setValue(
-                                outcome.isSuccess()
-                                        ? new State(Status.SIGNED_IN, null)
-                                        : new State(Status.IDLE, outcome.getError())));
+                outcome -> {
+                    if (outcome.isSuccess()) {
+                        state.setValue(new State(Status.SIGNED_IN, null));
+                    } else if (outcome.getError() == AppError.REGISTRATION_REQUIRED) {
+                        state.setValue(new State(Status.NEEDS_REGISTRATION, null));
+                    } else {
+                        state.setValue(new State(Status.IDLE, outcome.getError()));
+                    }
+                });
     }
 }

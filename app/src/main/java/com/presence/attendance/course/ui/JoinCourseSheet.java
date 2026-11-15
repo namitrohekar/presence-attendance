@@ -41,12 +41,10 @@ public final class JoinCourseSheet extends SheetFragment {
                 });
 
         final Runnable lookUp = () -> viewModel.lookUp(binding.joinCode.getText().toString());
-        final Runnable join = () -> viewModel.join(binding.joinRollNo.getText().toString());
         binding.joinContinue.setOnClickListener(v -> lookUp.run());
-        binding.joinSubmit.setOnClickListener(v -> join.run());
+        binding.joinSubmit.setOnClickListener(v -> viewModel.join());
         binding.joinBack.setOnClickListener(v -> viewModel.useDifferentCode());
         runOnDone(binding.joinCode, lookUp);
-        runOnDone(binding.joinRollNo, join);
         viewModel.getState().observe(getViewLifecycleOwner(), state -> render(binding, state));
     }
 
@@ -67,6 +65,7 @@ public final class JoinCourseSheet extends SheetFragment {
             binding.joinCourseName.setText(state.course.getCourseName());
             binding.joinTeacher.setText(
                     getString(R.string.join_taught_by, state.course.getTeacherName()));
+            binding.joinAs.setText(getString(R.string.join_as_roll, state.rollNo));
             binding.joinSubmit.setEnabled(enabled);
             binding.joinSubmit.setText(
                     state.busy ? R.string.join_submitting : R.string.join_submit);

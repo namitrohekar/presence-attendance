@@ -84,6 +84,19 @@ public final class HomeViewModelTest {
     }
 
     @Test
+    public void anUnregisteredStudentIsSentToRegistration() {
+        auth.userOutcome = Outcome.failure(AppError.REGISTRATION_REQUIRED);
+        assertEquals(Status.REGISTRATION_REQUIRED, load().status);
+        assertTrue(courses.calls.isEmpty());
+    }
+
+    @Test
+    public void anAccountThatIsNoLongerEligibleIsSignedOut() {
+        auth.userOutcome = Outcome.failure(AppError.NOT_VJTI_ACCOUNT);
+        assertEquals(Status.SIGNED_OUT, load().status);
+    }
+
+    @Test
     public void refreshPicksUpANewCourse() {
         auth.signedInAs(Fixtures.TEACHER);
         final HomeViewModel viewModel = new HomeViewModel(auth, courses);

@@ -88,18 +88,12 @@
                 android:textColor="@color/text_secondary" />
 
             <TextView
-                style="@style/Widget.Presence.FieldLabel"
-                android:labelFor="@id/join_roll_no"
-                android:text="@string/join_roll_no_label" />
-
-            <EditText
-                android:id="@+id/join_roll_no"
-                style="@style/Widget.Presence.TextField"
-                android:autofillHints=""
-                android:imeOptions="actionDone"
-                android:importantForAutofill="no"
-                android:inputType="textCapCharacters|textNoSuggestions"
-                android:maxLength="@integer/roll_no_max" />
+                android:id="@+id/join_as"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_20"
+                android:fontFeatureSettings="tnum"
+                android:textAppearance="@style/TextAppearance.Presence.Body" />
 
             <TextView
                 android:id="@+id/join_confirm_status"

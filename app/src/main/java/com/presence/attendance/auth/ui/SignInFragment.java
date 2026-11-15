@@ -8,6 +8,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.NavDestination;
+import androidx.navigation.NavDirections;
 import androidx.navigation.fragment.NavHostFragment;
 import com.presence.attendance.BuildConfig;
 import com.presence.attendance.R;
@@ -57,11 +58,17 @@ public final class SignInFragment extends Fragment {
         binding.signInProgress.setVisibility(signingIn ? View.VISIBLE : View.GONE);
         if (state.error != null) {
             showError(binding, state.error);
+            if (state.error == AppError.NOT_VJTI_ACCOUNT) {
+                // The rejected account was signed out; let the next attempt pick another one.
+                GoogleIdTokenRequester.clearState(requireContext());
+            }
         } else {
             binding.signInError.setVisibility(View.GONE);
         }
         if (state.status == SignInViewModel.Status.SIGNED_IN) {
-            openHome();
+            leave(SignInFragmentDirections.actionSignInToHome());
+        } else if (state.status == SignInViewModel.Status.NEEDS_REGISTRATION) {
+            leave(SignInFragmentDirections.actionSignInToRegistration());
         }
     }
 
@@ -70,11 +77,11 @@ public final class SignInFragment extends Fragment {
         binding.signInError.setVisibility(View.VISIBLE);
     }
 
-    private void openHome() {
+    private void leave(@NonNull NavDirections directions) {
         final NavController navController = NavHostFragment.findNavController(this);
         final NavDestination current = navController.getCurrentDestination();
         if (current != null && current.getId() == R.id.signInFragment) {
-            navController.navigate(SignInFragmentDirections.actionSignInToHome());
+            navController.navigate(directions);
         }
     }
 }

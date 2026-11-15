@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.NavDestination;
+import androidx.navigation.NavDirections;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.google.android.material.divider.MaterialDividerItemDecoration;
@@ -78,7 +79,11 @@ public final class HomeFragment extends Fragment {
             @NonNull HomeViewModel.State state) {
         if (state.status == HomeViewModel.Status.SIGNED_OUT) {
             GoogleIdTokenRequester.clearState(requireContext());
-            openSignIn();
+            leave(HomeFragmentDirections.actionHomeToSignIn());
+            return;
+        }
+        if (state.status == HomeViewModel.Status.REGISTRATION_REQUIRED) {
+            leave(HomeFragmentDirections.actionHomeToRegistration());
             return;
         }
         renderPrimaryAction(
@@ -159,29 +164,39 @@ public final class HomeFragment extends Fragment {
 
     private void showAccountMenu(@NonNull View anchor) {
         final HomeViewModel.State state = viewModel.getState().getValue();
+        final User user = state != null ? state.user : null;
         final PopupMenu menu = new PopupMenu(requireContext(), anchor);
         menu.inflate(R.menu.menu_account);
         final MenuItem email = menu.getMenu().findItem(R.id.account_email);
-        if (state != null && state.user != null) {
-            email.setTitle(state.user.getEmail());
+        if (user != null) {
+            email.setTitle(user.getEmail());
         } else {
             email.setVisible(false);
         }
+        // The roster and the alerts are faculty tools; the rules refuse them to students anyway.
+        final boolean isFaculty = user != null && user.getRole() == Role.FACULTY;
+        menu.getMenu().findItem(R.id.action_roster).setVisible(isFaculty);
+        menu.getMenu().findItem(R.id.action_alerts).setVisible(isFaculty);
         menu.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.action_sign_out) {
                 viewModel.signOut();
-                return true;
+            } else if (item.getItemId() == R.id.action_roster) {
+                leave(HomeFragmentDirections.actionHomeToRoster());
+            } else if (item.getItemId() == R.id.action_alerts) {
+                leave(HomeFragmentDirections.actionHomeToAlerts());
+            } else {
+                return false;
             }
-            return false;
+            return true;
         });
         menu.show();
     }
 
-    private void openSignIn() {
+    private void leave(@NonNull NavDirections directions) {
         final NavController navController = NavHostFragment.findNavController(this);
         final NavDestination current = navController.getCurrentDestination();
         if (current != null && current.getId() == R.id.homeFragment) {
-            navController.navigate(HomeFragmentDirections.actionHomeToSignIn());
+            navController.navigate(directions);
         }
     }
 

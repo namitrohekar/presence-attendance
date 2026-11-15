@@ -25,7 +25,7 @@ public final class FakeCourseRepository implements CourseRepository {
     public Outcome<JoinCodeInfo> joinOutcome = Outcome.failure(AppError.UNKNOWN);
 
     public final List<String> calls = new ArrayList<>();
-    @Nullable public String lastRollNo;
+    @Nullable public User lastJoiner;
 
     @Override
     public void loadTeacherCourses(
@@ -61,10 +61,9 @@ public final class FakeCourseRepository implements CourseRepository {
     public void joinCourse(
             @NonNull User student,
             @NonNull JoinCodeInfo joinCode,
-            @Nullable String rollNo,
             @NonNull Callback<JoinCodeInfo> callback) {
         calls.add("joinCourse:" + joinCode.getCode());
-        lastRollNo = rollNo;
+        lastJoiner = student;
         callback.onResult(joinOutcome);
     }
 }

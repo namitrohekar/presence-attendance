@@ -26,6 +26,7 @@ final class CourseMappers {
     private static final String TEACHER_NAME = "teacherName";
     private static final String EMAIL = "email";
     private static final String ROLL_NO = "rollNo";
+    private static final String COHORT = "cohort";
     private static final String JOINED_AT = "joinedAt";
 
     private CourseMappers() {}
@@ -83,20 +84,28 @@ final class CourseMappers {
         return document;
     }
 
+    /**
+     * @throws IllegalStateException if the student is not registered; the UI never offers joining
+     *     to an unregistered account
+     */
     @NonNull
     static Map<String, Object> newMembership(
-            @NonNull User student, @NonNull JoinCodeInfo joinCode, @Nullable String rollNo) {
+            @NonNull User student, @NonNull JoinCodeInfo joinCode) {
+        final String rollNo = student.getRollNo();
+        final String cohort = student.getCohort();
+        if (rollNo == null || cohort == null) {
+            throw new IllegalStateException("Only a registered student can join a course");
+        }
         final Map<String, Object> document = new HashMap<>();
         document.put(COURSE_ID, joinCode.getCourseId());
         document.put(TEACHER_ID, joinCode.getTeacherId());
         document.put(STUDENT_ID, student.getUid());
         document.put(NAME, student.getName());
         document.put(EMAIL, student.getEmail());
+        document.put(ROLL_NO, rollNo);
+        document.put(COHORT, cohort);
         document.put(JOIN_CODE, joinCode.getCode());
         document.put(JOINED_AT, FieldValue.serverTimestamp());
-        if (rollNo != null) {
-            document.put(ROLL_NO, rollNo);
-        }
         return document;
     }
 }

@@ -15,6 +15,27 @@
             app:destination="@id/homeFragment"
             app:popUpTo="@id/signInFragment"
             app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_signIn_to_registration"
+            app:destination="@id/registrationFragment"
+            app:popUpTo="@id/signInFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/registrationFragment"
+        android:name="com.presence.attendance.auth.ui.RegistrationFragment"
+        tools:layout="@layout/fragment_registration">
+        <action
+            android:id="@+id/action_registration_to_home"
+            app:destination="@id/homeFragment"
+            app:popUpTo="@id/registrationFragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_registration_to_signIn"
+            app:destination="@id/signInFragment"
+            app:popUpTo="@id/registrationFragment"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment
@@ -26,5 +47,35 @@
             app:destination="@id/signInFragment"
             app:popUpTo="@id/homeFragment"
             app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_home_to_registration"
+            app:destination="@id/registrationFragment"
+            app:popUpTo="@id/homeFragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_home_to_roster"
+            app:destination="@id/rosterFragment" />
+        <action
+            android:id="@+id/action_home_to_alerts"
+            app:destination="@id/alertsFragment" />
     </fragment>
+
+    <fragment
+        android:id="@+id/rosterFragment"
+        android:name="com.presence.attendance.roster.ui.RosterFragment"
+        tools:layout="@layout/fragment_list">
+        <action
+            android:id="@+id/action_roster_to_import"
+            app:destination="@id/importFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/importFragment"
+        android:name="com.presence.attendance.roster.ui.ImportFragment"
+        tools:layout="@layout/fragment_list" />
+
+    <fragment
+        android:id="@+id/alertsFragment"
+        android:name="com.presence.attendance.roster.ui.AlertsFragment"
+        tools:layout="@layout/fragment_list" />
 </navigation>

@@ -24,7 +24,9 @@ public final class HomeViewModel extends ViewModel {
         CONTENT,
         EMPTY,
         ERROR,
-        SIGNED_OUT
+        SIGNED_OUT,
+        /** A signed-in student address that has not linked a roll number yet. */
+        REGISTRATION_REQUIRED
     }
 
     /** Immutable screen state. {@code user} is known in every state reached after loading it. */
@@ -84,14 +86,15 @@ public final class HomeViewModel extends ViewModel {
     private void onUser(@NonNull Outcome<User> outcome) {
         if (!outcome.isSuccess()) {
             final AppError error = outcome.getError();
-            final boolean signedOut =
-                    error == AppError.UNAUTHENTICATED || error == AppError.ACCOUNT_NOT_ALLOWED;
-            state.setValue(
-                    new State(
-                            signedOut ? Status.SIGNED_OUT : Status.ERROR,
-                            null,
-                            Collections.emptyList(),
-                            error));
+            final Status status;
+            if (error == AppError.REGISTRATION_REQUIRED) {
+                status = Status.REGISTRATION_REQUIRED;
+            } else if (error == AppError.UNAUTHENTICATED || error == AppError.NOT_VJTI_ACCOUNT) {
+                status = Status.SIGNED_OUT;
+            } else {
+                status = Status.ERROR;
+            }
+            state.setValue(new State(status, null, Collections.emptyList(), error));
             return;
         }
         final User user = outcome.getValue();

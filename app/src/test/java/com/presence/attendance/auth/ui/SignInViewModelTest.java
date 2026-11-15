@@ -64,11 +64,20 @@ public final class SignInViewModelTest {
 
     @Test
     public void aRejectedAccountIsShownAndStaysOnSignIn() {
-        auth.signInOutcome = Outcome.failure(AppError.ACCOUNT_NOT_ALLOWED);
+        auth.signInOutcome = Outcome.failure(AppError.NOT_VJTI_ACCOUNT);
         viewModel.onSignInStarted();
         viewModel.onGoogleIdToken(Outcome.success("google-id-token"));
         assertEquals(Status.IDLE, state().status);
-        assertEquals(AppError.ACCOUNT_NOT_ALLOWED, state().error);
+        assertEquals(AppError.NOT_VJTI_ACCOUNT, state().error);
+    }
+
+    @Test
+    public void aStudentWhoHasNotRegisteredIsSentToRegistrationNotShownAnError() {
+        auth.signInOutcome = Outcome.failure(AppError.REGISTRATION_REQUIRED);
+        viewModel.onSignInStarted();
+        viewModel.onGoogleIdToken(Outcome.success("google-id-token"));
+        assertEquals(Status.NEEDS_REGISTRATION, state().status);
+        assertNull(state().error);
     }
 
     @Test

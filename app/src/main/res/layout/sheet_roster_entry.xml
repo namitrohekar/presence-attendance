@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/entry_scroll"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clipToPadding="false">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/screen_margin"
+        android:paddingBottom="@dimen/space_24">
+
+        <include layout="@layout/view_sheet_handle" />
+
+            <TextView
+                android:id="@+id/entry_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                android:accessibilityHeading="true"
+                android:textAppearance="@style/TextAppearance.Presence.Title" />
+
+            <TextView
+                android:id="@+id/entry_note"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_4"
+                android:textAppearance="@style/TextAppearance.Presence.Subhead"
+                android:textColor="@color/text_secondary" />
+
+            <TextView
+                style="@style/Widget.Presence.FieldLabel"
+                android:labelFor="@id/entry_roll"
+                android:text="@string/add_roll_label" />
+
+            <EditText
+                android:id="@+id/entry_roll"
+                style="@style/Widget.Presence.TextField"
+                android:autofillHints=""
+                android:importantForAutofill="no"
+                android:fontFeatureSettings="tnum"
+                android:imeOptions="actionNext"
+                android:inputType="number"
+                android:maxLength="@integer/roll_no_length" />
+
+            <TextView
+                android:id="@+id/entry_roll_error"
+                style="@style/Widget.Presence.InlineError"
+                android:text="@string/add_roll_invalid" />
+
+            <TextView
+                style="@style/Widget.Presence.FieldLabel"
+                android:labelFor="@id/entry_cohort"
+                android:text="@string/add_cohort_label" />
+
+            <EditText
+                android:id="@+id/entry_cohort"
+                style="@style/Widget.Presence.TextField"
+                android:autofillHints=""
+                android:importantForAutofill="no"
+                android:imeOptions="actionNext"
+                android:inputType="textCapCharacters|textNoSuggestions"
+                android:maxLength="@integer/cohort_max" />
+
+            <TextView
+                android:id="@+id/entry_cohort_error"
+                style="@style/Widget.Presence.InlineError"
+                android:text="@string/add_cohort_invalid" />
+
+            <TextView
+                style="@style/Widget.Presence.FieldLabel"
+                android:labelFor="@id/entry_reason"
+                android:text="@string/entry_reason_label" />
+
+            <EditText
+                android:id="@+id/entry_reason"
+                style="@style/Widget.Presence.TextField"
+                android:autofillHints=""
+                android:importantForAutofill="no"
+                android:imeOptions="actionDone"
+                android:inputType="textCapSentences"
+                android:maxLength="@integer/note_max" />
+
+            <TextView
+                android:id="@+id/entry_reason_error"
+                style="@style/Widget.Presence.InlineError"
+                android:text="@string/entry_reason_missing" />
+
+            <TextView
+                android:id="@+id/entry_status"
+                style="@style/Widget.Presence.InlineError"
+                android:layout_marginTop="@dimen/space_20" />
+
+            <com.presence.attendance.core.ui.SpringButton
+                android:id="@+id/entry_save"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_24"
+                android:text="@string/entry_save" />
+
+            <com.presence.attendance.core.ui.SpringButton
+                android:id="@+id/entry_release"
+                style="@style/Widget.Presence.Button.Text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_4"
+                android:text="@string/entry_release" />
+
+            <com.presence.attendance.core.ui.SpringButton
+                android:id="@+id/entry_remove"
+                style="@style/Widget.Presence.Button.Text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_4"
+                android:text="@string/entry_remove" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

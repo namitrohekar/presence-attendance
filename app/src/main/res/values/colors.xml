@@ -20,4 +20,8 @@
     <color name="google_button_fill">#FFFFFF</color>
     <color name="google_button_stroke">#747775</color>
     <color name="google_button_text">#1F1F1F</color>
+    <!-- Tinted fills behind badge text. The text itself uses the primary text colour (D-006). -->
+    <color name="badge_success">#2E34C759</color>
+    <color name="badge_warning">#33FF9500</color>
+    <color name="badge_danger">#29FF3B30</color>
 </resources>

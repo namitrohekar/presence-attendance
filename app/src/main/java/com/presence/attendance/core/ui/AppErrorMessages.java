@@ -21,7 +21,12 @@ public final class AppErrorMessages {
             case UNAUTHENTICATED -> R.string.error_unauthenticated;
             case SIGN_IN_CANCELLED, SIGN_IN_FAILED -> R.string.error_sign_in_failed;
             case NO_GOOGLE_ACCOUNT -> R.string.error_no_google_account;
-            case ACCOUNT_NOT_ALLOWED -> R.string.error_account_not_allowed;
+            case NOT_VJTI_ACCOUNT -> R.string.error_not_vjti_account;
+            case REGISTRATION_REQUIRED -> R.string.error_registration_required;
+            case NOT_ON_ROSTER -> R.string.error_not_on_roster;
+            case ROLL_MISMATCH -> R.string.error_roll_mismatch;
+            case DUPLICATE_CLAIM -> R.string.error_duplicate_claim;
+            case FILE_UNREADABLE -> R.string.error_file_unreadable;
             case JOIN_CODE_NOT_FOUND -> R.string.error_join_code_not_found;
             case ALREADY_JOINED -> R.string.error_already_joined;
             case OWN_COURSE -> R.string.error_own_course;

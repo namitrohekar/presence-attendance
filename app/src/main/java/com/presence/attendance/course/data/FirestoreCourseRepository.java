@@ -161,7 +161,6 @@ public final class FirestoreCourseRepository implements CourseRepository {
     public void joinCourse(
             @NonNull User student,
             @NonNull JoinCodeInfo joinCode,
-            @Nullable String rollNo,
             @NonNull Callback<JoinCodeInfo> callback) {
         final DocumentReference membership =
                 memberships().document(joinCode.getCourseId() + "_" + student.getUid());
@@ -172,8 +171,7 @@ public final class FirestoreCourseRepository implements CourseRepository {
                     if (transaction.get(membership).exists()) {
                         return false;
                     }
-                    transaction.set(
-                            membership, CourseMappers.newMembership(student, joinCode, rollNo));
+                    transaction.set(membership, CourseMappers.newMembership(student, joinCode));
                     return true;
                 })
                 .addOnCompleteListener(task -> {

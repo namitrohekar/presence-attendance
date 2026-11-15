@@ -47,7 +47,7 @@
     <string name="join_checking">Checking…</string>
     <string name="join_offline">You\'re offline. Connect to the internet to join a course.</string>
     <string name="join_taught_by">Taught by %1$s</string>
-    <string name="join_roll_no_label">Roll number (optional)</string>
+    <string name="join_as_roll">You\'ll join as roll number %1$s.</string>
     <string name="join_submit">Join course</string>
     <string name="join_submitting">Joining…</string>
     <string name="join_different_code">Use a different code</string>
@@ -60,9 +60,100 @@
     <string name="error_unauthenticated">You\'ve been signed out. Sign in again.</string>
     <string name="error_sign_in_failed">Couldn\'t sign in. Try again.</string>
     <string name="error_no_google_account">No Google account on this device. Add one in Settings, then try again.</string>
-    <string name="error_account_not_allowed">This account can\'t be used with Presence.</string>
+    <string name="error_not_vjti_account">Please sign in using your official VJTI student ID.</string>
+    <string name="error_registration_required">Finish registering to continue.</string>
+    <string name="error_not_on_roster">You\'re not on the class roster yet. Ask your teacher to add you.</string>
+    <string name="error_roll_mismatch">That roll number doesn\'t match the roster for this account.</string>
+    <string name="error_duplicate_claim">This student record is registered to another sign-in. Ask your teacher to release it.</string>
+    <string name="error_file_unreadable">Couldn\'t read that file. Choose a CSV file under 256 KB.</string>
     <string name="error_join_code_not_found">No course uses that code. Check it with your teacher.</string>
     <string name="error_already_joined">You\'ve already joined this course.</string>
     <string name="error_own_course">You teach this course, so you can\'t join it.</string>
     <string name="error_unknown">Something went wrong. Try again.</string>
+    <!-- Shared -->
+    <string name="action_back">Back</string>
+    <string name="state_loading">Loading</string>
+
+    <!-- Registration -->
+    <string name="register_title">Register</string>
+    <string name="register_signed_in_as">Signed in as %1$s. Enter your roll number once to link it to this account.</string>
+    <string name="register_roll_invalid">Enter your 9-digit roll number.</string>
+    <string name="register_submit">Register</string>
+    <string name="register_submitting">Checking…</string>
+    <string name="register_offline">You\'re offline. Connect to the internet to register.</string>
+    <string name="register_different_account">Use a different account</string>
+
+    <!-- Roster (faculty) -->
+    <string name="roster_title">Roster</string>
+    <string name="roster_import">Import CSV</string>
+    <string name="roster_empty_title">No students yet</string>
+    <string name="roster_empty_body">Add students one at a time, or import a class list as CSV with the columns email, rollNo, cohort.</string>
+    <string name="roster_error_title">Couldn\'t load the roster</string>
+    <string name="roster_registered">Registered</string>
+    <string name="roster_cohort_header">Cohort %1$s</string>
+    <string name="roster_offline">You\'re offline. Connect to the internet to change the roster.</string>
+    <string name="add_title">Add student</string>
+    <string name="add_email_label">Official email, ending in @mc.vjti.ac.in</string>
+    <string name="add_roll_label">Roll number</string>
+    <string name="add_cohort_label">Cohort, for example MC26</string>
+    <string name="add_email_invalid">Enter an address ending in @mc.vjti.ac.in.</string>
+    <string name="add_roll_invalid">Enter the 9-digit roll number.</string>
+    <string name="add_cohort_invalid">Use 2 to 8 capital letters and digits.</string>
+    <string name="add_email_exists">This address is already on the roster.</string>
+    <string name="add_roll_taken">This roll number belongs to another student in this cohort.</string>
+    <string name="add_submit">Add student</string>
+    <string name="add_submitting">Adding…</string>
+    <string name="entry_registered_note">Registered. A correction releases the registration, and the student registers again.</string>
+    <string name="entry_unregistered_note">Not registered yet.</string>
+    <string name="entry_reason_label">Reason (kept in the audit log)</string>
+    <string name="entry_reason_missing">Enter a reason.</string>
+    <string name="entry_unchanged">Change the roll number or cohort first.</string>
+    <string name="entry_gone">This student is no longer on the roster.</string>
+    <string name="entry_save">Save correction</string>
+    <string name="entry_saving">Saving…</string>
+    <string name="entry_release">Release registration</string>
+    <string name="entry_remove">Remove from roster</string>
+
+    <!-- CSV import -->
+    <string name="import_title">Import class list</string>
+    <string name="import_invalid_file">That file has no rows, or more than 500. Expected the columns email, rollNo, cohort.</string>
+    <string name="import_summary">Ready: %1$d · Rejected: %2$d · Already on the roster: %3$d</string>
+    <plurals name="import_button">
+        <item quantity="one">Import %1$d student</item>
+        <item quantity="other">Import %1$d students</item>
+    </plurals>
+    <string name="import_nothing">Nothing to import</string>
+    <string name="import_progress">Importing %1$d of %2$d…</string>
+    <string name="import_done_summary">Imported: %1$d · Not imported: %2$d</string>
+    <!-- Roll number, then cohort. -->
+    <string name="import_row_detail">%1$s · %2$s</string>
+    <string name="import_row_line">Row %1$d</string>
+    <string name="check_ready">Ready</string>
+    <string name="check_malformed">Expected three columns: email, roll number, cohort</string>
+    <string name="check_invalid_email">Not an @mc.vjti.ac.in address</string>
+    <string name="check_invalid_roll">Roll number is not 9 digits</string>
+    <string name="check_invalid_cohort">Cohort is not 2 to 8 capital letters and digits</string>
+    <string name="check_duplicate_email">Address appears earlier in this file</string>
+    <string name="check_duplicate_roll">Roll number appears earlier in this file</string>
+    <string name="check_already">Already on the roster</string>
+    <string name="check_email_on_roster">On the roster with a different roll number or cohort</string>
+    <string name="check_roll_taken">Roll number belongs to another student</string>
+    <string name="outcome_imported">Imported</string>
+    <string name="outcome_failed">Not imported</string>
+    <string name="badge_rejected">Rejected</string>
+    <string name="badge_skipped">Skipped</string>
+
+    <!-- Identity alerts (faculty) -->
+    <string name="alerts_title">Alerts</string>
+    <string name="alerts_empty_title">No alerts</string>
+    <string name="alerts_empty_body">Rejected sign-in and registration attempts appear here.</string>
+    <string name="alerts_error_title">Couldn\'t load alerts</string>
+    <string name="alert_non_vjti">Sign-in with a non-VJTI account</string>
+    <string name="alert_not_on_register">Not on the roster</string>
+    <string name="alert_roll_mismatch">Roll number mismatch</string>
+    <string name="alert_duplicate_claim">Record already registered to another sign-in</string>
+    <!-- Email, then how long ago. -->
+    <string name="alert_detail">%1$s · %2$s</string>
+    <string name="alert_detail_entered">%1$s entered %2$s · %3$s</string>
+    <string name="alert_detail_belongs">%1$s entered %2$s, which belongs to %3$s · %4$s</string>
 </resources>

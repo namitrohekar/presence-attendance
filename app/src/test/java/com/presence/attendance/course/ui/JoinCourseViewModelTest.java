@@ -80,19 +80,18 @@ public final class JoinCourseViewModelTest {
     }
 
     @Test
-    public void joiningWithARollNumber() {
+    public void theConfirmStepShowsTheRegisteredRollNumber() {
         viewModel.lookUp("ABC234");
-        viewModel.join(" 21CS045 ");
-        assertEquals(Arrays.asList("findJoinCode:ABC234", "joinCourse:ABC234"), courses.calls);
-        assertEquals("21CS045", courses.lastRollNo);
-        assertEquals(Step.JOINED, state().step);
+        assertEquals("262011001", state().rollNo);
     }
 
     @Test
-    public void aBlankRollNumberIsLeftOut() {
+    public void joiningUsesTheRegisteredStudentNotAnythingTyped() {
         viewModel.lookUp("ABC234");
-        viewModel.join("   ");
-        assertNull(courses.lastRollNo);
+        viewModel.join();
+        assertEquals(Arrays.asList("findJoinCode:ABC234", "joinCourse:ABC234"), courses.calls);
+        assertEquals("262011001", courses.lastJoiner.getRollNo());
+        assertEquals("MC26", courses.lastJoiner.getCohort());
         assertEquals(Step.JOINED, state().step);
     }
 
@@ -100,7 +99,7 @@ public final class JoinCourseViewModelTest {
     public void joiningTwiceSaysSoAndStaysOnTheConfirmStep() {
         courses.joinOutcome = Outcome.failure(AppError.ALREADY_JOINED);
         viewModel.lookUp("ABC234");
-        viewModel.join("");
+        viewModel.join();
         assertEquals(Step.CONFIRM, state().step);
         assertEquals(AppError.ALREADY_JOINED, state().error);
         assertEquals("the course is still shown", Fixtures.JOIN_CODE, state().course);
@@ -108,7 +107,7 @@ public final class JoinCourseViewModelTest {
 
     @Test
     public void joinDoesNothingBeforeACourseIsConfirmed() {
-        viewModel.join("21CS045");
+        viewModel.join();
         assertTrue(courses.calls.isEmpty());
         assertEquals(Step.ENTER_CODE, state().step);
     }
@@ -123,7 +122,7 @@ public final class JoinCourseViewModelTest {
         online.setValue(true);
         viewModel.lookUp("ABC234");
         online.setValue(false);
-        viewModel.join("");
+        viewModel.join();
         assertEquals(Step.CONFIRM, state().step);
         assertEquals(AppError.OFFLINE, state().error);
         assertEquals("no membership was written", 1, courses.calls.size());

@@ -13,6 +13,10 @@ import com.presence.attendance.auth.domain.AuthRepository;
 import com.presence.attendance.core.net.Connectivity;
 import com.presence.attendance.course.data.FirestoreCourseRepository;
 import com.presence.attendance.course.domain.CourseRepository;
+import com.presence.attendance.roster.data.FirestoreAlertRepository;
+import com.presence.attendance.roster.data.FirestoreRosterRepository;
+import com.presence.attendance.roster.domain.AlertRepository;
+import com.presence.attendance.roster.domain.RosterRepository;
 import java.security.SecureRandom;
 
 /**
@@ -30,6 +34,9 @@ public final class AppContainer {
     private final Connectivity connectivity;
     @Nullable private AuthRepository auth;
     @Nullable private CourseRepository courses;
+    @Nullable private RosterRepository roster;
+    @Nullable private AlertRepository alerts;
+    private final AppExecutors executors = new AppExecutors();
 
     public AppContainer(@NonNull Context context) {
         connectivity = new Connectivity(context.getApplicationContext());
@@ -47,7 +54,7 @@ public final class AppContainer {
         if (auth == null) {
             auth =
                     new FirebaseAuthRepository(
-                            FirebaseAuth.getInstance(), FirebaseFirestore.getInstance());
+                            FirebaseAuth.getInstance(), FirebaseFirestore.getInstance(), alerts());
         }
         return auth;
     }
@@ -61,6 +68,29 @@ public final class AppContainer {
                             FirebaseFirestore.getInstance(), new SecureRandom());
         }
         return courses;
+    }
+
+    @MainThread
+    @NonNull
+    public RosterRepository roster() {
+        if (roster == null) {
+            roster = new FirestoreRosterRepository(FirebaseFirestore.getInstance());
+        }
+        return roster;
+    }
+
+    @MainThread
+    @NonNull
+    public AlertRepository alerts() {
+        if (alerts == null) {
+            alerts = new FirestoreAlertRepository(FirebaseFirestore.getInstance());
+        }
+        return alerts;
+    }
+
+    @NonNull
+    public AppExecutors executors() {
+        return executors;
     }
 
     /** True while the device has validated internet access. */
