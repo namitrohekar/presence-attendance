@@ -405,3 +405,65 @@ Each entry: context, decision, alternatives, consequence. Newest last.
 - Alternatives: changing rules and app in one step (not reviewable in stages).
 - Consequence: between deploying the new rules and finishing Stage C, a build
   from before this extension cannot sign a student in or join a course.
+
+## D-031 Tokens are written only while the live screen is visible
+
+- Context: a rotating token is what proves a scan happened now. With no server,
+  the faculty phone is the only thing that can issue one.
+- Decision: the live-session screen writes a token every `ROTATION_S` seconds
+  after the previous write is acknowledged, one write in flight at a time, and
+  shows a code only after its write is acknowledged. The code is blanked
+  `TOKEN_VALIDITY_S` seconds after its write *started*, which is never later
+  than the server would stop accepting it. Leaving the screen stops the writes.
+  The schedule is a pure state machine (`TokenRotation`) with its own tests.
+- Alternatives: a foreground service that keeps writing in the background
+  (more permissions, and a QR nobody can see has no use).
+- Consequence: a session with the faculty app in the background has no valid
+  code; students see "This QR has expired" until the screen is reopened.
+
+## D-032 Ending a session has two forms
+
+- Context: the rules never let `endsAt` move later, and compare it with the
+  server clock.
+- Decision: ending early sets `status = ENDED` and `endsAt = serverTimestamp`.
+  Closing a session whose time has already passed changes `status` only. The
+  repository picks the form from the document it reads in the transaction and
+  decides again once if the write is denied (D-029).
+- Consequence: `endsAt` is always the moment marks stopped being accepted,
+  which Phase 5 and 6 rely on.
+
+## D-033 Scan pre-checks mirror the rules, and a denial after them means expired
+
+- Context: the rules refuse a mark without saying why.
+- Decision: before writing, the client checks in a fixed order: payload format,
+  already marked, session readable (a denial here means not enrolled), session
+  ended, location fix (age <= 15 s, accuracy <= `MAX_ACCURACY_M`, not mock, wait
+  up to 6 s), and the geofence with the same arithmetic as the rules (shared
+  vectors). Each has its own message. A PERMISSION_DENIED after all of them
+  passed can only be the token, so it is shown as "This QR has expired".
+- Alternatives: one generic "not marked" message.
+- Consequence: the pre-checks are for messages only. A modified app that skips
+  them gets the same refusal from the rules.
+
+## D-034 Scanner details
+
+- Frames are analysed on the main executor with keep-only-latest; ML Kit does
+  its own work off the main thread and the callback touches the ViewModel.
+- Only QR codes are decoded. Text that is not `prs1:<id>:<token>` is ignored
+  and scanning continues, so a poster next to the screen cannot end the scan.
+- The first valid code stops analysis; the mark has an 8 s budget and then
+  reports a timeout rather than queueing silently (Firestore's own offline
+  queue is never used for writes, see D-029).
+
+## D-035 Build exclusions added for generated code
+
+- `-Xlint` excludes `rawtypes` and `unchecked`: Safe Args generates raw
+  `HashMap` code. Everything hand-written still compiles clean under `-Werror`.
+- Mockito is allowed by the brief but unused: every collaborator is an
+  interface with a hand-written fake in `testutil/`.
+
+## D-036 Deferred from the identity extension
+
+- The alerts screen has no unread count and there is no background check with
+  a local notification. Both were optional in Stage D and neither affects
+  enforcement. Alerts are live while the Alerts screen is open.
