@@ -10,7 +10,7 @@ Standing gate, run at the end of every phase:
 
 From Phase 1 onward, also `npm test` in `firebase/`.
 
-Status: Phases 0 to 4 and the identity extension (Stages A to D) are built and
+Status: Phases 0 to 5 and the identity extension (Stages A to D) are built and
 pass the automated gates. Phases 0 to 2 were reviewed on your device. The rest
 is waiting for your run: follow `docs/testing-guide.md`.
 

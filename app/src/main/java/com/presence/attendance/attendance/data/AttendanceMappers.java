@@ -6,10 +6,12 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.presence.attendance.attendance.domain.AttendanceRecord;
+import com.presence.attendance.attendance.domain.PendingMark;
 import com.presence.attendance.auth.domain.User;
 import com.presence.attendance.core.data.Snapshots;
 import com.presence.attendance.core.location.LocationFix;
 import com.presence.attendance.session.domain.Session;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,6 +30,8 @@ final class AttendanceMappers {
     private static final String LNG = "lng";
     private static final String ACCURACY_M = "accuracyM";
     private static final String SOURCE_LIVE = "LIVE";
+    private static final String SOURCE_QUEUED = "QUEUED";
+    private static final String SCANNED_AT = "scannedAt";
 
     private AttendanceMappers() {}
 
@@ -68,6 +72,28 @@ final class AttendanceMappers {
         document.put(LAT, fix.getLat());
         document.put(LNG, fix.getLng());
         document.put(ACCURACY_M, (double) fix.getAccuracyM());
+        return document;
+    }
+
+    /**
+     * A scan saved offline, sent late. {@code scannedAt} is the device clock at the scan; the rules
+     * accept it only inside the window in which the scanned code was current.
+     */
+    @NonNull
+    static Map<String, Object> queuedMark(@NonNull Session session, @NonNull PendingMark mark) {
+        final Map<String, Object> document = new HashMap<>();
+        document.put(SESSION_ID, session.getId());
+        document.put(COURSE_ID, session.getCourseId());
+        document.put(TEACHER_ID, session.getTeacherId());
+        document.put(STUDENT_ID, mark.getStudentId());
+        document.put(STATUS, AttendanceRecord.Status.LATE_SYNC.name());
+        document.put(SOURCE, SOURCE_QUEUED);
+        document.put(TOKEN, mark.getToken());
+        document.put(MARKED_AT, FieldValue.serverTimestamp());
+        document.put(SCANNED_AT, new Timestamp(new Date(mark.getScannedAtMillis())));
+        document.put(LAT, mark.getLat());
+        document.put(LNG, mark.getLng());
+        document.put(ACCURACY_M, (double) mark.getAccuracyM());
         return document;
     }
 }

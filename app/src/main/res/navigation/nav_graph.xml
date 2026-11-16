@@ -56,6 +56,9 @@
             android:id="@+id/action_home_to_roster"
             app:destination="@id/rosterFragment" />
         <action
+            android:id="@+id/action_home_to_saved"
+            app:destination="@id/savedScansFragment" />
+        <action
             android:id="@+id/action_home_to_alerts"
             app:destination="@id/alertsFragment" />
         <action
@@ -144,4 +147,13 @@
         android:id="@+id/alertsFragment"
         android:name="com.presence.attendance.roster.ui.AlertsFragment"
         tools:layout="@layout/fragment_list" />
+
+    <fragment
+        android:id="@+id/savedScansFragment"
+        android:name="com.presence.attendance.attendance.ui.SavedScansFragment"
+        tools:layout="@layout/fragment_list">
+        <argument
+            android:name="studentId"
+            app:argType="string" />
+    </fragment>
 </navigation>

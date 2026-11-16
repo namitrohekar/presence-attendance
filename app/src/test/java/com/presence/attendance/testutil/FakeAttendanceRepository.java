@@ -5,6 +5,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import com.presence.attendance.attendance.domain.AttendanceRecord;
 import com.presence.attendance.attendance.domain.AttendanceRepository;
+import com.presence.attendance.attendance.domain.PendingMark;
 import com.presence.attendance.auth.domain.User;
 import com.presence.attendance.core.Callback;
 import com.presence.attendance.core.Outcome;
@@ -49,6 +50,15 @@ public final class FakeAttendanceRepository implements AttendanceRepository {
             @NonNull Callback<MarkResult> callback) {
         marks.add(session.getId() + ":" + token);
         lastFix = fix;
+        callback.onResult(markOutcome);
+    }
+
+    @Override
+    public void markQueued(
+            @NonNull Session session,
+            @NonNull PendingMark mark,
+            @NonNull Callback<MarkResult> callback) {
+        marks.add(session.getId() + ":" + mark.getToken() + ":queued");
         callback.onResult(markOutcome);
     }
 }

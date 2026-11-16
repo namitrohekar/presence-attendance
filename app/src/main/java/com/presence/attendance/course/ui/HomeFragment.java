@@ -13,6 +13,7 @@ import androidx.navigation.NavDestination;
 import androidx.navigation.NavDirections;
 import androidx.navigation.fragment.NavHostFragment;
 import com.presence.attendance.R;
+import com.presence.attendance.attendance.ui.SavedScansViewModel;
 import com.presence.attendance.auth.domain.Role;
 import com.presence.attendance.auth.domain.User;
 import com.presence.attendance.auth.ui.GoogleIdTokenRequester;
@@ -51,9 +52,9 @@ public final class HomeFragment extends Fragment {
         WindowInsetsPadding.applyHorizontal(binding.getRoot());
         WindowInsetsPadding.applyBottom(binding.homeContent);
         // The content is laid out taller than the screen by however far the title can still
-        // collapse, so the button anchored to its bottom is lifted back into view.
+        // collapse, so the footer anchored to its bottom is lifted back into view.
         binding.homeAppBar.addOnOffsetChangedListener((bar, offset) ->
-                binding.homeScan.setTranslationY(-(bar.getTotalScrollRange() + offset)));
+                binding.homeFooter.setTranslationY(-(bar.getTotalScrollRange() + offset)));
 
         viewModel =
                 new ViewModelProvider(
@@ -111,7 +112,10 @@ public final class HomeFragment extends Fragment {
         final boolean isFaculty = state.user != null && state.user.getRole() == Role.FACULTY;
         adapter.submitList(lines(state, isFaculty));
         // The student's one primary action. Faculty show the code instead of scanning it.
-        binding.homeScan.setVisibility(visibleIf(state.user != null && !isFaculty));
+        binding.homeFooter.setVisibility(visibleIf(state.user != null && !isFaculty));
+        if (state.user != null && !isFaculty) {
+            showSavedScans(binding, state.user.getUid());
+        }
 
         binding.homeProgress.setVisibility(visibleIf(state.status == HomeViewModel.Status.LOADING));
         binding.homeList.setVisibility(visibleIf(state.status == HomeViewModel.Status.CONTENT));
@@ -158,6 +162,37 @@ public final class HomeFragment extends Fragment {
             lines.add(isFaculty ? row.navigates() : row);
         }
         return Line.grouped(lines);
+    }
+
+    /**
+     * A link to the student's saved scans, shown while there are any. Set up once the student is
+     * known; watching the list also sends any scan that is still waiting.
+     */
+    private void showSavedScans(@NonNull FragmentHomeBinding binding, @NonNull String studentId) {
+        final SavedScansViewModel saved =
+                new ViewModelProvider(
+                                this,
+                                ViewModels.factory(c ->
+                                        new SavedScansViewModel(c.pendingMarks(), c::requestSync)))
+                        .get(SavedScansViewModel.class);
+        saved.setStudent(studentId);
+        if (saved.getMarks().hasObservers()) {
+            return;
+        }
+        binding.homeSaved.setOnClickListener(
+                v -> leave(HomeFragmentDirections.actionHomeToSaved(studentId)));
+        saved.getMarks()
+                .observe(
+                        getViewLifecycleOwner(),
+                        marks -> {
+                            binding.homeSaved.setVisibility(visibleIf(!marks.isEmpty()));
+                            binding.homeSaved.setText(
+                                    getResources()
+                                            .getQuantityString(
+                                                    R.plurals.home_saved_scans,
+                                                    marks.size(),
+                                                    marks.size()));
+                        });
     }
 
     private void openCourse(@NonNull String courseId) {

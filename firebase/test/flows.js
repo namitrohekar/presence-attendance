@@ -356,8 +356,40 @@ function markLive(db, student, session, token, fix) {
   });
 }
 
+/**
+ * FirestoreAttendanceRepository.markQueued: a scan saved offline, sent by the sync worker.
+ * Resolves to MARKED or ALREADY_MARKED; rejects if the rules refuse it.
+ */
+function markQueued(db, session, mark) {
+  const ref = doc(db, 'attendance', `${session.id}_${mark.studentId}`);
+  return runTransaction(db, async (tx) => {
+    if ((await tx.get(ref)).exists()) {
+      return 'ALREADY_MARKED';
+    }
+    tx.set(
+      ref,
+      build('attendance.queued', {
+        sessionId: session.id,
+        courseId: session.courseId,
+        teacherId: session.teacherId,
+        studentId: mark.studentId,
+        status: 'LATE_SYNC',
+        source: 'QUEUED',
+        token: mark.token,
+        markedAt: serverTimestamp(),
+        scannedAt: Timestamp.fromMillis(mark.scannedAtMillis),
+        lat: mark.lat,
+        lng: mark.lng,
+        accuracyM: mark.accuracyM,
+      }),
+    );
+    return 'MARKED';
+  });
+}
+
 module.exports = {
   markLive,
+  markQueued,
   startSession,
   writeToken,
   endSession,

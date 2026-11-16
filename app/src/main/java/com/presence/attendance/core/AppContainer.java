@@ -5,11 +5,16 @@ import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
+import androidx.room.Room;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.presence.attendance.BuildConfig;
 import com.presence.attendance.attendance.data.FirestoreAttendanceRepository;
+import com.presence.attendance.attendance.data.PendingMarkSyncWorker;
+import com.presence.attendance.attendance.data.QueueDatabase;
+import com.presence.attendance.attendance.data.RoomPendingMarkStore;
 import com.presence.attendance.attendance.domain.AttendanceRepository;
+import com.presence.attendance.attendance.domain.PendingMarkStore;
 import com.presence.attendance.auth.data.FirebaseAuthRepository;
 import com.presence.attendance.auth.domain.AuthRepository;
 import com.presence.attendance.core.location.FusedLocationSource;
@@ -46,6 +51,7 @@ public final class AppContainer {
     @Nullable private SessionRepository sessions;
     @Nullable private AttendanceRepository attendance;
     @Nullable private LocationSource location;
+    @Nullable private PendingMarkStore pendingMarks;
     private final AppExecutors executors = new AppExecutors();
 
     public AppContainer(@NonNull Context context) {
@@ -124,6 +130,25 @@ public final class AppContainer {
             location = new FusedLocationSource(appContext);
         }
         return location;
+    }
+
+    /** The offline queue. Also used by the sync worker, off the main thread. */
+    @NonNull
+    public synchronized PendingMarkStore pendingMarks() {
+        if (pendingMarks == null) {
+            pendingMarks =
+                    new RoomPendingMarkStore(
+                            Room.databaseBuilder(
+                                            appContext, QueueDatabase.class, QueueDatabase.NAME)
+                                    .build(),
+                            executors);
+        }
+        return pendingMarks;
+    }
+
+    /** Sends saved scans as soon as there is a connection, even if the app is closed by then. */
+    public void requestSync() {
+        PendingMarkSyncWorker.request(appContext);
     }
 
     @NonNull

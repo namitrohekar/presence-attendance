@@ -7,6 +7,8 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 import com.presence.attendance.attendance.domain.AttendanceRepository;
 import com.presence.attendance.attendance.domain.AttendanceRepository.MarkResult;
+import com.presence.attendance.attendance.domain.PendingMark;
+import com.presence.attendance.attendance.domain.PendingMarkStore;
 import com.presence.attendance.auth.domain.AuthRepository;
 import com.presence.attendance.auth.domain.User;
 import com.presence.attendance.core.AppError;
@@ -42,16 +44,29 @@ public final class ScanViewModel extends ViewModel {
         DONE
     }
 
-    /** Immutable screen state. In DONE, {@code rejection} is null exactly when marked. */
+    /**
+     * Immutable screen state. In DONE: {@code queued} means saved for later, otherwise {@code
+     * rejection} is null exactly when marked.
+     */
     public static final class State {
         @NonNull public final Stage stage;
         public final boolean locationReady;
         @Nullable public final AppError rejection;
+        public final boolean queued;
 
         State(@NonNull Stage stage, boolean locationReady, @Nullable AppError rejection) {
+            this(stage, locationReady, rejection, false);
+        }
+
+        State(
+                @NonNull Stage stage,
+                boolean locationReady,
+                @Nullable AppError rejection,
+                boolean queued) {
             this.stage = stage;
             this.locationReady = locationReady;
             this.rejection = rejection;
+            this.queued = queued;
         }
     }
 
@@ -63,6 +78,8 @@ public final class ScanViewModel extends ViewModel {
     private final AuthRepository auth;
     private final SessionRepository sessions;
     private final AttendanceRepository attendance;
+    private final PendingMarkStore queue;
+    private final Runnable requestSync;
     private final TokenRotation.Scheduler scheduler;
     private final LongSupplier elapsedNanos;
     private final LongSupplier wallClockMs;
@@ -73,17 +90,24 @@ public final class ScanViewModel extends ViewModel {
     @Nullable private LocationFix latestFix;
     @Nullable private FixReceiver waitingForFix;
     @Nullable private Runnable cancelFixTimeout;
+    private boolean online = true;
+    // The device clock when the code was read, which is what a saved scan must carry.
+    private long scannedAtMs;
 
     public ScanViewModel(
             @NonNull AuthRepository auth,
             @NonNull SessionRepository sessions,
             @NonNull AttendanceRepository attendance,
+            @NonNull PendingMarkStore queue,
+            @NonNull Runnable requestSync,
             @NonNull TokenRotation.Scheduler scheduler,
             @NonNull LongSupplier elapsedNanos,
             @NonNull LongSupplier wallClockMs) {
         this.auth = auth;
         this.sessions = sessions;
         this.attendance = attendance;
+        this.queue = queue;
+        this.requestSync = requestSync;
         this.scheduler = scheduler;
         this.elapsedNanos = elapsedNanos;
         this.wallClockMs = wallClockMs;
@@ -92,6 +116,11 @@ public final class ScanViewModel extends ViewModel {
     @NonNull
     public LiveData<State> getState() {
         return state;
+    }
+
+    /** Whether the device has a connection. Without one a scan is saved instead of sent. */
+    public void onOnline(boolean nowOnline) {
+        online = nowOnline;
     }
 
     /** A location update arrived. Updates start as soon as the scanner opens. */
@@ -118,14 +147,50 @@ public final class ScanViewModel extends ViewModel {
         if (payload == null || current().stage != Stage.SCANNING) {
             return;
         }
+        scannedAtMs = wallClockMs.getAsLong();
         state.setValue(new State(Stage.CHECKING, current().locationReady, null));
         auth.loadUser(user -> {
-            if (user.isSuccess()) {
+            if (!user.isSuccess()) {
+                reject(user.getError());
+            } else if (online) {
                 checkNotMarked(user.getValue(), payload);
             } else {
-                reject(user.getError());
+                save(user.getValue(), payload);
             }
         });
+    }
+
+    /**
+     * The server cannot be reached, so the scan is kept on the device and sent later. Nothing is
+     * known about the session here; the checks happen when it is sent, and the rules decide.
+     */
+    private void save(@NonNull User student, @NonNull QrPayload payload) {
+        withFix(fix -> {
+            if (fix.isMock()) {
+                reject(AppError.MOCK_LOCATION);
+                return;
+            }
+            queue.add(
+                    new PendingMark(
+                            payload.getSessionId(),
+                            student.getUid(),
+                            payload.getToken(),
+                            fix.getLat(),
+                            fix.getLng(),
+                            fix.getAccuracyM(),
+                            scannedAtMs,
+                            PendingMark.State.PENDING,
+                            null),
+                    () -> {
+                        requestSync.run();
+                        state.setValue(new State(Stage.DONE, current().locationReady, null, true));
+                    });
+        });
+    }
+
+    /** True for failures that say nothing about the scan itself, only about the connection. */
+    private static boolean isUnreachable(@Nullable AppError error) {
+        return error == AppError.OFFLINE || error == AppError.TIMEOUT;
     }
 
     private void checkNotMarked(@NonNull User student, @NonNull QrPayload payload) {
@@ -133,7 +198,9 @@ public final class ScanViewModel extends ViewModel {
                 payload.getSessionId(),
                 student.getUid(),
                 marked -> {
-                    if (!marked.isSuccess()) {
+                    if (isUnreachable(marked.getError())) {
+                        save(student, payload);
+                    } else if (!marked.isSuccess()) {
                         reject(marked.getError());
                     } else if (marked.getValue()) {
                         reject(AppError.ALREADY_MARKED);
@@ -147,7 +214,9 @@ public final class ScanViewModel extends ViewModel {
         sessions.loadSession(
                 payload.getSessionId(),
                 loaded -> {
-                    if (!loaded.isSuccess()) {
+                    if (isUnreachable(loaded.getError())) {
+                        save(student, payload);
+                    } else if (!loaded.isSuccess()) {
                         // Only members can read a session, so a denial means not enrolled.
                         final boolean denied = loaded.getError() == AppError.PERMISSION_DENIED;
                         reject(denied ? AppError.NOT_ENROLLED : loaded.getError());
@@ -171,7 +240,19 @@ public final class ScanViewModel extends ViewModel {
             reject(AppError.OUTSIDE_AREA);
         } else {
             attendance.markLive(
-                    student, session, payload.getToken(), fix, marked -> onMarked(marked));
+                    student,
+                    session,
+                    payload.getToken(),
+                    fix,
+                    marked -> {
+                        if (isUnreachable(marked.getError())) {
+                            // Whether it arrived is unknown. Sending it again later is safe:
+                            // a record that exists is reported, not written twice.
+                            save(student, payload);
+                        } else {
+                            onMarked(marked);
+                        }
+                    });
         }
     }
 

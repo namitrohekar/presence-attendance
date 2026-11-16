@@ -62,7 +62,7 @@
                 android:visibility="gone"
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
                 app:layout_constrainedHeight="true"
-                app:layout_constraintBottom_toTopOf="@id/home_scan"
+                app:layout_constraintBottom_toTopOf="@id/home_footer"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
@@ -118,16 +118,30 @@
             </LinearLayout>
 
             <!-- Students only: always in reach, whatever the list shows. -->
-            <com.presence.attendance.core.ui.SpringButton
-                android:id="@+id/home_scan"
+            <LinearLayout
+                android:id="@+id/home_footer"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_12"
-                android:text="@string/home_scan"
+                android:orientation="vertical"
+                android:paddingTop="@dimen/space_12"
                 android:visibility="gone"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent" />
+                app:layout_constraintStart_toStartOf="parent">
+
+                <com.presence.attendance.core.ui.SpringButton
+                    android:id="@+id/home_saved"
+                    style="@style/Widget.Presence.Button.Text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone" />
+
+                <com.presence.attendance.core.ui.SpringButton
+                    android:id="@+id/home_scan"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/home_scan" />
+            </LinearLayout>
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,6 +1,6 @@
 # Testing guide
 
-What to do, in order, to test everything built so far (Phases 0 to 4 and the
+What to do, in order, to test everything built so far (Phases 0 to 5 and the
 student identity extension). Each check lists what you should see. Nothing here
 has been run against the production project by me: the rules below are not
 deployed yet, and I cannot sign in as you.
@@ -9,14 +9,15 @@ deployed yet, and I cannot sign in as you.
 
 | Area | Automated | On an emulator with stand-in data | Real Firebase, real accounts |
 |------|-----------|-----------------------------------|------------------------------|
-| Security rules | 546 Jest tests, 76 mutations | n/a | Phase 2 rules only (yours) |
+| Security rules | 550 Jest tests, 76 of 76 mutations caught | n/a | Phase 2 rules only (yours) |
 | Sign-in, courses | JUnit | yes | yes (yours, before the identity extension) |
 | Roster, CSV import, alerts, registration | JUnit + rules | yes | **no** |
 | Session, rotating QR, end session | JUnit + rules | yes | **no** |
 | Scanner, result screens | JUnit + rules | yes (simulated scan) | **no** |
+| Offline queue | JUnit + rules | yes (airplane mode, stand-in server) | **no** |
 | Camera decoding a real QR | none | no | **no** |
 
-So sections 3 to 7 are the first real end-to-end run. Expect to find things.
+So sections 3 to 8 are the first real end-to-end run. Expect to find things.
 
 ## 1. One-time setup
 
@@ -138,21 +139,43 @@ Start a fresh session on the faculty device first.
 10. Scan a QR that is not an attendance code (a URL): nothing happens; the
     scanner keeps looking.
 
-## 7. Things to look at on every screen
+## 7. Offline queue (student)
+
+Keep the app open on Courses before going offline (see Known gaps).
+
+1. Faculty starts a session. On the student phone turn on airplane mode, then
+   Scan QR and scan the code: "Saved. It will sync when you're back online."
+2. Courses now shows "1 saved scan" above Scan QR. Open it: the scan is
+   "Waiting".
+3. Swipe the app away, turn airplane mode off, wait about a minute. Open the
+   app > saved scans: "Sent · Recorded as a late sync". The faculty roster
+   shows the student with "Late sync".
+4. Tap the sent row: it is removed from the list.
+5. Expiry: save a scan offline, end the session on the faculty phone, and stay
+   offline for more than 30 minutes after the end. Reconnect: the row shows
+   "Expired" and stays until tapped.
+6. Stale code: save a scan offline from a photo of a code that was already
+   more than 20 s old. Reconnect: "Not accepted · This QR has expired."
+7. Set the student phone's clock a minute wrong, save a scan offline,
+   reconnect: "Not accepted". This is by design (D-037).
+
+## 8. Things to look at on every screen
 
 - Dark mode, landscape, largest font size, gesture and 3-button navigation.
 - No button under the system bar; no text cut off.
 - Airplane mode: actions that need the network are disabled with a reason.
 
-## 8. Known gaps
+## 9. Known gaps
 
-- Offline scan: see the Phase 5 section of `docs/phases.md` for whether the
-  queue is in this build.
+- Opening the app cold with no connection shows no Scan button (the profile
+  has to load once). Open the app first, then go offline.
+- Force stop (Settings > Apps) cancels background sync until the app is opened
+  again. Swiping the app away does not.
 - Alerts: no unread count and no background notification. Alerts appear when
   the Alerts screen is open (live while it is open).
 - Reports, percentages, manual correction and CSV export are Phase 6.
 
-## 9. If something fails
+## 10. If something fails
 
 - "You don't have permission to do that" on a first action after deploy
   usually means the rules deploy did not finish, or the account's `users`

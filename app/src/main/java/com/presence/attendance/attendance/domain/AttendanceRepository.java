@@ -49,4 +49,14 @@ public interface AttendanceRepository {
             @NonNull String token,
             @NonNull LocationFix fix,
             @NonNull Callback<MarkResult> callback);
+
+    /**
+     * Sends a scan that was saved while offline. The server records it as a late sync if the code
+     * was current at the saved scan time and the session's grace period has not run out.
+     */
+    @MainThread
+    void markQueued(
+            @NonNull Session session,
+            @NonNull PendingMark mark,
+            @NonNull Callback<MarkResult> callback);
 }

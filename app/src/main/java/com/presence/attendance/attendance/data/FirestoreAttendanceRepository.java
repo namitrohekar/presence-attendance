@@ -11,6 +11,7 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.Source;
 import com.presence.attendance.attendance.domain.AttendanceRecord;
 import com.presence.attendance.attendance.domain.AttendanceRepository;
+import com.presence.attendance.attendance.domain.PendingMark;
 import com.presence.attendance.auth.domain.User;
 import com.presence.attendance.core.AppError;
 import com.presence.attendance.core.Callback;
@@ -20,6 +21,7 @@ import com.presence.attendance.core.data.QueryLiveData;
 import com.presence.attendance.core.location.LocationFix;
 import com.presence.attendance.session.domain.Session;
 import java.util.List;
+import java.util.Map;
 
 /** {@link AttendanceRepository} backed by Cloud Firestore. */
 public final class FirestoreAttendanceRepository implements AttendanceRepository {
@@ -28,6 +30,9 @@ public final class FirestoreAttendanceRepository implements AttendanceRepository
 
     /** How long a LIVE mark may take before the app stops waiting for the server. */
     private static final long MARK_BUDGET_MS = 8_000;
+
+    /** A background sync has no one waiting on a screen, so it may take longer. */
+    private static final long SYNC_BUDGET_MS = 20_000;
 
     private final FirebaseFirestore firestore;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -75,7 +80,31 @@ public final class FirestoreAttendanceRepository implements AttendanceRepository
             @NonNull String token,
             @NonNull LocationFix fix,
             @NonNull Callback<MarkResult> callback) {
-        final DocumentReference ref = record(session.getId(), student.getUid());
+        write(
+                record(session.getId(), student.getUid()),
+                AttendanceMappers.liveMark(student, session, token, fix),
+                MARK_BUDGET_MS,
+                callback);
+    }
+
+    @Override
+    public void markQueued(
+            @NonNull Session session,
+            @NonNull PendingMark mark,
+            @NonNull Callback<MarkResult> callback) {
+        write(
+                record(session.getId(), mark.getStudentId()),
+                AttendanceMappers.queuedMark(session, mark),
+                SYNC_BUDGET_MS,
+                callback);
+    }
+
+    /** Creates the record unless one exists, and answers within the budget either way. */
+    private void write(
+            @NonNull DocumentReference ref,
+            @NonNull Map<String, Object> document,
+            long budgetMs,
+            @NonNull Callback<MarkResult> callback) {
         // Whichever comes first, the server's answer or the end of the budget, is delivered;
         // the other is ignored.
         final boolean[] answered = {false};
@@ -86,14 +115,14 @@ public final class FirestoreAttendanceRepository implements AttendanceRepository
                         callback.onResult(Outcome.failure(AppError.TIMEOUT));
                     }
                 };
-        mainHandler.postDelayed(timeout, MARK_BUDGET_MS);
+        mainHandler.postDelayed(timeout, budgetMs);
         // A transaction, not a plain set: offline it fails instead of being silently queued.
         firestore
                 .runTransaction(transaction -> {
                     if (transaction.get(ref).exists()) {
                         return MarkResult.ALREADY_MARKED;
                     }
-                    transaction.set(ref, AttendanceMappers.liveMark(student, session, token, fix));
+                    transaction.set(ref, document);
                     return MarkResult.MARKED;
                 })
                 .addOnCompleteListener(task -> {

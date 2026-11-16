@@ -14,5 +14,6 @@
   "sessions": "courseId,teacherId,status,startedAt,endsAt,geofence",
   "sessions.geofence": "lat,lng,radiusM,cosLat",
   "tokens": "validFrom",
-  "attendance.live": "sessionId,courseId,teacherId,studentId,status,source,token,markedAt,lat,lng,accuracyM"
+  "attendance.live": "sessionId,courseId,teacherId,studentId,status,source,token,markedAt,lat,lng,accuracyM",
+  "attendance.queued": "sessionId,courseId,teacherId,studentId,status,source,token,markedAt,scannedAt,lat,lng,accuracyM"
 }

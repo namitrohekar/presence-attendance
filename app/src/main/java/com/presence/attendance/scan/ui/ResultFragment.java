@@ -20,6 +20,9 @@ import com.presence.attendance.databinding.FragmentResultBinding;
  */
 public final class ResultFragment extends Fragment {
 
+    /** The argument value for a scan that was saved to be sent later. */
+    static final String QUEUED = "QUEUED";
+
     public ResultFragment() {
         super(R.layout.fragment_result);
     }
@@ -29,11 +32,22 @@ public final class ResultFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         final FragmentResultBinding binding = FragmentResultBinding.bind(view);
         WindowInsetsPadding.apply(binding.getRoot());
-        final AppError rejection =
-                rejection(ResultFragmentArgs.fromBundle(requireArguments()).getRejection());
+        final String outcome = ResultFragmentArgs.fromBundle(requireArguments()).getRejection();
+        final AppError rejection = rejection(outcome);
         final NavController navController = NavHostFragment.findNavController(this);
         final boolean firstShow = savedInstanceState == null;
 
+        if (QUEUED.equals(outcome)) {
+            // Not marked yet, so no check: the words say exactly what happened.
+            binding.resultTitle.setText(R.string.result_queued_title);
+            binding.resultBody.setText(R.string.result_queued_body);
+            binding.resultPrimary.setText(R.string.action_done);
+            binding.resultPrimary.setOnClickListener(v -> navController.popBackStack());
+            if (firstShow) {
+                view.performHapticFeedback(HapticFeedbackConstants.CONFIRM);
+            }
+            return;
+        }
         if (rejection == null) {
             binding.resultCheck.setVisibility(View.VISIBLE);
             binding.resultTitle.setText(R.string.result_marked_title);

@@ -102,15 +102,18 @@ android {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    // Every javac warning is an error, except three categories that only generated code trips:
-    // dangling-doc-comments (AGP's BuildConfig.java) and rawtypes/unchecked (the raw HashMap in
-    // Safe Args' generated Args and Directions classes). javac cannot exempt a directory.
+    // Every javac warning is an error, except categories that only tooling trips:
+    // dangling-doc-comments (AGP's BuildConfig.java), rawtypes/unchecked (the raw HashMap in
+    // Safe Args' generated Args and Directions classes), and processing (with Room's processor
+    // on the path, javac reports every annotation no processor claims, such as @NonNull).
+    // javac cannot exempt a directory.
     options.compilerArgs.addAll(
         listOf(
             "-Xlint:all",
             "-Xlint:-dangling-doc-comments",
             "-Xlint:-rawtypes",
             "-Xlint:-unchecked",
+            "-Xlint:-processing",
             "-Werror",
         ),
     )
@@ -157,6 +160,9 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.mlkit.barcode.scanning)
     implementation(libs.play.services.location)
+    implementation(libs.androidx.room.runtime)
+    annotationProcessor(libs.androidx.room.compiler)
+    implementation(libs.androidx.work.runtime)
 
     testImplementation(libs.junit)
     testImplementation(libs.androidx.arch.core.testing)

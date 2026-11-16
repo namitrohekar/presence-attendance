@@ -238,3 +238,54 @@ describe('app flow: a session from start to end', () => {
     await assertFails(flows.endSession(student, h.SESSION));
   });
 });
+
+describe('app flow: a scan saved offline is sent later', () => {
+  const TOKEN_AT = 40 * h.MINUTE;
+  const session = (endedAgo) => ({
+    id: h.SESSION,
+    ...h.sessionDoc({ startedAt: h.ago(60 * h.MINUTE), endsAt: h.ago(endedAgo) }),
+  });
+  // Scanned five seconds after the code was issued, forty minutes ago.
+  const saved = (student, offsetMs = 5 * h.SECOND) => ({
+    studentId: student.uid,
+    token: h.TOKEN,
+    scannedAtMillis: Date.now() - TOKEN_AT + offsetMs,
+    ...h.INSIDE,
+  });
+  const seedEnded = (endedAgo) =>
+    t.seed({
+      [`sessions/${h.SESSION}`]: h.sessionDoc({ startedAt: h.ago(60 * h.MINUTE), endsAt: h.ago(endedAgo) }),
+      [`sessions/${h.SESSION}/tokens/${h.TOKEN}`]: { validFrom: h.ago(TOKEN_AT) },
+    });
+
+  test('inside the grace period it is recorded once, as a late sync', async () => {
+    await seedEnded(29 * h.MINUTE);
+    const student = t.as(STUDENT);
+    expect(await assertSucceeds(flows.markQueued(student, session(29 * h.MINUTE), saved(STUDENT)))).toBe('MARKED');
+    const stored = (await getDoc(doc(student, 'attendance', `${h.SESSION}_${STUDENT.uid}`))).data();
+    expect(stored.status).toBe('LATE_SYNC');
+    expect(stored.source).toBe('QUEUED');
+    // The worker runs again after a lost answer: nothing is written twice.
+    expect(await assertSucceeds(flows.markQueued(student, session(29 * h.MINUTE), saved(STUDENT)))).toBe('ALREADY_MARKED');
+  });
+
+  test('after the grace period it is refused', async () => {
+    await seedEnded(31 * h.MINUTE);
+    await assertFails(flows.markQueued(t.as(STUDENT), session(31 * h.MINUTE), saved(STUDENT)));
+  });
+
+  test('a scan time at which the code was not current is refused', async () => {
+    await seedEnded(29 * h.MINUTE);
+    const student = t.as(STUDENT);
+    await assertFails(flows.markQueued(student, session(29 * h.MINUTE), saved(STUDENT, 21 * h.SECOND)));
+    await assertFails(flows.markQueued(student, session(29 * h.MINUTE), saved(STUDENT, -1 * h.SECOND)));
+  });
+
+  test('a saved scan cannot be sent for another student or from outside the area', async () => {
+    await seedEnded(29 * h.MINUTE);
+    const student = t.as(STUDENT);
+    await assertFails(flows.markQueued(student, session(29 * h.MINUTE), saved(h.OTHER_STUDENT)));
+    const outside = { ...saved(STUDENT), lat: h.INSIDE.lat + 0.01 };
+    await assertFails(flows.markQueued(student, session(29 * h.MINUTE), outside));
+  });
+});

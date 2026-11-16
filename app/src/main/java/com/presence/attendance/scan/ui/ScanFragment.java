@@ -94,6 +94,8 @@ public final class ScanFragment extends Fragment {
                                                 c.auth(),
                                                 c.sessions(),
                                                 c.attendance(),
+                                                c.pendingMarks(),
+                                                c::requestSync,
                                                 new HandlerScheduler(),
                                                 SystemClock::elapsedRealtimeNanos,
                                                 System::currentTimeMillis)))
@@ -110,6 +112,10 @@ public final class ScanFragment extends Fragment {
         bound.scanPermissionAllow.setOnClickListener(v -> requestPermissions.launch(PERMISSIONS));
         bound.scanPermissionSettings.setOnClickListener(v -> openSettings());
         viewModel.getState().observe(getViewLifecycleOwner(), this::render);
+        ((PresenceApp) requireContext().getApplicationContext())
+                .getContainer()
+                .online()
+                .observe(getViewLifecycleOwner(), viewModel::onOnline);
     }
 
     @Override
@@ -239,7 +245,10 @@ public final class ScanFragment extends Fragment {
             analysis.clearAnalyzer();
         }
         if (state.stage == Stage.DONE) {
-            openResult(state.rejection != null ? state.rejection.name() : "");
+            openResult(
+                    state.queued
+                            ? ResultFragment.QUEUED
+                            : state.rejection != null ? state.rejection.name() : "");
             return;
         }
         if (state.stage == Stage.CHECKING) {

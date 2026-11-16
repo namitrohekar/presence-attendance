@@ -467,3 +467,35 @@ Each entry: context, decision, alternatives, consequence. Newest last.
 - The alerts screen has no unread count and there is no background check with
   a local notification. Both were optional in Stage D and neither affects
   enforcement. Alerts are live while the Alerts screen is open.
+
+## D-037 Offline queue
+
+- Context: a classroom can have no signal. A scan made then must still count,
+  without weakening what the rules verify.
+- Decision: when the server cannot be reached (no connection, or a step that
+  times out, including a mark whose answer never came), the scan is saved in a
+  Room table: session id, student id, code, fix, and the device clock at the
+  moment the code was read. A refusal is never saved. A WorkManager job with a
+  network constraint sends saved scans as a QUEUED mark; the rules accept it
+  only if the saved scan time falls inside the window in which that code was
+  current, and until `QUEUE_GRACE_MIN` after the session's end.
+- Each saved scan ends in one state: synced, expired (past the grace period),
+  rejected with the reason, or still pending. The logic is a pure class
+  (`PendingMarkSync`) tested against fakes. Sending twice is harmless: the
+  record id is fixed, and an existing record is reported, not rewritten.
+- Offline the app knows nothing about the session, so enrolment, the session's
+  end and the geofence are checked when the scan is sent. The message arrives
+  late; the decision is the same.
+- A settled row has its code and coordinates wiped. The database is excluded
+  from backup. One row per student and session; a newer scan replaces an older
+  one, and a late result for the older one is ignored.
+- Consequence: a queued mark depends on the device clock. The window is 20 s
+  and a code is on screen for about 12 s, so a clock more than a few seconds
+  off makes the mark fail (closed, never open). A student can forge
+  `scannedAt`, but only to a moment when the code they hold was current, which
+  means they had the code while it was valid, and the geofence still applies.
+- Known gap: the scanner needs the profile loaded once in the running app, so
+  an app opened cold with no connection shows the courses error and no Scan
+  button. Opening the app before going offline works.
+- Build: `-Xlint:-processing` was added. With Room's annotation processor on
+  the path javac warns about every annotation no processor claims.

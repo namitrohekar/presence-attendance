@@ -240,4 +240,21 @@
     <string name="error_outside_area">You\'re outside the allowed area</string>
     <string name="error_qr_expired">This QR has expired. Scan the current one.</string>
     <string name="error_location_off">Location is turned off. Turn it on in system settings.</string>
+    <string name="result_queued_title">Saved</string>
+    <string name="result_queued_body">It will sync when you\'re back online. You can close the app.</string>
+    <plurals name="home_saved_scans">
+        <item quantity="one">%1$d saved scan</item>
+        <item quantity="other">%1$d saved scans</item>
+    </plurals>
+    <string name="saved_title">Saved scans</string>
+    <string name="saved_empty_title">No saved scans</string>
+    <string name="saved_empty_body">A scan made without a connection waits here until it can be sent.</string>
+    <string name="saved_pending">Waiting</string>
+    <string name="saved_pending_detail">Waiting for a connection</string>
+    <string name="saved_synced">Sent</string>
+    <string name="saved_synced_detail">Recorded as a late sync</string>
+    <string name="saved_expired">Expired</string>
+    <string name="saved_expired_detail">The session closed before this could be sent.</string>
+    <string name="saved_rejected">Not accepted</string>
+    <string name="saved_dismiss_hint">Tap a scan that is no longer waiting to remove it from this list.</string>
 </resources>
