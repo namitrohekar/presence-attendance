@@ -499,3 +499,22 @@ Each entry: context, decision, alternatives, consequence. Newest last.
   button. Opening the app before going offline works.
 - Build: `-Xlint:-processing` was added. With Room's annotation processor on
   the path javac warns about every annotation no processor claims.
+
+## D-038 Manual correction is a write without a read
+
+- Context: a teacher may read an attendance record only if its `teacherId` is
+  theirs, so a record that does not exist cannot be read at all. A
+  read-then-write correction is therefore refused for every absent student.
+  Found by the flow test before the screen was run.
+- Decision: the session roster is a live listener, so it already knows whether
+  a record exists. The correction is a transaction with no read: an update of
+  four fields if a record exists, a create of a MANUAL record if not. Marking
+  absent a student with no record writes nothing, since no record means absent.
+- A stale roster cannot damage data. A create over an existing record is a full
+  overwrite, which the update rule refuses because it touches fields a teacher
+  may not change; an update of a missing record fails. Both are tested.
+- Alternatives: letting teachers read missing records. Rejected: it would have
+  to be allowed for every signed-in user, and would reveal whether any student
+  has a record for any session.
+- Consequence: a correction keeps the original source, token and coordinates
+  of a scanned mark, so the audit trail shows it was a scan that was overruled.

@@ -387,8 +387,46 @@ function markQueued(db, session, mark) {
   });
 }
 
+/**
+ * FirestoreAttendanceRepository.correct: a teacher marks a student present or absent by hand.
+ * No read: a teacher cannot read a record that does not exist. hasRecord comes from the roster.
+ * Resolves to true if something was written, false if there was nothing to change.
+ */
+function correctAttendance(db, teacher, courseId, sessionId, studentId, hasRecord, present, note) {
+  if (!hasRecord && !present) {
+    return Promise.resolve(false);
+  }
+  const ref = doc(db, 'attendance', `${sessionId}_${studentId}`);
+  const correction = build('attendance.correction', {
+    status: present ? 'MANUAL_PRESENT' : 'MANUAL_ABSENT',
+    note,
+    updatedBy: teacher.uid,
+    updatedAt: serverTimestamp(),
+  });
+  return runTransaction(db, async (tx) => {
+    if (hasRecord) {
+      tx.update(ref, correction);
+    } else {
+      tx.set(
+        ref,
+        build('attendance.manual', {
+          ...correction,
+          sessionId,
+          courseId,
+          teacherId: teacher.uid,
+          studentId,
+          source: 'MANUAL',
+          markedAt: serverTimestamp(),
+        }),
+      );
+    }
+    return true;
+  });
+}
+
 module.exports = {
   markLive,
+  correctAttendance,
   markQueued,
   startSession,
   writeToken,

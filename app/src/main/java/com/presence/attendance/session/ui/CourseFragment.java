@@ -141,15 +141,38 @@ public final class CourseFragment extends Fragment {
                             null,
                             getString(live ? R.string.session_live : R.string.session_ended),
                             live ? Line.Tone.SUCCESS : Line.Tone.NEUTRAL);
-            lines.add(live ? row.navigates() : row);
+            lines.add(row.navigates());
         }
         return Line.grouped(lines);
     }
 
     private void onRowClicked(@NonNull String key) {
         final CourseViewModel.State state = viewModel.getState().getValue();
-        if (state != null && state.live != null && state.live.getId().equals(key)) {
+        if (state == null) {
+            return;
+        }
+        if (state.live != null && state.live.getId().equals(key)) {
             openLive(key);
+            return;
+        }
+        for (Session session : state.sessions) {
+            if (session.getId().equals(key)) {
+                openRoster(session);
+            }
+        }
+    }
+
+    /** An ended session opens its roster, where attendance can be corrected by hand. */
+    private void openRoster(@NonNull Session session) {
+        final NavController navController = NavHostFragment.findNavController(this);
+        final NavDestination current = navController.getCurrentDestination();
+        if (current != null && current.getId() == R.id.courseFragment) {
+            navController.navigate(
+                    CourseFragmentDirections.actionCourseToSessionRoster(
+                            args.getCourseId(),
+                            session.getId(),
+                            DateUtils.formatDateTime(
+                                    requireContext(), session.getStartedAtMillis(), DATE_FLAGS)));
         }
     }
 

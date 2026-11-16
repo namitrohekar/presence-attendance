@@ -61,4 +61,30 @@ public final class FakeAttendanceRepository implements AttendanceRepository {
         marks.add(session.getId() + ":" + mark.getToken() + ":queued");
         callback.onResult(markOutcome);
     }
+
+    public Outcome<Boolean> correctOutcome = Outcome.success(true);
+    public final List<String> corrections = new ArrayList<>();
+
+    @Override
+    public void correct(
+            @NonNull String teacherId,
+            @NonNull String courseId,
+            @NonNull String sessionId,
+            @NonNull String studentId,
+            boolean hasRecord,
+            boolean present,
+            @NonNull String note,
+            @NonNull Callback<Boolean> callback) {
+        corrections.add(
+                String.join(
+                        ":",
+                        teacherId,
+                        courseId,
+                        sessionId,
+                        studentId,
+                        hasRecord ? "update" : "create",
+                        String.valueOf(present),
+                        note));
+        callback.onResult(correctOutcome);
+    }
 }

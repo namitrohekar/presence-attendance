@@ -59,4 +59,23 @@ public interface AttendanceRepository {
             @NonNull Session session,
             @NonNull PendingMark mark,
             @NonNull Callback<MarkResult> callback);
+
+    /**
+     * A teacher's correction for one student in one of their sessions, with the reason.
+     *
+     * <p>{@code hasRecord} comes from the live roster: a teacher cannot read a record that does not
+     * exist, so the write is chosen without reading. If the roster was stale the rules refuse the
+     * write and nothing changes. Marking absent a student with no record writes nothing, because no
+     * record already means absent; the result is then false.
+     */
+    @MainThread
+    void correct(
+            @NonNull String teacherId,
+            @NonNull String courseId,
+            @NonNull String sessionId,
+            @NonNull String studentId,
+            boolean hasRecord,
+            boolean present,
+            @NonNull String note,
+            @NonNull Callback<Boolean> callback);
 }

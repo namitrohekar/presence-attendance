@@ -31,6 +31,10 @@ final class AttendanceMappers {
     private static final String ACCURACY_M = "accuracyM";
     private static final String SOURCE_LIVE = "LIVE";
     private static final String SOURCE_QUEUED = "QUEUED";
+    private static final String SOURCE_MANUAL = "MANUAL";
+    private static final String NOTE = "note";
+    private static final String UPDATED_BY = "updatedBy";
+    private static final String UPDATED_AT = "updatedAt";
     private static final String SCANNED_AT = "scannedAt";
 
     private AttendanceMappers() {}
@@ -95,5 +99,40 @@ final class AttendanceMappers {
         document.put(LNG, mark.getLng());
         document.put(ACCURACY_M, (double) mark.getAccuracyM());
         return document;
+    }
+
+    /** A teacher marking present a student who has no record for the session. */
+    @NonNull
+    static Map<String, Object> manualPresent(
+            @NonNull String teacherId,
+            @NonNull String courseId,
+            @NonNull String sessionId,
+            @NonNull String studentId,
+            @NonNull String note) {
+        final Map<String, Object> document = correction(teacherId, true, note);
+        document.put(SESSION_ID, sessionId);
+        document.put(COURSE_ID, courseId);
+        document.put(TEACHER_ID, teacherId);
+        document.put(STUDENT_ID, studentId);
+        document.put(SOURCE, SOURCE_MANUAL);
+        document.put(MARKED_AT, FieldValue.serverTimestamp());
+        return document;
+    }
+
+    /** The only fields a teacher may change on an existing record. */
+    @NonNull
+    static Map<String, Object> correction(
+            @NonNull String teacherId, boolean present, @NonNull String note) {
+        final Map<String, Object> changes = new HashMap<>();
+        changes.put(
+                STATUS,
+                (present
+                                ? AttendanceRecord.Status.MANUAL_PRESENT
+                                : AttendanceRecord.Status.MANUAL_ABSENT)
+                        .name());
+        changes.put(NOTE, note);
+        changes.put(UPDATED_BY, teacherId);
+        changes.put(UPDATED_AT, FieldValue.serverTimestamp());
+        return changes;
     }
 }

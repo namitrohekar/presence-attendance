@@ -99,6 +99,45 @@ public final class FirestoreAttendanceRepository implements AttendanceRepository
                 callback);
     }
 
+    @Override
+    public void correct(
+            @NonNull String teacherId,
+            @NonNull String courseId,
+            @NonNull String sessionId,
+            @NonNull String studentId,
+            boolean hasRecord,
+            boolean present,
+            @NonNull String note,
+            @NonNull Callback<Boolean> callback) {
+        if (!hasRecord && !present) {
+            callback.onResult(Outcome.success(false));
+            return;
+        }
+        final DocumentReference ref = record(sessionId, studentId);
+        // A transaction with no read: offline it fails instead of being queued. Updating a
+        // record that is gone fails, and creating one that exists is refused by the rules,
+        // because a full overwrite touches fields a teacher may not change.
+        firestore
+                .runTransaction(transaction -> {
+                    if (hasRecord) {
+                        transaction.update(
+                                ref, AttendanceMappers.correction(teacherId, present, note));
+                    } else {
+                        transaction.set(
+                                ref,
+                                AttendanceMappers.manualPresent(
+                                        teacherId, courseId, sessionId, studentId, note));
+                    }
+                    return true;
+                })
+                .addOnCompleteListener(task ->
+                        callback.onResult(
+                                task.isSuccessful()
+                                        ? Outcome.success(task.getResult())
+                                        : Outcome.failure(
+                                                FirebaseErrors.toAppError(task.getException()))));
+    }
+
     /** Creates the record unless one exists, and answers within the budget either way. */
     private void write(
             @NonNull DocumentReference ref,

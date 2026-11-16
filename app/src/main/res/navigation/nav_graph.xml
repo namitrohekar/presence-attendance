@@ -115,6 +115,9 @@
         <action
             android:id="@+id/action_course_to_live"
             app:destination="@id/liveSessionFragment" />
+        <action
+            android:id="@+id/action_course_to_session_roster"
+            app:destination="@id/sessionRosterFragment" />
     </fragment>
 
     <fragment
@@ -154,6 +157,21 @@
         tools:layout="@layout/fragment_list">
         <argument
             android:name="studentId"
+            app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/sessionRosterFragment"
+        android:name="com.presence.attendance.attendance.ui.SessionRosterFragment"
+        tools:layout="@layout/fragment_list">
+        <argument
+            android:name="courseId"
+            app:argType="string" />
+        <argument
+            android:name="sessionId"
+            app:argType="string" />
+        <argument
+            android:name="title"
             app:argType="string" />
     </fragment>
 </navigation>

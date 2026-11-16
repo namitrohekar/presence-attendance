@@ -257,4 +257,18 @@
     <string name="saved_expired_detail">The session closed before this could be sent.</string>
     <string name="saved_rejected">Not accepted</string>
     <string name="saved_dismiss_hint">Tap a scan that is no longer waiting to remove it from this list.</string>
+    <string name="status_present">Present</string>
+    <string name="status_absent">Absent</string>
+    <string name="status_manual_present">Marked present</string>
+    <string name="status_manual_absent">Marked absent</string>
+    <string name="session_roster_summary">Present: %1$d of %2$d</string>
+    <string name="session_roster_empty_title">No students yet</string>
+    <string name="session_roster_empty_body">Students appear here once they join the course.</string>
+    <string name="session_roster_error_title">Couldn\'t load this session</string>
+    <string name="correction_note_label">Reason (kept with the record)</string>
+    <string name="correction_note_missing">Enter a reason.</string>
+    <string name="correction_mark_present">Mark present</string>
+    <string name="correction_mark_absent">Mark absent</string>
+    <string name="correction_saving">Saving…</string>
+    <string name="correction_offline">You\'re offline. Connect to the internet to change attendance.</string>
 </resources>

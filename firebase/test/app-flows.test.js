@@ -289,3 +289,55 @@ describe('app flow: a scan saved offline is sent later', () => {
     await assertFails(flows.markQueued(student, session(29 * h.MINUTE), outside));
   });
 });
+
+describe('app flow: a teacher corrects attendance by hand', () => {
+  const record = (db, student) => getDoc(doc(db, 'attendance', `${h.SESSION}_${student.uid}`));
+  const correct = (db, who, student, hasRecord, present, note = 'Seen in class') =>
+    flows.correctAttendance(db, who, h.COURSE, h.SESSION, student.uid, hasRecord, present, note);
+
+  test('a teacher cannot read a record that does not exist, so the app never tries', async () => {
+    await assertFails(record(t.as(TEACHER), STUDENT));
+  });
+
+  test('absent with no record writes nothing; present creates a manual record', async () => {
+    const faculty = t.as(TEACHER);
+    expect(await correct(faculty, TEACHER, STUDENT, false, false)).toBe(false);
+    expect(await assertSucceeds(correct(faculty, TEACHER, STUDENT, false, true))).toBe(true);
+    const stored = (await assertSucceeds(record(faculty, STUDENT))).data();
+    expect(stored.status).toBe('MANUAL_PRESENT');
+    expect(stored.source).toBe('MANUAL');
+    expect(stored.updatedBy).toBe(TEACHER.uid);
+  });
+
+  test('a scanned mark can be turned absent and back, keeping where it came from', async () => {
+    await t.seed({ [`attendance/${h.SESSION}_${STUDENT.uid}`]: h.storedMark(STUDENT) });
+    const faculty = t.as(TEACHER);
+    expect(await assertSucceeds(correct(faculty, TEACHER, STUDENT, true, false, 'Left early'))).toBe(true);
+    let stored = (await record(faculty, STUDENT)).data();
+    expect(stored.status).toBe('MANUAL_ABSENT');
+    expect(stored.note).toBe('Left early');
+    expect(stored.source).toBe('LIVE');
+    expect(stored.token).toBe(h.TOKEN);
+    expect(await assertSucceeds(correct(faculty, TEACHER, STUDENT, true, true, 'Returned'))).toBe(true);
+    stored = (await record(faculty, STUDENT)).data();
+    expect(stored.status).toBe('MANUAL_PRESENT');
+  });
+
+  test('a stale roster cannot damage a record: the wrong kind of write is refused', async () => {
+    const faculty = t.as(TEACHER);
+    // The roster says "no record" but the student has just marked: a create must not overwrite.
+    await t.seed({ [`attendance/${h.SESSION}_${STUDENT.uid}`]: h.storedMark(STUDENT) });
+    await assertFails(correct(faculty, TEACHER, STUDENT, false, true));
+    expect((await record(faculty, STUDENT)).data().status).toBe('PRESENT');
+    // The roster says "has a record" but there is none: an update has nothing to change.
+    await assertFails(correct(faculty, TEACHER, h.OTHER_STUDENT, true, false));
+  });
+
+  test('refused: no note, another teacher, a student, someone not enrolled', async () => {
+    const faculty = t.as(TEACHER);
+    await assertFails(correct(faculty, TEACHER, STUDENT, false, true, ''));
+    await assertFails(correct(t.as(h.OTHER_TEACHER), h.OTHER_TEACHER, STUDENT, false, true));
+    await assertFails(correct(t.as(STUDENT), STUDENT, STUDENT, false, true));
+    await assertFails(correct(faculty, TEACHER, h.OUTSIDER, false, true));
+  });
+});

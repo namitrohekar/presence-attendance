@@ -105,4 +105,23 @@ public final class AttendanceMappersTest {
         assertEquals("never shown as waiting", PendingMark.State.REJECTED, odd.getState());
         assertEquals(AppError.UNKNOWN, odd.getReason());
     }
+
+    @Test
+    public void aManualRecordAndACorrectionHaveExactlyTheContractFields() throws IOException {
+        final Map<String, Object> created =
+                AttendanceMappers.manualPresent("teacherA", "courseA", "sessA", "studentA", "why");
+        assertEquals(
+                DocumentContract.fields("attendance.manual", false),
+                new TreeSet<>(created.keySet()));
+        assertEquals("MANUAL_PRESENT", created.get("status"));
+        assertEquals("MANUAL", created.get("source"));
+        assertEquals("teacherA", created.get("updatedBy"));
+
+        final Map<String, Object> absent = AttendanceMappers.correction("teacherA", false, "why");
+        assertEquals(
+                DocumentContract.fields("attendance.correction", false),
+                new TreeSet<>(absent.keySet()));
+        assertEquals("MANUAL_ABSENT", absent.get("status"));
+        assertEquals("why", absent.get("note"));
+    }
 }

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="@dimen/screen_margin"
+    android:paddingBottom="@dimen/space_24">
+
+    <include layout="@layout/view_sheet_handle" />
+
+    <TextView
+        android:id="@+id/correction_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_16"
+        android:accessibilityHeading="true"
+        android:textAppearance="@style/TextAppearance.Presence.Title" />
+
+    <TextView
+        android:id="@+id/correction_current"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_4"
+        android:textAppearance="@style/TextAppearance.Presence.Body"
+        android:textColor="@color/text_secondary" />
+
+    <TextView
+        style="@style/Widget.Presence.FieldLabel"
+        android:labelFor="@id/correction_note"
+        android:text="@string/correction_note_label" />
+
+    <EditText
+        android:id="@+id/correction_note"
+        style="@style/Widget.Presence.TextField"
+        android:autofillHints=""
+        android:importantForAutofill="no"
+        android:imeOptions="actionDone"
+        android:inputType="textCapSentences"
+        android:maxLength="@integer/note_max" />
+
+    <TextView
+        android:id="@+id/correction_note_error"
+        style="@style/Widget.Presence.InlineError"
+        android:text="@string/correction_note_missing" />
+
+    <TextView
+        android:id="@+id/correction_status"
+        style="@style/Widget.Presence.InlineError"
+        android:layout_marginTop="@dimen/space_20" />
+
+    <com.presence.attendance.core.ui.SpringButton
+        android:id="@+id/correction_save"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_24" />
+</LinearLayout>

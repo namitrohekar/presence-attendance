@@ -9,15 +9,16 @@ deployed yet, and I cannot sign in as you.
 
 | Area | Automated | On an emulator with stand-in data | Real Firebase, real accounts |
 |------|-----------|-----------------------------------|------------------------------|
-| Security rules | 550 Jest tests, 76 of 76 mutations caught | n/a | Phase 2 rules only (yours) |
+| Security rules | 555 Jest tests, 76 of 76 mutations caught | n/a | Phase 2 rules only (yours) |
 | Sign-in, courses | JUnit | yes | yes (yours, before the identity extension) |
 | Roster, CSV import, alerts, registration | JUnit + rules | yes | **no** |
 | Session, rotating QR, end session | JUnit + rules | yes | **no** |
 | Scanner, result screens | JUnit + rules | yes (simulated scan) | **no** |
 | Offline queue | JUnit + rules | yes (airplane mode, stand-in server) | **no** |
+| Session roster, manual correction | JUnit + rules | **no** | **no** |
 | Camera decoding a real QR | none | no | **no** |
 
-So sections 3 to 8 are the first real end-to-end run. Expect to find things.
+So sections 3 to 9 are the first real end-to-end run. Expect to find things.
 
 ## 1. One-time setup
 
@@ -159,13 +160,27 @@ Keep the app open on Courses before going offline (see Known gaps).
 7. Set the student phone's clock a minute wrong, save a scan offline,
    reconnect: "Not accepted". This is by design (D-037).
 
-## 8. Things to look at on every screen
+## 8. Session roster and manual correction (faculty)
+
+1. Courses > the course > tap an ended session. Every enrolled student is
+   listed with Present, Late sync, Marked present, Marked absent or Absent, and
+   the footer says "Present: X of Y".
+2. Tap an absent student > Mark present with an empty reason: "Enter a reason."
+   With a reason: the sheet closes and the row changes to "Marked present"
+   without a refresh.
+3. Tap a present student > Mark absent with a reason: "Marked absent"; the
+   count drops by one.
+4. Airplane mode: the button is disabled with an explanation.
+5. In the console the record keeps its original `source` and gains `note`,
+   `updatedBy` and `updatedAt`.
+
+## 9. Things to look at on every screen
 
 - Dark mode, landscape, largest font size, gesture and 3-button navigation.
 - No button under the system bar; no text cut off.
 - Airplane mode: actions that need the network are disabled with a reason.
 
-## 9. Known gaps
+## 10. Known gaps
 
 - Opening the app cold with no connection shows no Scan button (the profile
   has to load once). Open the app first, then go offline.
@@ -173,9 +188,12 @@ Keep the app open on Courses before going offline (see Known gaps).
   again. Swiping the app away does not.
 - Alerts: no unread count and no background notification. Alerts appear when
   the Alerts screen is open (live while it is open).
-- Reports, percentages, manual correction and CSV export are Phase 6.
+- Phase 6 is partly built: the session roster and manual correction are in.
+  Percentages, the at-risk list, the student's own history, CSV export and the
+  low-attendance notification are not.
+- The correction note is stored but not shown on the roster.
 
-## 10. If something fails
+## 11. If something fails
 
 - "You don't have permission to do that" on a first action after deploy
   usually means the rules deploy did not finish, or the account's `users`
