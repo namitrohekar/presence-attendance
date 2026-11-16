@@ -285,4 +285,8 @@
     <string name="students_at_risk">At risk · %1$d%%</string>
     <string name="students_summary">Below %1$d%%: %2$d of %3$d</string>
     <string name="students_error_title">Couldn\'t load attendance</string>
+    <string name="students_export">Export CSV</string>
+    <string name="students_export_name">attendance.csv</string>
+    <string name="students_exported">Saved the report.</string>
+    <string name="students_export_failed">Couldn\'t save the report. Choose another location and try again.</string>
 </resources>

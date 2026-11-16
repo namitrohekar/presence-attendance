@@ -16,7 +16,8 @@ deployed yet, and I cannot sign in as you.
 | Scanner, result screens | JUnit + rules | yes (simulated scan) | **no** |
 | Offline queue | JUnit + rules | yes (airplane mode, stand-in server) | **no** |
 | Session roster, manual correction | JUnit + rules | yes | **no** |
-| Student history, faculty students report | JUnit + rules | **no** | **no** |
+| Student history, faculty students report | JUnit + rules | yes | **no** |
+| CSV export | JUnit (builder only) | **no** | **no** |
 | Camera decoding a real QR | none | no | **no** |
 
 So sections 3 to 10 are the first real end-to-end run. Expect to find things.
@@ -192,6 +193,10 @@ Hold at least four short sessions so the figures are easy to check by hand.
    to Students: the figure and the badge follow.
 5. A course with no sessions yet: the student sees "No sessions yet"; the
    faculty list shows students with no badge.
+6. Students > Export CSV > pick a folder. "Saved the report." Open the file in
+   Sheets and in Excel: seven columns, one row per student, names with accents
+   intact. To check formula safety, a student whose Google display name starts
+   with `=` must show as text beginning with an apostrophe, not as a formula.
 
 ## 10. Things to look at on every screen
 
@@ -208,8 +213,9 @@ Hold at least four short sessions so the figures are easy to check by hand.
 - Alerts: no unread count and no background notification. Alerts appear when
   the Alerts screen is open (live while it is open).
 - Phase 6 is partly built: session roster, manual correction, percentages,
-  the student's history and the at-risk list are in. Changing a course's
-  threshold, CSV export and the low-attendance notification are not.
+  the student's history, the at-risk list and CSV export are in. Changing a
+  course's threshold and the low-attendance notification are not. Export
+  saves a file through the system picker; there is no share sheet.
 - The correction note is stored but not shown on the roster.
 
 ## 12. If something fails

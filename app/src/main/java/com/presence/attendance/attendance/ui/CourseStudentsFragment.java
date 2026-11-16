@@ -1,27 +1,49 @@
 package com.presence.attendance.attendance.ui;
 
+import android.content.Context;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.fragment.NavHostFragment;
+import com.presence.attendance.PresenceApp;
 import com.presence.attendance.R;
+import com.presence.attendance.attendance.domain.AttendanceCsv;
 import com.presence.attendance.core.AppError;
+import com.presence.attendance.core.AppExecutors;
+import com.presence.attendance.core.Log;
 import com.presence.attendance.core.ui.AppErrorMessages;
 import com.presence.attendance.core.ui.Line;
 import com.presence.attendance.core.ui.LineAdapter;
 import com.presence.attendance.core.ui.ViewModels;
 import com.presence.attendance.core.ui.WindowInsetsPadding;
 import com.presence.attendance.databinding.FragmentListBinding;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 /** Faculty: each student's attendance in the course, with those below the requirement marked. */
 public final class CourseStudentsFragment extends Fragment {
 
+    private static final String TAG = "CourseStudents";
+
     private CourseStudentsFragmentArgs args;
+    private CourseStudentsViewModel viewModel;
+    @Nullable private FragmentListBinding binding;
+    // Shown in place of the summary once an export has been tried.
+    @StringRes private int exportMessage;
+
+    private final ActivityResultLauncher<String> createCsv =
+            registerForActivityResult(
+                    new ActivityResultContracts.CreateDocument("text/csv"), this::export);
 
     public CourseStudentsFragment() {
         super(R.layout.fragment_list);
@@ -31,11 +53,12 @@ public final class CourseStudentsFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         final FragmentListBinding binding = FragmentListBinding.bind(view);
+        this.binding = binding;
         WindowInsetsPadding.applyHorizontal(binding.getRoot());
         WindowInsetsPadding.applyBottom(binding.listContent);
         args = CourseStudentsFragmentArgs.fromBundle(requireArguments());
 
-        final CourseStudentsViewModel viewModel =
+        viewModel =
                 new ViewModelProvider(
                                 this,
                                 ViewModels.factory(c ->
@@ -54,7 +77,9 @@ public final class CourseStudentsFragment extends Fragment {
                 v -> NavHostFragment.findNavController(this).popBackStack());
         final LineAdapter adapter = new LineAdapter(null);
         binding.listRecycler.setAdapter(adapter);
-        binding.listPrimary.setVisibility(View.GONE);
+        binding.listPrimary.setText(R.string.students_export);
+        binding.listPrimary.setOnClickListener(
+                v -> createCsv.launch(getString(R.string.students_export_name)));
         binding.listMessageAction.setText(R.string.action_try_again);
         binding.listMessageAction.setOnClickListener(v -> viewModel.retry());
         viewModel
@@ -75,14 +100,17 @@ public final class CourseStudentsFragment extends Fragment {
         binding.listRecycler.setVisibility(visibleIf(content));
         binding.listFooter.setVisibility(visibleIf(content));
         final boolean held = content && state.rows.get(0).stats.hasSessions();
+        binding.listPrimary.setVisibility(visibleIf(held));
         binding.listSummary.setText(
-                held
-                        ? getString(
-                                R.string.students_summary,
-                                args.getThreshold(),
-                                state.atRiskCount,
-                                state.rows.size())
-                        : getString(R.string.course_no_sessions_title));
+                exportMessage != 0
+                        ? getString(exportMessage)
+                        : held
+                                ? getString(
+                                        R.string.students_summary,
+                                        args.getThreshold(),
+                                        state.atRiskCount,
+                                        state.rows.size())
+                                : getString(R.string.course_no_sessions_title));
         binding.listMessage.setVisibility(visibleIf(empty || error));
         binding.listMessageAction.setVisibility(visibleIf(error));
         if (empty) {
@@ -123,6 +151,58 @@ public final class CourseStudentsFragment extends Fragment {
                             row.atRisk ? Line.Tone.DANGER : Line.Tone.NEUTRAL));
         }
         return Line.grouped(lines);
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
+    }
+
+    /** Writes the report to the place the teacher picked. Null means they cancelled. */
+    private void export(@Nullable Uri target) {
+        final CourseStudentsViewModel.State state = viewModel.getState().getValue();
+        if (target == null || state == null) {
+            return;
+        }
+        final List<AttendanceCsv.Row> rows = new ArrayList<>(state.rows.size());
+        for (CourseStudentsViewModel.Row row : state.rows) {
+            rows.add(
+                    new AttendanceCsv.Row(
+                            row.member.getRollNo(),
+                            row.member.getName(),
+                            row.member.getEmail(),
+                            row.stats.getPresent(),
+                            row.stats.getTotal(),
+                            row.stats.percent(),
+                            row.atRisk));
+        }
+        final String csv = AttendanceCsv.build(rows);
+        final Context app = requireContext().getApplicationContext();
+        final AppExecutors executors = ((PresenceApp) app).getContainer().executors();
+        executors
+                .io()
+                .execute(() -> {
+                    boolean saved = false;
+                    try (OutputStream out = app.getContentResolver().openOutputStream(target)) {
+                        if (out != null) {
+                            out.write(csv.getBytes(StandardCharsets.UTF_8));
+                            saved = true;
+                        }
+                    } catch (IOException | SecurityException e) {
+                        Log.w(TAG, "The report could not be written", e);
+                    }
+                    final boolean ok = saved;
+                    executors.main().execute(() -> onExported(ok));
+                });
+    }
+
+    private void onExported(boolean saved) {
+        exportMessage = saved ? R.string.students_exported : R.string.students_export_failed;
+        final FragmentListBinding bound = binding;
+        if (bound != null) {
+            bound.listSummary.setText(exportMessage);
+        }
     }
 
     private static int visibleIf(boolean visible) {
