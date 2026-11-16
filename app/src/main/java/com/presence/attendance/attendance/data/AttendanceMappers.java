@@ -21,8 +21,8 @@ final class AttendanceMappers {
     static final String SESSION_ID = "sessionId";
     static final String TEACHER_ID = "teacherId";
     static final String MARKED_AT = "markedAt";
-    private static final String COURSE_ID = "courseId";
-    private static final String STUDENT_ID = "studentId";
+    static final String COURSE_ID = "courseId";
+    static final String STUDENT_ID = "studentId";
     private static final String STATUS = "status";
     private static final String SOURCE = "source";
     private static final String TOKEN = "token";
@@ -42,15 +42,16 @@ final class AttendanceMappers {
     /** The record in the snapshot, or null if the document is malformed. */
     @Nullable
     static AttendanceRecord record(@NonNull DocumentSnapshot snapshot) {
+        final String sessionId = Snapshots.string(snapshot, SESSION_ID);
         final String studentId = Snapshots.string(snapshot, STUDENT_ID);
         final AttendanceRecord.Status status =
                 AttendanceRecord.Status.fromWire(Snapshots.string(snapshot, STATUS));
         final Timestamp markedAt =
                 snapshot.getTimestamp(MARKED_AT, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE);
-        if (studentId == null || status == null || markedAt == null) {
+        if (sessionId == null || studentId == null || status == null || markedAt == null) {
             return null;
         }
-        return new AttendanceRecord(studentId, status, markedAt.toDate().getTime());
+        return new AttendanceRecord(sessionId, studentId, status, markedAt.toDate().getTime());
     }
 
     /**

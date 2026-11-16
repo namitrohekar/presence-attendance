@@ -11,8 +11,9 @@ Standing gate, run at the end of every phase:
 From Phase 1 onward, also `npm test` in `firebase/`.
 
 Status: Phases 0 to 5 and the identity extension (Stages A to D) are built and
-pass the automated gates, plus the first slice of Phase 6 (session roster and
-manual correction). Phases 0 to 2 were reviewed on your device. The rest
+pass the automated gates, plus most of Phase 6 (session roster, manual
+correction, percentages, student history, at-risk list; not yet: threshold
+setting, CSV export, low-attendance notification). Phases 0 to 2 were reviewed on your device. The rest
 is waiting for your run: follow `docs/testing-guide.md`.
 
 | Phase | Delivers | Demo steps unlocked |

@@ -80,6 +80,13 @@ public final class FakeSessionRepository implements SessionRepository {
     }
 
     @Override
+    public void loadEnrolledSessions(
+            @NonNull String courseId, @NonNull Callback<List<Session>> callback) {
+        calls.add("loadEnrolledSessions:" + courseId);
+        callback.onResult(courseSessionsOutcome);
+    }
+
+    @Override
     public void loadCourseSessions(
             @NonNull String teacherId,
             @NonNull String courseId,

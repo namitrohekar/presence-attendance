@@ -78,4 +78,18 @@ public interface AttendanceRepository {
             boolean present,
             @NonNull String note,
             @NonNull Callback<Boolean> callback);
+
+    /** The student's own records in one course. */
+    @MainThread
+    void loadStudentRecords(
+            @NonNull String studentId,
+            @NonNull String courseId,
+            @NonNull Callback<List<AttendanceRecord>> callback);
+
+    /** Every record in one of the teacher's courses. */
+    @MainThread
+    void loadCourseRecords(
+            @NonNull String teacherId,
+            @NonNull String courseId,
+            @NonNull Callback<List<AttendanceRecord>> callback);
 }

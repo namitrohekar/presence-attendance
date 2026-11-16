@@ -168,11 +168,17 @@ public final class LiveSessionViewModelTest {
                 Outcome.success(
                         Arrays.asList(
                                 new AttendanceRecord(
-                                        "studentA", AttendanceRecord.Status.PRESENT, 3000),
+                                        "sessA", "studentA", AttendanceRecord.Status.PRESENT, 3000),
                                 new AttendanceRecord(
-                                        "studentB", AttendanceRecord.Status.LATE_SYNC, 2000),
+                                        "sessA",
+                                        "studentB",
+                                        AttendanceRecord.Status.LATE_SYNC,
+                                        2000),
                                 new AttendanceRecord(
-                                        "studentC", AttendanceRecord.Status.MANUAL_ABSENT, 1000))));
+                                        "sessA",
+                                        "studentC",
+                                        AttendanceRecord.Status.MANUAL_ABSENT,
+                                        1000))));
         assertEquals(3, state().records.size());
         assertEquals(2, state().presentCount());
         assertEquals("Meera Joshi", state().members.get("studentA").getName());

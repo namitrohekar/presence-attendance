@@ -32,6 +32,7 @@ public final class CourseFragment extends Fragment {
 
     private static final String TAG_SHEET = "course_sheet";
     private static final String KEY_JOIN_CODE = "join_code";
+    private static final String KEY_STUDENTS = "students";
     private static final String KEY_NO_SESSIONS = "no_sessions";
     private static final int DATE_FLAGS =
             DateUtils.FORMAT_SHOW_DATE
@@ -123,6 +124,13 @@ public final class CourseFragment extends Fragment {
         final List<Line> lines = new ArrayList<>();
         lines.add(Line.header("h_code", getString(R.string.course_join_code_header)));
         lines.add(Line.row(KEY_JOIN_CODE, args.getJoinCode(), null));
+        lines.add(Line.header("h_attendance", getString(R.string.course_attendance_header)));
+        lines.add(
+                Line.row(
+                                KEY_STUDENTS,
+                                getString(R.string.students_title),
+                                getString(R.string.course_students_detail, args.getThreshold()))
+                        .navigates());
         lines.add(Line.header("h_sessions", getString(R.string.course_sessions_header)));
         if (state.sessions.isEmpty()) {
             lines.add(
@@ -149,6 +157,16 @@ public final class CourseFragment extends Fragment {
     private void onRowClicked(@NonNull String key) {
         final CourseViewModel.State state = viewModel.getState().getValue();
         if (state == null) {
+            return;
+        }
+        if (KEY_STUDENTS.equals(key)) {
+            final NavController navController = NavHostFragment.findNavController(this);
+            final NavDestination current = navController.getCurrentDestination();
+            if (current != null && current.getId() == R.id.courseFragment) {
+                navController.navigate(
+                        CourseFragmentDirections.actionCourseToStudents(
+                                args.getCourseId(), args.getThreshold()));
+            }
             return;
         }
         if (state.live != null && state.live.getId().equals(key)) {

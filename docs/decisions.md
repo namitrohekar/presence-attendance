@@ -518,3 +518,20 @@ Each entry: context, decision, alternatives, consequence. Newest last.
   has a record for any session.
 - Consequence: a correction keeps the original source, token and coordinates
   of a scanned mark, so the audit trail shows it was a scan that was overruled.
+
+## D-039 How an attendance percentage is defined
+
+- Decision: sessions attended divided by sessions held, for one student in one
+  course. A session counts as held once it is over (ended, or its time has run
+  out), so a class in progress never lowers a figure. Present, late sync and
+  marked present count as attended; marked absent and no record do not. The
+  figure is shown as a whole percent, halves rounded up.
+- "Below the requirement" is compared exactly (`present * 100 < threshold *
+  total`), not on the rounded figure: 74.6% displays as 75% and is still below
+  a 75% requirement. Before any session is held nobody is at risk.
+- The calculation is one pure class (`AttendanceStats`) used by the student's
+  history and the teacher's report, so the two can never disagree.
+- Known limits: a student who joined after some sessions were held is counted
+  absent for those; the last 50 sessions of a course are loaded, so a longer
+  course would be computed over its most recent 50. Both are acceptable for a
+  semester course and would need `joinedAt` and paging to lift.

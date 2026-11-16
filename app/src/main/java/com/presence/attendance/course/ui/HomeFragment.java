@@ -159,7 +159,7 @@ public final class HomeFragment extends Fragment {
                             detail,
                             live ? getString(R.string.home_live) : null,
                             Line.Tone.SUCCESS);
-            lines.add(isFaculty ? row.navigates() : row);
+            lines.add(row.navigates());
         }
         return Line.grouped(lines);
     }
@@ -197,16 +197,24 @@ public final class HomeFragment extends Fragment {
 
     private void openCourse(@NonNull String courseId) {
         final HomeViewModel.State state = viewModel.getState().getValue();
-        if (state == null || state.user == null || state.user.getRole() != Role.FACULTY) {
+        if (state == null || state.user == null) {
             return;
         }
         for (Course course : state.courses) {
-            if (course.getId().equals(courseId)) {
-                leave(
-                        HomeFragmentDirections.actionHomeToCourse(
-                                course.getId(), course.getName(), course.getJoinCode()));
-                return;
+            if (!course.getId().equals(courseId)) {
+                continue;
             }
+            // Faculty manage the course; a student sees their own attendance in it.
+            leave(
+                    state.user.getRole() == Role.FACULTY
+                            ? HomeFragmentDirections.actionHomeToCourse(
+                                    course.getId(),
+                                    course.getName(),
+                                    course.getJoinCode(),
+                                    course.getThreshold())
+                            : HomeFragmentDirections.actionHomeToHistory(
+                                    course.getId(), course.getName(), course.getThreshold()));
+            return;
         }
     }
 

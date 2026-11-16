@@ -271,4 +271,18 @@
     <string name="correction_mark_absent">Mark absent</string>
     <string name="correction_saving">Saving…</string>
     <string name="correction_offline">You\'re offline. Connect to the internet to change attendance.</string>
+    <string name="status_in_progress">In progress</string>
+    <string name="history_summary_title">%1$d%% attendance</string>
+    <string name="history_summary_detail">Sessions attended: %1$d of %2$d</string>
+    <string name="history_below">Below %1$d%%</string>
+    <string name="history_empty_body">Your attendance appears here after the first class.</string>
+    <string name="history_error_title">Couldn\'t load your attendance</string>
+    <string name="students_title">Students</string>
+    <string name="course_attendance_header">Attendance</string>
+    <string name="course_students_detail">Percentages, and who is below %1$d%%</string>
+    <string name="students_row_detail">%1$s · Present: %2$d of %3$d</string>
+    <string name="students_percent">%1$d%%</string>
+    <string name="students_at_risk">At risk · %1$d%%</string>
+    <string name="students_summary">Below %1$d%%: %2$d of %3$d</string>
+    <string name="students_error_title">Couldn\'t load attendance</string>
 </resources>

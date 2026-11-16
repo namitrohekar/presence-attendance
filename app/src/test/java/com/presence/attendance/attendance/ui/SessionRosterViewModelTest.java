@@ -46,10 +46,10 @@ public final class SessionRosterViewModelTest {
         attendance.feed.setValue(
                 Outcome.success(
                         Arrays.asList(
-                                new AttendanceRecord("a", Status.LATE_SYNC, 1),
-                                new AttendanceRecord("bb", Status.MANUAL_ABSENT, 2),
+                                new AttendanceRecord("sessA", "a", Status.LATE_SYNC, 1),
+                                new AttendanceRecord("sessA", "bb", Status.MANUAL_ABSENT, 2),
                                 // Someone who has since left the course is not counted.
-                                new AttendanceRecord("gone", Status.PRESENT, 3))));
+                                new AttendanceRecord("sessA", "gone", Status.PRESENT, 3))));
         final SessionRosterViewModel.State state = viewModel.getState().getValue();
         assertEquals(SessionRosterViewModel.Status.CONTENT, state.status);
         assertEquals(3, state.members.size());

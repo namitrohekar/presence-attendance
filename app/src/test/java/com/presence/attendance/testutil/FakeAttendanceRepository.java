@@ -87,4 +87,25 @@ public final class FakeAttendanceRepository implements AttendanceRepository {
                         note));
         callback.onResult(correctOutcome);
     }
+
+    public Outcome<List<AttendanceRecord>> recordsOutcome = Outcome.success(new ArrayList<>());
+    public final List<String> recordLoads = new ArrayList<>();
+
+    @Override
+    public void loadStudentRecords(
+            @NonNull String studentId,
+            @NonNull String courseId,
+            @NonNull Callback<List<AttendanceRecord>> callback) {
+        recordLoads.add("student:" + studentId + ":" + courseId);
+        callback.onResult(recordsOutcome);
+    }
+
+    @Override
+    public void loadCourseRecords(
+            @NonNull String teacherId,
+            @NonNull String courseId,
+            @NonNull Callback<List<AttendanceRecord>> callback) {
+        recordLoads.add("teacher:" + teacherId + ":" + courseId);
+        callback.onResult(recordsOutcome);
+    }
 }

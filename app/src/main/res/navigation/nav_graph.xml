@@ -56,6 +56,9 @@
             android:id="@+id/action_home_to_roster"
             app:destination="@id/rosterFragment" />
         <action
+            android:id="@+id/action_home_to_history"
+            app:destination="@id/historyFragment" />
+        <action
             android:id="@+id/action_home_to_saved"
             app:destination="@id/savedScansFragment" />
         <action
@@ -112,6 +115,12 @@
         <argument
             android:name="joinCode"
             app:argType="string" />
+        <argument
+            android:name="threshold"
+            app:argType="integer" />
+        <action
+            android:id="@+id/action_course_to_students"
+            app:destination="@id/courseStudentsFragment" />
         <action
             android:id="@+id/action_course_to_live"
             app:destination="@id/liveSessionFragment" />
@@ -173,5 +182,32 @@
         <argument
             android:name="title"
             app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/historyFragment"
+        android:name="com.presence.attendance.attendance.ui.HistoryFragment"
+        tools:layout="@layout/fragment_list">
+        <argument
+            android:name="courseId"
+            app:argType="string" />
+        <argument
+            android:name="courseName"
+            app:argType="string" />
+        <argument
+            android:name="threshold"
+            app:argType="integer" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/courseStudentsFragment"
+        android:name="com.presence.attendance.attendance.ui.CourseStudentsFragment"
+        tools:layout="@layout/fragment_list">
+        <argument
+            android:name="courseId"
+            app:argType="string" />
+        <argument
+            android:name="threshold"
+            app:argType="integer" />
     </fragment>
 </navigation>

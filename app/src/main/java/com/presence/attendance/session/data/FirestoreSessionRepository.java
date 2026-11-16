@@ -177,6 +177,18 @@ public final class FirestoreSessionRepository implements SessionRepository {
     }
 
     @Override
+    public void loadEnrolledSessions(
+            @NonNull String courseId, @NonNull Callback<List<Session>> callback) {
+        // Allowed for members only; the rules look the membership up from the course id.
+        deliver(
+                sessions()
+                        .whereEqualTo(SessionMappers.COURSE_ID, courseId)
+                        .orderBy(SessionMappers.STARTED_AT, Query.Direction.DESCENDING)
+                        .limit(HISTORY_PAGE),
+                callback);
+    }
+
+    @Override
     public void loadCourseSessions(
             @NonNull String teacherId,
             @NonNull String courseId,

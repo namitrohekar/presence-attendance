@@ -341,3 +341,32 @@ describe('app flow: a teacher corrects attendance by hand', () => {
     await assertFails(correct(faculty, TEACHER, h.OUTSIDER, false, true));
   });
 });
+
+describe('app flow: attendance reports', () => {
+  const records = (db, field, uid) =>
+    query(collection(db, 'attendance'), where(field, '==', uid), where('courseId', '==', h.COURSE));
+  const courseSessions = (db) =>
+    query(collection(db, 'sessions'), where('courseId', '==', h.COURSE));
+
+  beforeEach(() =>
+    t.seed({
+      [`attendance/${h.SESSION}_${STUDENT.uid}`]: h.storedMark(STUDENT),
+      [`attendance/${h.SESSION}_${h.OTHER_STUDENT.uid}`]: h.storedMark(h.OTHER_STUDENT),
+    }),
+  );
+
+  test('the teacher loads every record of the course; a student only their own', async () => {
+    const all = await assertSucceeds(getDocs(records(t.as(TEACHER), 'teacherId', TEACHER.uid)));
+    expect(all.size).toBe(2);
+    const mine = await assertSucceeds(getDocs(records(t.as(STUDENT), 'studentId', STUDENT.uid)));
+    expect(mine.docs.map((d) => d.data().studentId)).toEqual([STUDENT.uid]);
+    expect((await assertSucceeds(getDocs(courseSessions(t.as(STUDENT))))).size).toBe(1);
+  });
+
+  test('denied: a classmate, another teacher or a non-member asking for the same data', async () => {
+    await assertFails(getDocs(records(t.as(STUDENT), 'studentId', h.OTHER_STUDENT.uid)));
+    await assertFails(getDocs(records(t.as(STUDENT), 'teacherId', TEACHER.uid)));
+    await assertFails(getDocs(records(t.as(h.OTHER_TEACHER), 'teacherId', TEACHER.uid)));
+    await assertFails(getDocs(courseSessions(t.as(h.OUTSIDER))));
+  });
+});

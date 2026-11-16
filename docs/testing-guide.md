@@ -9,16 +9,17 @@ deployed yet, and I cannot sign in as you.
 
 | Area | Automated | On an emulator with stand-in data | Real Firebase, real accounts |
 |------|-----------|-----------------------------------|------------------------------|
-| Security rules | 555 Jest tests, 76 of 76 mutations caught | n/a | Phase 2 rules only (yours) |
+| Security rules | 557 Jest tests; 76 of 76 mutations caught (rules unchanged since) | n/a | Phase 2 rules only (yours) |
 | Sign-in, courses | JUnit | yes | yes (yours, before the identity extension) |
 | Roster, CSV import, alerts, registration | JUnit + rules | yes | **no** |
 | Session, rotating QR, end session | JUnit + rules | yes | **no** |
 | Scanner, result screens | JUnit + rules | yes (simulated scan) | **no** |
 | Offline queue | JUnit + rules | yes (airplane mode, stand-in server) | **no** |
-| Session roster, manual correction | JUnit + rules | **no** | **no** |
+| Session roster, manual correction | JUnit + rules | yes | **no** |
+| Student history, faculty students report | JUnit + rules | **no** | **no** |
 | Camera decoding a real QR | none | no | **no** |
 
-So sections 3 to 9 are the first real end-to-end run. Expect to find things.
+So sections 3 to 10 are the first real end-to-end run. Expect to find things.
 
 ## 1. One-time setup
 
@@ -174,13 +175,31 @@ Keep the app open on Courses before going offline (see Known gaps).
 5. In the console the record keeps its original `source` and gains `note`,
    `updatedBy` and `updatedAt`.
 
-## 9. Things to look at on every screen
+## 9. Percentages and the at-risk list
+
+Hold at least four short sessions so the figures are easy to check by hand.
+
+1. Student: Courses > tap the course. The first row is "N% attendance" with
+   "Sessions attended: X of Y"; below it every session with Present, Late
+   sync, Marked present, Marked absent or Absent. A session still running
+   that you have not marked shows "In progress" and is not counted.
+2. Attend 2 of 4: "50% attendance" with a "Below 75%" badge. Attend 3 of 4:
+   "75% attendance" and no badge.
+3. Faculty: the course > Students. Each student shows "roll · Present: X of
+   Y" and a percentage; anyone below the requirement shows "At risk · N%".
+   The footer says "Below 75%: A of B".
+4. Mark an at-risk student present in one more session (section 8), come back
+   to Students: the figure and the badge follow.
+5. A course with no sessions yet: the student sees "No sessions yet"; the
+   faculty list shows students with no badge.
+
+## 10. Things to look at on every screen
 
 - Dark mode, landscape, largest font size, gesture and 3-button navigation.
 - No button under the system bar; no text cut off.
 - Airplane mode: actions that need the network are disabled with a reason.
 
-## 10. Known gaps
+## 11. Known gaps
 
 - Opening the app cold with no connection shows no Scan button (the profile
   has to load once). Open the app first, then go offline.
@@ -188,12 +207,12 @@ Keep the app open on Courses before going offline (see Known gaps).
   again. Swiping the app away does not.
 - Alerts: no unread count and no background notification. Alerts appear when
   the Alerts screen is open (live while it is open).
-- Phase 6 is partly built: the session roster and manual correction are in.
-  Percentages, the at-risk list, the student's own history, CSV export and the
-  low-attendance notification are not.
+- Phase 6 is partly built: session roster, manual correction, percentages,
+  the student's history and the at-risk list are in. Changing a course's
+  threshold, CSV export and the low-attendance notification are not.
 - The correction note is stored but not shown on the roster.
 
-## 11. If something fails
+## 12. If something fails
 
 - "You don't have permission to do that" on a first action after deploy
   usually means the rules deploy did not finish, or the account's `users`

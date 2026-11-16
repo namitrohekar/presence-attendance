@@ -4,7 +4,6 @@ import android.os.Bundle;
 import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.StringRes;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.fragment.NavHostFragment;
@@ -105,8 +104,8 @@ public final class SessionRosterFragment extends Fragment {
                                     member.getStudentId(),
                                     member.getName(),
                                     member.getRollNo(),
-                                    getString(label(record)),
-                                    tone(record))
+                                    getString(AttendanceLabels.label(record)),
+                                    AttendanceLabels.tone(record))
                             .navigates());
         }
         return Line.grouped(lines);
@@ -125,39 +124,13 @@ public final class SessionRosterFragment extends Fragment {
                                 args.getSessionId(),
                                 studentId,
                                 member.getName(),
-                                getString(label(record)),
+                                getString(AttendanceLabels.label(record)),
                                 record != null,
                                 record != null && record.getStatus().countsAsPresent())
                         .show(getChildFragmentManager(), TAG_SHEET);
                 return;
             }
         }
-    }
-
-    /** No record means the student never marked and nobody marked them: absent. */
-    @StringRes
-    private static int label(@Nullable AttendanceRecord record) {
-        if (record == null) {
-            return R.string.status_absent;
-        }
-        switch (record.getStatus()) {
-            case PRESENT:
-                return R.string.status_present;
-            case LATE_SYNC:
-                return R.string.live_late_sync;
-            case MANUAL_PRESENT:
-                return R.string.status_manual_present;
-            default:
-                return R.string.status_manual_absent;
-        }
-    }
-
-    @NonNull
-    private static Line.Tone tone(@Nullable AttendanceRecord record) {
-        if (record == null) {
-            return Line.Tone.NEUTRAL;
-        }
-        return record.getStatus().countsAsPresent() ? Line.Tone.SUCCESS : Line.Tone.DANGER;
     }
 
     private static int visibleIf(boolean visible) {

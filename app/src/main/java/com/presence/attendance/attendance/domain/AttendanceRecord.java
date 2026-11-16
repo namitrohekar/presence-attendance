@@ -29,15 +29,25 @@ public final class AttendanceRecord {
         }
     }
 
+    @NonNull private final String sessionId;
     @NonNull private final String studentId;
     @NonNull private final Status status;
     private final long markedAtMillis;
 
     public AttendanceRecord(
-            @NonNull String studentId, @NonNull Status status, long markedAtMillis) {
+            @NonNull String sessionId,
+            @NonNull String studentId,
+            @NonNull Status status,
+            long markedAtMillis) {
+        this.sessionId = sessionId;
         this.studentId = studentId;
         this.status = status;
         this.markedAtMillis = markedAtMillis;
+    }
+
+    @NonNull
+    public String getSessionId() {
+        return sessionId;
     }
 
     @NonNull

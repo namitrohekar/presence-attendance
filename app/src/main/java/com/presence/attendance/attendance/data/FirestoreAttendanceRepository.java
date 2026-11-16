@@ -6,6 +6,7 @@ import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.Source;
@@ -20,6 +21,7 @@ import com.presence.attendance.core.data.FirebaseErrors;
 import com.presence.attendance.core.data.QueryLiveData;
 import com.presence.attendance.core.location.LocationFix;
 import com.presence.attendance.session.domain.Session;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -136,6 +138,52 @@ public final class FirestoreAttendanceRepository implements AttendanceRepository
                                         ? Outcome.success(task.getResult())
                                         : Outcome.failure(
                                                 FirebaseErrors.toAppError(task.getException()))));
+    }
+
+    @Override
+    public void loadStudentRecords(
+            @NonNull String studentId,
+            @NonNull String courseId,
+            @NonNull Callback<List<AttendanceRecord>> callback) {
+        // The rules allow a student to list only records that carry their own id.
+        load(
+                attendance()
+                        .whereEqualTo(AttendanceMappers.STUDENT_ID, studentId)
+                        .whereEqualTo(AttendanceMappers.COURSE_ID, courseId),
+                callback);
+    }
+
+    @Override
+    public void loadCourseRecords(
+            @NonNull String teacherId,
+            @NonNull String courseId,
+            @NonNull Callback<List<AttendanceRecord>> callback) {
+        // The rules allow a teacher to list only records that carry their own id.
+        load(
+                attendance()
+                        .whereEqualTo(AttendanceMappers.TEACHER_ID, teacherId)
+                        .whereEqualTo(AttendanceMappers.COURSE_ID, courseId),
+                callback);
+    }
+
+    private static void load(
+            @NonNull Query query, @NonNull Callback<List<AttendanceRecord>> callback) {
+        query.get()
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        callback.onResult(
+                                Outcome.failure(FirebaseErrors.toAppError(task.getException())));
+                        return;
+                    }
+                    final List<AttendanceRecord> records = new ArrayList<>();
+                    for (DocumentSnapshot document : task.getResult().getDocuments()) {
+                        final AttendanceRecord record = AttendanceMappers.record(document);
+                        if (record != null) {
+                            records.add(record);
+                        }
+                    }
+                    callback.onResult(Outcome.success(records));
+                });
     }
 
     /** Creates the record unless one exists, and answers within the budget either way. */

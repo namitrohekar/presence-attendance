@@ -37,6 +37,10 @@ public interface SessionRepository {
     @MainThread
     void loadActiveSessions(@NonNull String teacherId, @NonNull Callback<List<Session>> callback);
 
+    /** The sessions of a course the signed-in student is enrolled in, newest first. */
+    @MainThread
+    void loadEnrolledSessions(@NonNull String courseId, @NonNull Callback<List<Session>> callback);
+
     /** A course's sessions, newest first. */
     @MainThread
     void loadCourseSessions(
