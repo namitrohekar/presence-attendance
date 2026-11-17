@@ -8,7 +8,8 @@ const {
   assertFails,
   assertSucceeds,
 } = require('@firebase/rules-unit-testing');
-const { doc, setDoc, Timestamp, serverTimestamp, setLogLevel } = require('firebase/firestore');
+const { doc, setDoc, writeBatch, Timestamp, serverTimestamp, setLogLevel } =
+  require('firebase/firestore');
 
 // Denials are the point of most tests; the SDK's warning for each one is noise.
 setLogLevel('silent');
@@ -69,7 +70,7 @@ async function newEnv(projectId, rules) {
 
 /** Firestore handle for a signed-in user with a verified email. */
 function as(env, user, claims = {}) {
-  return env
+  const db = env
     .authenticatedContext(user.uid, {
       email: user.email,
       email_verified: true,
@@ -77,6 +78,32 @@ function as(env, user, claims = {}) {
       ...claims,
     })
     .firestore();
+  // Remembered so submit() can claim the phone as whoever is writing. Set on the
+  // instance document references point at, which is not the wrapper returned here.
+  doc(db, 'users', user.uid).firestore.presenceUid = user.uid;
+  return db;
+}
+
+/** The id of the one phone a fixture student owns: 22 characters, like a token. */
+const deviceOf = (student) => `${student.uid}Phone0000000000000000`.slice(0, 22);
+
+/**
+ * Writes a mark the way the app does: together with the claim on the phone it
+ * names, made as whoever is signed in. A document with no usable deviceId (a
+ * teacher's manual record, or a deliberately broken mark) is written alone.
+ */
+function submit(ref, data) {
+  const db = ref.firestore;
+  const usable = (v) => typeof v === 'string' && v !== '' && !v.includes('/');
+  if (!usable(data.deviceId) || !usable(data.sessionId)) {
+    return setDoc(ref, data);
+  }
+  const batch = writeBatch(db);
+  batch.set(ref, data);
+  batch.set(doc(db, 'sessions', data.sessionId, 'devices', data.deviceId), {
+    studentId: db.presenceUid,
+  });
+  return batch.commit();
 }
 
 /** Runs writes with rules disabled, to put the database in a known state. */
@@ -216,6 +243,7 @@ function liveMark(student = STUDENT, overrides = {}) {
     token: TOKEN,
     markedAt: serverTimestamp(),
     ...INSIDE,
+    deviceId: deviceOf(student),
     ...overrides,
   };
 }
@@ -326,6 +354,8 @@ module.exports = {
   storedMark,
   patch,
   attendanceId,
+  deviceOf,
+  submit,
   assertFails,
   assertSucceeds,
 };

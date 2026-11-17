@@ -34,7 +34,8 @@ public final class AttendanceMappersTest {
                         Fixtures.STUDENT,
                         session,
                         "AbCdEfGhIjKlMnOpQrSt_-",
-                        new LocationFix(19.0761, 72.8778, 12.5f, false, 0));
+                        new LocationFix(19.0761, 72.8778, 12.5f, false, 0),
+                        "PhoneIdPhoneIdPhoneId0");
         assertEquals(
                 DocumentContract.fields("attendance.live", false), new TreeSet<>(mark.keySet()));
         assertEquals("the course and teacher are the session's", "courseA", mark.get("courseId"));
@@ -68,7 +69,8 @@ public final class AttendanceMappersTest {
                                 12.5f,
                                 1_700_000_000_000L,
                                 PendingMark.State.PENDING,
-                                null));
+                                null),
+                        "PhoneIdPhoneIdPhoneId0");
         assertEquals(
                 DocumentContract.fields("attendance.queued", false), new TreeSet<>(mark.keySet()));
         assertEquals("LATE_SYNC", mark.get("status"));
@@ -123,5 +125,30 @@ public final class AttendanceMappersTest {
                 new TreeSet<>(absent.keySet()));
         assertEquals("MANUAL_ABSENT", absent.get("status"));
         assertEquals("why", absent.get("note"));
+    }
+
+    @Test
+    public void aMarkNamesItsPhoneAndTheClaimHasExactlyTheContractFields() throws IOException {
+        final Session session =
+                new Session(
+                        "sessA",
+                        "courseA",
+                        "teacherA",
+                        Session.Status.ACTIVE,
+                        0,
+                        1,
+                        Geofence.around(19.076, 72.8777, 100));
+        final Map<String, Object> mark =
+                AttendanceMappers.liveMark(
+                        Fixtures.STUDENT,
+                        session,
+                        "AbCdEfGhIjKlMnOpQrSt_-",
+                        new LocationFix(19.0761, 72.8778, 12.5f, false, 0),
+                        "PhoneIdPhoneIdPhoneId0");
+        assertEquals("PhoneIdPhoneIdPhoneId0", mark.get("deviceId"));
+        final Map<String, Object> claim = AttendanceMappers.deviceClaim("studentA");
+        assertEquals(
+                DocumentContract.fields("sessions.devices", false), new TreeSet<>(claim.keySet()));
+        assertEquals("studentA", claim.get("studentId"));
     }
 }

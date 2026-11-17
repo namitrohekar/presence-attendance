@@ -32,6 +32,7 @@ final class AttendanceMappers {
     private static final String SOURCE_LIVE = "LIVE";
     private static final String SOURCE_QUEUED = "QUEUED";
     private static final String SOURCE_MANUAL = "MANUAL";
+    private static final String DEVICE_ID = "deviceId";
     private static final String NOTE = "note";
     private static final String UPDATED_BY = "updatedBy";
     private static final String UPDATED_AT = "updatedAt";
@@ -64,7 +65,8 @@ final class AttendanceMappers {
             @NonNull User student,
             @NonNull Session session,
             @NonNull String token,
-            @NonNull LocationFix fix) {
+            @NonNull LocationFix fix,
+            @NonNull String deviceId) {
         final Map<String, Object> document = new HashMap<>();
         document.put(SESSION_ID, session.getId());
         document.put(COURSE_ID, session.getCourseId());
@@ -77,6 +79,7 @@ final class AttendanceMappers {
         document.put(LAT, fix.getLat());
         document.put(LNG, fix.getLng());
         document.put(ACCURACY_M, (double) fix.getAccuracyM());
+        document.put(DEVICE_ID, deviceId);
         return document;
     }
 
@@ -85,7 +88,8 @@ final class AttendanceMappers {
      * accept it only inside the window in which the scanned code was current.
      */
     @NonNull
-    static Map<String, Object> queuedMark(@NonNull Session session, @NonNull PendingMark mark) {
+    static Map<String, Object> queuedMark(
+            @NonNull Session session, @NonNull PendingMark mark, @NonNull String deviceId) {
         final Map<String, Object> document = new HashMap<>();
         document.put(SESSION_ID, session.getId());
         document.put(COURSE_ID, session.getCourseId());
@@ -99,6 +103,7 @@ final class AttendanceMappers {
         document.put(LAT, mark.getLat());
         document.put(LNG, mark.getLng());
         document.put(ACCURACY_M, (double) mark.getAccuracyM());
+        document.put(DEVICE_ID, deviceId);
         return document;
     }
 
@@ -135,5 +140,22 @@ final class AttendanceMappers {
         changes.put(UPDATED_BY, teacherId);
         changes.put(UPDATED_AT, FieldValue.serverTimestamp());
         return changes;
+    }
+
+    /**
+     * The claim on a phone for one session: {@code sessions/{id}/devices/{deviceId}}. Written with
+     * the mark, so a second student cannot mark the same session from the same phone.
+     */
+    @NonNull
+    static Map<String, Object> deviceClaim(@NonNull String studentId) {
+        final Map<String, Object> claim = new HashMap<>();
+        claim.put(STUDENT_ID, studentId);
+        return claim;
+    }
+
+    /** Whose phone the claim says it is, or null if the claim is malformed. */
+    @Nullable
+    static String claimedBy(@NonNull DocumentSnapshot claim) {
+        return Snapshots.string(claim, STUDENT_ID);
     }
 }

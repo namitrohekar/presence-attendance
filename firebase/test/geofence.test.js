@@ -24,7 +24,7 @@ describe('geofence shared vectors (rules)', () => {
       const geofence = { lat: v.lat0, lng: v.lng0, radiusM: v.radiusM, cosLat: v.cosLat0 };
       await t.seed({ [`sessions/${h.SESSION}`]: h.sessionDoc({ geofence }) });
       const mark = h.liveMark(h.STUDENT, { lat: v.lat, lng: v.lng, accuracyM: v.accuracyM });
-      const write = setDoc(doc(t.as(h.STUDENT), 'attendance', h.attendanceId()), mark);
+      const write = h.submit(doc(t.as(h.STUDENT), 'attendance', h.attendanceId()), mark);
       await (v.pass ? h.assertSucceeds(write) : h.assertFails(write));
     },
   );

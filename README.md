@@ -35,6 +35,9 @@ run against the real Firebase project is in `docs/testing-guide.md`, section 0.
   course, the token they scanned was issued less than 20 seconds ago by the
   server's clock, the session is live, and their coordinates fall inside the
   session's geofence.
+- One phone can mark only one student in a session: the mark is written
+  together with a claim on the phone's id, and a claimed phone cannot be
+  claimed again.
 - Roles are never taken from the client. Faculty are an allowlist no client can
   read; a student is an address in the official domain that faculty have put
   on the roster, bound once to one sign-in.
@@ -64,8 +67,8 @@ interfaces in their constructors and are tested against in-memory fakes.
     cd firebase && npm install && npm test
     cd firebase && npm run test:mutation
 
-Last run: 229 unit tests, 560 rules tests (one of them 60 students marking at
-once), 76 of 76 weakened rules caught.
+Last run: 235 unit tests, 574 rules tests (one of them 60 students marking at
+once), 82 of 82 weakened rules caught.
 Lint and javac treat warnings as errors.
 
 To run the app you need `app/google-services.json` from the Firebase project

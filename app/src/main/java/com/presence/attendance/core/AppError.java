@@ -35,6 +35,8 @@ public enum AppError {
     SESSION_NOT_FOUND,
     SESSION_ENDED,
     ALREADY_MARKED,
+    /** Another student has already marked this session from this phone. */
+    DEVICE_USED,
     NOT_ENROLLED,
     MOCK_LOCATION,
     OUTSIDE_AREA,

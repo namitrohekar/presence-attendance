@@ -28,6 +28,8 @@ import java.util.Map;
 public final class FirestoreAttendanceRepository implements AttendanceRepository {
 
     private static final String ATTENDANCE = "attendance";
+    private static final String SESSIONS = "sessions";
+    private static final String DEVICES = "devices";
 
     /** How long a LIVE mark may take before the app stops waiting for the server. */
     private static final long MARK_BUDGET_MS = 8_000;
@@ -38,8 +40,15 @@ public final class FirestoreAttendanceRepository implements AttendanceRepository
     private final FirebaseFirestore firestore;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    public FirestoreAttendanceRepository(@NonNull FirebaseFirestore firestore) {
+    private final String deviceId;
+
+    /**
+     * @param deviceId this phone's id, see {@link com.presence.attendance.core.DeviceId}
+     */
+    public FirestoreAttendanceRepository(
+            @NonNull FirebaseFirestore firestore, @NonNull String deviceId) {
         this.firestore = firestore;
+        this.deviceId = deviceId;
     }
 
     @NonNull
@@ -64,8 +73,9 @@ public final class FirestoreAttendanceRepository implements AttendanceRepository
             @NonNull LocationFix fix,
             @NonNull Callback<MarkResult> callback) {
         write(
-                record(session.getId(), student.getUid()),
-                AttendanceMappers.liveMark(student, session, token, fix),
+                session.getId(),
+                student.getUid(),
+                AttendanceMappers.liveMark(student, session, token, fix, deviceId),
                 MARK_BUDGET_MS,
                 callback);
     }
@@ -76,8 +86,9 @@ public final class FirestoreAttendanceRepository implements AttendanceRepository
             @NonNull PendingMark mark,
             @NonNull Callback<MarkResult> callback) {
         write(
-                record(session.getId(), mark.getStudentId()),
-                AttendanceMappers.queuedMark(session, mark),
+                session.getId(),
+                mark.getStudentId(),
+                AttendanceMappers.queuedMark(session, mark, deviceId),
                 SYNC_BUDGET_MS,
                 callback);
     }
@@ -167,12 +178,24 @@ public final class FirestoreAttendanceRepository implements AttendanceRepository
                 });
     }
 
-    /** Creates the record unless one exists, and answers within the budget either way. */
+    /**
+     * Creates the record and claims this phone for the session, in one transaction, and answers
+     * within the budget either way. Nothing is written if the student already has a record, or if
+     * another student has claimed this phone.
+     */
     private void write(
-            @NonNull DocumentReference ref,
+            @NonNull String sessionId,
+            @NonNull String studentId,
             @NonNull Map<String, Object> document,
             long budgetMs,
             @NonNull Callback<MarkResult> callback) {
+        final DocumentReference ref = record(sessionId, studentId);
+        final DocumentReference claim =
+                firestore
+                        .collection(SESSIONS)
+                        .document(sessionId)
+                        .collection(DEVICES)
+                        .document(deviceId);
         // Whichever comes first, the server's answer or the end of the budget, is delivered;
         // the other is ignored.
         final boolean[] answered = {false};
@@ -190,7 +213,16 @@ public final class FirestoreAttendanceRepository implements AttendanceRepository
                     if (transaction.get(ref).exists()) {
                         return MarkResult.ALREADY_MARKED;
                     }
+                    final DocumentSnapshot claimed = transaction.get(claim);
+                    if (claimed.exists()
+                            && !studentId.equals(AttendanceMappers.claimedBy(claimed))) {
+                        // Read only to say why. The rules refuse it regardless.
+                        return MarkResult.DEVICE_USED;
+                    }
                     transaction.set(ref, document);
+                    if (!claimed.exists()) {
+                        transaction.set(claim, AttendanceMappers.deviceClaim(studentId));
+                    }
                     return MarkResult.MARKED;
                 })
                 .addOnCompleteListener(task -> {

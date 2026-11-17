@@ -70,6 +70,10 @@ public final class PendingMarkSync {
         }
         final Outcome<MarkResult> sent = remote.markQueued(session, mark);
         if (sent.isSuccess()) {
+            if (sent.getValue() == MarkResult.DEVICE_USED) {
+                return reject(mark, AppError.DEVICE_USED);
+            }
+            // Marked now, or already on the server from an attempt whose answer was lost.
             store.resolve(mark, PendingMark.State.SYNCED, null);
             return true;
         }

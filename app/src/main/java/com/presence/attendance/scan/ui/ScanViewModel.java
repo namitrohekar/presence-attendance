@@ -273,10 +273,16 @@ public final class ScanViewModel extends ViewModel {
 
     private void onMarked(@NonNull Outcome<MarkResult> marked) {
         if (marked.isSuccess()) {
-            if (marked.getValue() == MarkResult.MARKED) {
-                state.setValue(new State(Stage.DONE, current().locationReady, null));
-            } else {
-                reject(AppError.ALREADY_MARKED);
+            switch (marked.getValue()) {
+                case MARKED:
+                    state.setValue(new State(Stage.DONE, current().locationReady, null));
+                    break;
+                case DEVICE_USED:
+                    reject(AppError.DEVICE_USED);
+                    break;
+                default:
+                    reject(AppError.ALREADY_MARKED);
+                    break;
             }
         } else if (marked.getError() == AppError.PERMISSION_DENIED) {
             reject(AppError.QR_EXPIRED);

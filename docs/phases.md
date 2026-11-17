@@ -250,8 +250,8 @@ Five stages, each reviewed before the next. Findings and design in
 | Stage | Delivers | State |
 |-------|----------|-------|
 | 1 | Geofence accuracy 50 m, faster scan, late-delivery rescue, "N of M", 60-student test | built |
-| 2 | One phone, one student per session, enforced by the rules | next |
-| 3 | Headcount, end-of-session summary, revoke and restore, penalty, audit trail | |
+| 2 | One phone, one student per session, enforced by the rules | built |
+| 3 | Headcount, end-of-session summary, revoke and restore, penalty, audit trail | next |
 | 4 | Month calendar against the 75% criterion, per-student view | |
 | 5 | Low-attendance email from the teacher's mail app, student notification, threshold | |
 
@@ -263,3 +263,16 @@ Run-checks for stage 1:
    marked"; the faculty row may say "Late sync".
 4. A photo of a code older than 20 s: "This QR has expired."
 5. The accuracy check in `docs/testing-guide.md`.
+
+Run-checks for stage 2 (needs the rules deployed and two student accounts):
+1. Student A scans and is marked. On the same phone, sign out, sign in as
+   student B, scan the current code: "This phone already marked another
+   student in this session. Ask your teacher to mark you." No row for B.
+2. B scans from their own phone: marked.
+3. A scans again on the first phone: "You've already marked attendance for
+   this session."
+4. Start a new session: B can now mark from A's phone (the limit is per
+   session).
+5. Uninstall and reinstall the app on A's phone, sign in as B, scan in the
+   session A already marked: still refused.
+

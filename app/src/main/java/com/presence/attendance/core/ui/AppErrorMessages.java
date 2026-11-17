@@ -34,6 +34,7 @@ public final class AppErrorMessages {
             case SESSION_NOT_FOUND -> R.string.error_session_not_found;
             case SESSION_ENDED -> R.string.error_session_ended;
             case ALREADY_MARKED -> R.string.error_already_marked;
+            case DEVICE_USED -> R.string.error_device_used;
             case NOT_ENROLLED -> R.string.error_not_enrolled;
             case MOCK_LOCATION -> R.string.error_mock_location;
             case OUTSIDE_AREA -> R.string.error_outside_area;

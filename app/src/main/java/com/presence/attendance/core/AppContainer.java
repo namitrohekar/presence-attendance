@@ -1,6 +1,9 @@
 package com.presence.attendance.core;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.provider.Settings;
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -28,6 +31,7 @@ import com.presence.attendance.roster.domain.AlertRepository;
 import com.presence.attendance.roster.domain.RosterRepository;
 import com.presence.attendance.session.data.FirestoreSessionRepository;
 import com.presence.attendance.session.domain.SessionRepository;
+import com.presence.attendance.session.domain.Tokens;
 import java.security.SecureRandom;
 
 /**
@@ -41,6 +45,8 @@ public final class AppContainer {
 
     private static final int AUTH_EMULATOR_PORT = 9099;
     private static final int FIRESTORE_EMULATOR_PORT = 8080;
+    private static final String PREFS_DEVICE = "device";
+    private static final String KEY_FALLBACK_ID = "fallbackId";
 
     private final Connectivity connectivity;
     private final Context appContext;
@@ -118,7 +124,8 @@ public final class AppContainer {
     @NonNull
     public AttendanceRepository attendance() {
         if (attendance == null) {
-            attendance = new FirestoreAttendanceRepository(FirebaseFirestore.getInstance());
+            attendance =
+                    new FirestoreAttendanceRepository(FirebaseFirestore.getInstance(), deviceId());
         }
         return attendance;
     }
@@ -130,6 +137,30 @@ public final class AppContainer {
             location = new FusedLocationSource(appContext);
         }
         return location;
+    }
+
+    /**
+     * This phone's id for attendance marks. Android's per-app id is the same after a reinstall and
+     * after clearing data, which a random id kept by the app would not be. On the rare device that
+     * has none, a random one is kept instead.
+     */
+    @SuppressLint(
+            "HardwareIds") // Scoped to this app by Android, hashed, used only against proxies.
+    @NonNull
+    private String deviceId() {
+        String androidId =
+                Settings.Secure.getString(
+                        appContext.getContentResolver(), Settings.Secure.ANDROID_ID);
+        if (androidId == null || androidId.isEmpty()) {
+            final SharedPreferences prefs =
+                    appContext.getSharedPreferences(PREFS_DEVICE, Context.MODE_PRIVATE);
+            androidId = prefs.getString(KEY_FALLBACK_ID, null);
+            if (androidId == null) {
+                androidId = Tokens.generate(new SecureRandom());
+                prefs.edit().putString(KEY_FALLBACK_ID, androidId).apply();
+            }
+        }
+        return DeviceId.of(androidId);
     }
 
     /** The offline queue. Also used by the sync worker, off the main thread. */

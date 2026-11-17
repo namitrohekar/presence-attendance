@@ -9,7 +9,7 @@ deployed yet, and I cannot sign in as you.
 
 | Area | Automated | On an emulator with stand-in data | Real Firebase, real accounts |
 |------|-----------|-----------------------------------|------------------------------|
-| Security rules | 560 Jest tests, 76 of 76 mutations caught, 60-student concurrency test | n/a | Phase 2 rules only (yours) |
+| Security rules | 574 Jest tests, 82 of 82 mutations caught, 60-student concurrency test | n/a | Phase 2 rules only (yours) |
 | Sign-in, courses | JUnit | yes | yes (yours, before the identity extension) |
 | Roster, CSV import, alerts, registration | JUnit + rules | yes | **no** |
 | Session, rotating QR, end session | JUnit + rules | yes | **no** |
@@ -141,6 +141,12 @@ Start a fresh session on the faculty device first.
 9. Scan after the session ended: "This session has ended."
 10. Scan a QR that is not an attendance code (a URL): nothing happens; the
     scanner keeps looking.
+
+### One phone, one student
+
+Needs two student accounts on the roster and enrolled. The steps are the
+stage 2 run-checks at the end of `docs/phases.md`. This has never run on a
+phone: it is covered by rules tests and unit tests only.
 
 ### Location accuracy (do this in the real classroom)
 

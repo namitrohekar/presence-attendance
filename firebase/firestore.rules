@@ -626,6 +626,25 @@ service cloud.firestore {
           && session().status == 'ACTIVE'
           && request.time < session().endsAt;
       }
+
+      // One phone, one student per session. devices/{deviceId} is claimed by
+      // the first student who marks from that phone, in the same write as
+      // the mark. A second student on the same phone would be an update, and
+      // there is no update rule; nor delete, nor list.
+      match /devices/{deviceId} {
+        // The id is known only to the phone it belongs to, so whoever asks
+        // already holds that phone. Lets the app say why a mark is refused.
+        allow get: if signedIn();
+
+        // Lookups: 1 (the writer's own mark after the write). The mark names
+        // this phone, so a claim cannot exist without its mark.
+        allow create: if signedIn()
+          && isToken(deviceId)
+          && hasExactly(request.resource.data, ['studentId'])
+          && request.resource.data.studentId == uid()
+          && getAfter(/databases/$(database)/documents/attendance/$(sessionId + '_' + uid())).data.deviceId
+              == deviceId;
+      }
     }
 
     // ---- attendance (invariants 6, 7 and 8) -----------------------------
@@ -654,7 +673,7 @@ service cloud.firestore {
 
       function studentFields() {
         return ['sessionId', 'courseId', 'teacherId', 'studentId', 'status', 'source',
-                'token', 'markedAt', 'lat', 'lng', 'accuracyM'];
+                'token', 'markedAt', 'lat', 'lng', 'accuracyM', 'deviceId'];
       }
 
       function liveMark(data, session, validFrom) {
@@ -680,7 +699,13 @@ service cloud.firestore {
           && request.time < session.endsAt + duration.value(QUEUE_GRACE_MIN(), 'm');
       }
 
-      // Lookups: 3 (session, membership, token).
+      // The claim on this phone for this session, as it will be once the
+      // write commits. It must be created in the same write as the mark.
+      function deviceClaimAfter(sessionId, deviceId) {
+        return getAfter(/databases/$(database)/documents/sessions/$(sessionId)/devices/$(deviceId)).data;
+      }
+
+      // Lookups: 4 (session, membership, token, device claim after the write).
       function studentMark(data) {
         let session = sessionOf(data.sessionId);
         let validFrom = validFromOf(data.sessionId, data.token);
@@ -688,6 +713,7 @@ service cloud.firestore {
           && isToken(data.token)
           && attendanceId == data.sessionId + '_' + uid()
           && data.studentId == uid()
+          && deviceClaimAfter(data.sessionId, data.deviceId).studentId == uid()
           && data.courseId == session.courseId
           && data.teacherId == session.teacherId
           && isMemberOf(session.courseId, uid())

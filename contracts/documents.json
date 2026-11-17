@@ -14,8 +14,9 @@
   "sessions": "courseId,teacherId,status,startedAt,endsAt,geofence",
   "sessions.geofence": "lat,lng,radiusM,cosLat",
   "tokens": "validFrom",
-  "attendance.live": "sessionId,courseId,teacherId,studentId,status,source,token,markedAt,lat,lng,accuracyM",
-  "attendance.queued": "sessionId,courseId,teacherId,studentId,status,source,token,markedAt,scannedAt,lat,lng,accuracyM",
+  "sessions.devices": "studentId",
+  "attendance.live": "sessionId,courseId,teacherId,studentId,status,source,token,markedAt,lat,lng,accuracyM,deviceId",
+  "attendance.queued": "sessionId,courseId,teacherId,studentId,status,source,token,markedAt,scannedAt,lat,lng,accuracyM,deviceId",
   "attendance.manual": "sessionId,courseId,teacherId,studentId,status,source,markedAt,note,updatedBy,updatedAt",
   "attendance.correction": "status,note,updatedBy,updatedAt"
 }

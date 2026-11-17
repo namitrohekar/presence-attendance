@@ -279,6 +279,15 @@ public final class ScanViewModelTest {
     }
 
     @Test
+    public void aPhoneThatAlreadyMarkedAnotherStudentIsToldSo() {
+        attendance.markOutcome = Outcome.success(MarkResult.DEVICE_USED);
+        viewModel.onFix(inside());
+        viewModel.onQrText(QR);
+        assertEquals(AppError.DEVICE_USED, state().rejection);
+        assertTrue("it is not kept to be tried again", queue.marks.isEmpty());
+    }
+
+    @Test
     public void aRaceWithAnotherDeviceIsReportedAsAlreadyMarked() {
         attendance.markOutcome = Outcome.success(MarkResult.ALREADY_MARKED);
         viewModel.onFix(inside());

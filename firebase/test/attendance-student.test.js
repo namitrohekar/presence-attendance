@@ -32,7 +32,7 @@ const at = (ms) => Timestamp.fromMillis(ms);
 describe('INV-6 LIVE mark', () => {
   test('an enrolled student inside the geofence marks with a fresh token', async () => {
     const db = t.as(STUDENT);
-    await assertSucceeds(setDoc(ref(db), h.liveMark()));
+    await assertSucceeds(h.submit(ref(db), h.liveMark()));
     const stored = (await getDoc(ref(db))).data();
     expect(stored.status).toBe('PRESENT');
     expect(stored.markedAt.toMillis()).toBeGreaterThan(Date.now() - MINUTE);
@@ -47,7 +47,7 @@ describe('INV-6 LIVE mark', () => {
       await t.reset();
       const seededAt = Date.now();
       await t.seed({ [tokenPath()]: { validFrom: at(seededAt - 19900) } });
-      const accepted = await setDoc(ref(db), h.liveMark()).then(
+      const accepted = await h.submit(ref(db), h.liveMark()).then(
         () => true,
         () => false,
       );
@@ -63,32 +63,32 @@ describe('INV-6 LIVE mark', () => {
 
   test('denied: a token that is 20.1 s old', async () => {
     await t.seed({ [tokenPath()]: { validFrom: h.ago(20100) } });
-    await assertFails(setDoc(ref(t.as(STUDENT)), h.liveMark()));
+    await assertFails(h.submit(ref(t.as(STUDENT)), h.liveMark()));
   });
 
   test('denied: a direct write with a token that was never issued', async () => {
     const forged = h.liveMark(STUDENT, { token: 'AAAAAAAAAAAAAAAAAAAAAA' });
-    await assertFails(setDoc(ref(t.as(STUDENT)), forged));
+    await assertFails(h.submit(ref(t.as(STUDENT)), forged));
   });
 
   test('denied: a token issued for a different session', async () => {
-    await assertFails(setDoc(ref(t.as(STUDENT)), h.liveMark(STUDENT, { token: OTHER_TOKEN })));
+    await assertFails(h.submit(ref(t.as(STUDENT)), h.liveMark(STUDENT, { token: OTHER_TOKEN })));
   });
 
   test('denied: a student who is not enrolled', async () => {
-    await assertFails(setDoc(ref(t.as(OUTSIDER), OUTSIDER), h.liveMark(OUTSIDER)));
+    await assertFails(h.submit(ref(t.as(OUTSIDER), OUTSIDER), h.liveMark(OUTSIDER)));
   });
 
   test('denied: the session has been ended', async () => {
     // End time deliberately still ahead, so only the status check can deny it.
     const ended = h.sessionDoc({ status: 'ENDED', endsAt: h.fromNow(10 * MINUTE) });
     await t.seed({ [`sessions/${SESSION}`]: ended });
-    await assertFails(setDoc(ref(t.as(STUDENT)), h.liveMark()));
+    await assertFails(h.submit(ref(t.as(STUDENT)), h.liveMark()));
   });
 
   test('denied: the session is still ACTIVE but past its end time', async () => {
     await t.seed({ [`sessions/${SESSION}`]: h.sessionDoc({ endsAt: h.ago(SECOND) }) });
-    await assertFails(setDoc(ref(t.as(STUDENT)), h.liveMark()));
+    await assertFails(h.submit(ref(t.as(STUDENT)), h.liveMark()));
   });
 
   test.each([
@@ -113,29 +113,29 @@ describe('INV-6 LIVE mark', () => {
     ['the token is malformed', { token: 'short' }],
     ['the token is missing', { token: DROP }],
   ])('denied when %s', async (_, change) => {
-    await assertFails(setDoc(ref(t.as(STUDENT)), h.patch(h.liveMark(), change)));
+    await assertFails(h.submit(ref(t.as(STUDENT)), h.patch(h.liveMark(), change)));
   });
 
   test('denied: writing the attendance document of another student', async () => {
     const db = t.as(STUDENT);
-    await assertFails(setDoc(ref(db, OTHER_STUDENT), h.liveMark(OTHER_STUDENT)));
-    await assertFails(setDoc(ref(db, OTHER_STUDENT), h.liveMark(STUDENT)));
+    await assertFails(h.submit(ref(db, OTHER_STUDENT), h.liveMark(OTHER_STUDENT)));
+    await assertFails(h.submit(ref(db, OTHER_STUDENT), h.liveMark(STUDENT)));
   });
 });
 
 describe('INV-6 one record per student per session', () => {
   test('denied: marking twice, editing or deleting your own record', async () => {
     const db = t.as(STUDENT);
-    await assertSucceeds(setDoc(ref(db), h.liveMark()));
-    await assertFails(setDoc(ref(db), h.liveMark()));
+    await assertSucceeds(h.submit(ref(db), h.liveMark()));
+    await assertFails(h.submit(ref(db), h.liveMark()));
     await assertFails(updateDoc(ref(db), { status: 'PRESENT', markedAt: serverTimestamp() }));
     await assertFails(deleteDoc(ref(db)));
   });
 
   test('denied: a queued mark after a live mark for the same session', async () => {
     const db = t.as(STUDENT);
-    await assertSucceeds(setDoc(ref(db), h.liveMark()));
-    await assertFails(setDoc(ref(db), h.queuedMark(h.ago(SECOND))));
+    await assertSucceeds(h.submit(ref(db), h.liveMark()));
+    await assertFails(h.submit(ref(db), h.queuedMark(h.ago(SECOND))));
   });
 });
 
@@ -152,20 +152,20 @@ describe('INV-6 QUEUED mark', () => {
 
   test('a scan inside the token window syncs later as LATE_SYNC', async () => {
     const db = t.as(STUDENT);
-    await assertSucceeds(setDoc(ref(db), scanned(5 * SECOND)));
+    await assertSucceeds(h.submit(ref(db), scanned(5 * SECOND)));
     expect((await getDoc(ref(db))).data().status).toBe('LATE_SYNC');
   });
 
   test('it also syncs after the session has ended', async () => {
     await endSessionAt(validFromMs + 5 * MINUTE);
-    await assertSucceeds(setDoc(ref(t.as(STUDENT)), scanned(5 * SECOND)));
+    await assertSucceeds(h.submit(ref(t.as(STUDENT)), scanned(5 * SECOND)));
   });
 
   test.each([
     ['exactly when the token became valid', 0],
     ['19.9 s after the token became valid', 19900],
   ])('a scan %s is accepted', async (_, offsetMs) => {
-    await assertSucceeds(setDoc(ref(t.as(STUDENT)), scanned(offsetMs)));
+    await assertSucceeds(h.submit(ref(t.as(STUDENT)), scanned(offsetMs)));
   });
 
   test.each([
@@ -173,18 +173,18 @@ describe('INV-6 QUEUED mark', () => {
     ['20.1 s after the token became valid', 20100],
     ['0.1 s before the token became valid', -100],
   ])('denied: a scan %s', async (_, offsetMs) => {
-    await assertFails(setDoc(ref(t.as(STUDENT)), scanned(offsetMs)));
+    await assertFails(h.submit(ref(t.as(STUDENT)), scanned(offsetMs)));
   });
 
   test('denied: a scan time in the future', async () => {
     const future = Date.now() + MINUTE;
     await t.seed({ [tokenPath()]: { validFrom: at(future) } });
-    await assertFails(setDoc(ref(t.as(STUDENT)), h.queuedMark(at(future + 5 * SECOND))));
+    await assertFails(h.submit(ref(t.as(STUDENT)), h.queuedMark(at(future + 5 * SECOND))));
   });
 
   test('denied: a scan at or after the session end', async () => {
     await endSessionAt(validFromMs + 3 * SECOND);
-    await assertFails(setDoc(ref(t.as(STUDENT)), scanned(5 * SECOND)));
+    await assertFails(h.submit(ref(t.as(STUDENT)), scanned(5 * SECOND)));
   });
 
   test('a sync 29.9 min after the session end is accepted', async () => {
@@ -192,7 +192,7 @@ describe('INV-6 QUEUED mark', () => {
     await endSessionAt(endMs);
     await t.seed({ [tokenPath()]: { validFrom: at(endMs - MINUTE) } });
     const mark = h.queuedMark(at(endMs - MINUTE + 5 * SECOND));
-    await assertSucceeds(setDoc(ref(t.as(STUDENT)), mark));
+    await assertSucceeds(h.submit(ref(t.as(STUDENT)), mark));
   });
 
   test('denied: a sync 30.1 min after the session end', async () => {
@@ -200,7 +200,7 @@ describe('INV-6 QUEUED mark', () => {
     await endSessionAt(endMs);
     await t.seed({ [tokenPath()]: { validFrom: at(endMs - MINUTE) } });
     const mark = h.queuedMark(at(endMs - MINUTE + 5 * SECOND));
-    await assertFails(setDoc(ref(t.as(STUDENT)), mark));
+    await assertFails(h.submit(ref(t.as(STUDENT)), mark));
   });
 
   test.each([
@@ -213,11 +213,11 @@ describe('INV-6 QUEUED mark', () => {
     ['markedAt is a client-chosen time', { markedAt: h.ago(MINUTE) }],
     ['a note is attached', { note: 'was there' }],
   ])('denied when %s', async (_, change) => {
-    await assertFails(setDoc(ref(t.as(STUDENT)), h.patch(scanned(5 * SECOND), change)));
+    await assertFails(h.submit(ref(t.as(STUDENT)), h.patch(scanned(5 * SECOND), change)));
   });
 
   test('denied: a student who is not enrolled', async () => {
     const mark = h.queuedMark(at(validFromMs + 5 * SECOND), OUTSIDER);
-    await assertFails(setDoc(ref(t.as(OUTSIDER), OUTSIDER), mark));
+    await assertFails(h.submit(ref(t.as(OUTSIDER), OUTSIDER), mark));
   });
 });

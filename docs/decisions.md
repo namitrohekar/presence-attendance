@@ -567,3 +567,34 @@ Each entry: context, decision, alternatives, consequence. Newest last.
 - Alternatives: capping the accuracy credit separately from the accuracy
   limit (two numbers to explain); hiding the geofence from students (the room
   is public knowledge, and the app could no longer say "outside the area").
+
+## D-041 One phone, one student per session
+
+- Context: the simplest proxy is a friend signing in as the absent student on
+  their own phone and scanning a second time. Nothing in the rules could see
+  that two marks came from one phone.
+- Decision: a mark carries `deviceId` and must be written together with a
+  claim, `sessions/{id}/devices/{deviceId} = {studentId}`. The mark requires
+  the claim to exist after the write in the writer's name; the claim requires
+  the writer's mark to name that phone. A second student on the same phone
+  would have to change an existing claim, and there is no update rule. Same
+  pairing as `rollIndex` (D-024). Lookups for a mark: 4.
+- The id is the SHA-256 of Android's per-app id (`ANDROID_ID`), cut to the
+  shape of a token. It is the same after reinstalling or clearing data, is
+  different for every app and needs no permission. Only the hash leaves the
+  phone. A device with no Android id gets a random one kept by the app.
+- The app reads the claim inside the transaction only to explain: "This phone
+  already marked another student in this session. Ask your teacher to mark
+  you." Anyone signed in may read one claim by id, because knowing the id
+  means holding the phone; claims cannot be listed.
+- Scope is one session. The same phone may mark a different student in
+  another session, so a lent phone is not locked to one person for good.
+- Two students who really share a phone: the second is marked by hand, with a
+  reason, which is the honest record of what happened.
+- Limit: the id is sent by the app, so a modified app can send any value.
+  This closes the ordinary case. The headcount and review (next stage) are
+  what catch the rest.
+- Alternatives: flag only (leaves the mark in place until someone looks);
+  binding an account to one phone for good (breaks on a new phone and needs a
+  release procedure); a random id kept by the app (cleared with app data in
+  seconds).

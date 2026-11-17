@@ -17,7 +17,9 @@ public interface AttendanceRepository {
     enum MarkResult {
         MARKED,
         /** A record for this student and session already existed; nothing was written. */
-        ALREADY_MARKED
+        ALREADY_MARKED,
+        /** Another student already marked this session from this phone; nothing was written. */
+        DEVICE_USED
     }
 
     /**

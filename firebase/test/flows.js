@@ -327,67 +327,6 @@ async function endSession(db, sessionId) {
 }
 
 /**
- * FirestoreAttendanceRepository.markLive: the student's mark, after the app's own checks.
- * Resolves to MARKED or ALREADY_MARKED; rejects if the rules refuse it.
- */
-function markLive(db, student, session, token, fix) {
-  const ref = doc(db, 'attendance', `${session.id}_${student.uid}`);
-  return runTransaction(db, async (tx) => {
-    if ((await tx.get(ref)).exists()) {
-      return 'ALREADY_MARKED';
-    }
-    tx.set(
-      ref,
-      build('attendance.live', {
-        sessionId: session.id,
-        courseId: session.courseId,
-        teacherId: session.teacherId,
-        studentId: student.uid,
-        status: 'PRESENT',
-        source: 'LIVE',
-        token,
-        markedAt: serverTimestamp(),
-        lat: fix.lat,
-        lng: fix.lng,
-        accuracyM: fix.accuracyM,
-      }),
-    );
-    return 'MARKED';
-  });
-}
-
-/**
- * FirestoreAttendanceRepository.markQueued: a scan saved offline, sent by the sync worker.
- * Resolves to MARKED or ALREADY_MARKED; rejects if the rules refuse it.
- */
-function markQueued(db, session, mark) {
-  const ref = doc(db, 'attendance', `${session.id}_${mark.studentId}`);
-  return runTransaction(db, async (tx) => {
-    if ((await tx.get(ref)).exists()) {
-      return 'ALREADY_MARKED';
-    }
-    tx.set(
-      ref,
-      build('attendance.queued', {
-        sessionId: session.id,
-        courseId: session.courseId,
-        teacherId: session.teacherId,
-        studentId: mark.studentId,
-        status: 'LATE_SYNC',
-        source: 'QUEUED',
-        token: mark.token,
-        markedAt: serverTimestamp(),
-        scannedAt: Timestamp.fromMillis(mark.scannedAtMillis),
-        lat: mark.lat,
-        lng: mark.lng,
-        accuracyM: mark.accuracyM,
-      }),
-    );
-    return 'MARKED';
-  });
-}
-
-/**
  * FirestoreAttendanceRepository.correct: a teacher marks a student present or absent by hand.
  * No read: a teacher cannot read a record that does not exist. hasRecord comes from the roster.
  * Resolves to true if something was written, false if there was nothing to change.
@@ -422,6 +361,82 @@ function correctAttendance(db, teacher, courseId, sessionId, studentId, hasRecor
     }
     return true;
   });
+}
+
+/** The phone a fixture student marks from, unless a test says otherwise. */
+const deviceOf = (uid) => `${uid}Phone0000000000000000`.slice(0, 22);
+
+/**
+ * FirestoreAttendanceRepository.write: creates the mark and claims the phone in one transaction.
+ * Resolves to MARKED, ALREADY_MARKED, or DEVICE_USED when another student has already marked
+ * this session from the same phone; rejects if the rules refuse it.
+ */
+function writeMark(db, studentId, sessionId, deviceId, document) {
+  const ref = doc(db, 'attendance', `${sessionId}_${studentId}`);
+  const claim = doc(db, 'sessions', sessionId, 'devices', deviceId);
+  return runTransaction(db, async (tx) => {
+    if ((await tx.get(ref)).exists()) {
+      return 'ALREADY_MARKED';
+    }
+    const claimed = await tx.get(claim);
+    if (claimed.exists() && claimed.data().studentId !== studentId) {
+      return 'DEVICE_USED';
+    }
+    tx.set(ref, document);
+    if (!claimed.exists()) {
+      tx.set(claim, build('sessions.devices', { studentId }));
+    }
+    return 'MARKED';
+  });
+}
+
+/** FirestoreAttendanceRepository.markLive: the student's mark, after the app's own checks. */
+function markLive(db, student, session, token, fix, deviceId = deviceOf(student.uid)) {
+  return writeMark(
+    db,
+    student.uid,
+    session.id,
+    deviceId,
+    build('attendance.live', {
+      sessionId: session.id,
+      courseId: session.courseId,
+      teacherId: session.teacherId,
+      studentId: student.uid,
+      status: 'PRESENT',
+      source: 'LIVE',
+      token,
+      markedAt: serverTimestamp(),
+      lat: fix.lat,
+      lng: fix.lng,
+      accuracyM: fix.accuracyM,
+      deviceId,
+    }),
+  );
+}
+
+/** FirestoreAttendanceRepository.markQueued: a scan saved earlier, sent with its scan time. */
+function markQueued(db, session, mark, deviceId = deviceOf(mark.studentId)) {
+  return writeMark(
+    db,
+    mark.studentId,
+    session.id,
+    deviceId,
+    build('attendance.queued', {
+      sessionId: session.id,
+      courseId: session.courseId,
+      teacherId: session.teacherId,
+      studentId: mark.studentId,
+      status: 'LATE_SYNC',
+      source: 'QUEUED',
+      token: mark.token,
+      markedAt: serverTimestamp(),
+      scannedAt: Timestamp.fromMillis(mark.scannedAtMillis),
+      lat: mark.lat,
+      lng: mark.lng,
+      accuracyM: mark.accuracyM,
+      deviceId,
+    }),
+  );
 }
 
 module.exports = {

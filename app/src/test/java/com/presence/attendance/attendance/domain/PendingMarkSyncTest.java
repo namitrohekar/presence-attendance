@@ -191,6 +191,16 @@ public final class PendingMarkSyncTest {
     }
 
     @Test
+    public void aSavedScanFromAPhoneAnotherStudentUsedIsRejectedNotSynced() {
+        session("s1");
+        saved("s1");
+        markOutcome = Outcome.success(MarkResult.DEVICE_USED);
+        assertFalse(sync.run(STUDENT, 20 * MINUTE));
+        assertEquals(State.REJECTED, store.only("s1").getState());
+        assertEquals(AppError.DEVICE_USED, store.only("s1").getReason());
+    }
+
+    @Test
     public void oneUnreachableScanDoesNotHoldBackTheOthers() {
         sessions.put("s1", Outcome.failure(AppError.OFFLINE));
         saved("s1");
