@@ -156,8 +156,12 @@ public final class LiveSessionFragment extends Fragment {
         renderQr(binding, state);
         renderStatus(binding, state);
         final int present = state.presentCount();
+        // Out of everyone enrolled, once the course list has loaded.
         binding.liveCount.setText(
-                getResources().getQuantityString(R.plurals.live_present, present, present));
+                state.members.isEmpty()
+                        ? getResources().getQuantityString(R.plurals.live_present, present, present)
+                        : getString(
+                                R.string.session_roster_summary, present, state.members.size()));
         adapter.submitList(latestMarks(state));
         binding.liveNone.setVisibility(visibleIf(state.records.isEmpty()));
         binding.livePrimary.setEnabled(!state.ending);

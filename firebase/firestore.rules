@@ -22,7 +22,7 @@ service cloud.firestore {
     function SESSION_SKEW_MIN() { return 1; }
     function GEO_RADIUS_MIN_M() { return 30; }
     function GEO_RADIUS_MAX_M() { return 1000; }
-    function MAX_ACCURACY_M() { return 100; }
+    function MAX_ACCURACY_M() { return 50; }
     function QUEUE_GRACE_MIN() { return 30; }
     function THRESHOLD_MIN() { return 1; }
     function THRESHOLD_MAX() { return 100; }

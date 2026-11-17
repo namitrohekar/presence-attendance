@@ -9,7 +9,7 @@ deployed yet, and I cannot sign in as you.
 
 | Area | Automated | On an emulator with stand-in data | Real Firebase, real accounts |
 |------|-----------|-----------------------------------|------------------------------|
-| Security rules | 557 Jest tests; 76 of 76 mutations caught (rules unchanged since) | n/a | Phase 2 rules only (yours) |
+| Security rules | 560 Jest tests, 76 of 76 mutations caught, 60-student concurrency test | n/a | Phase 2 rules only (yours) |
 | Sign-in, courses | JUnit | yes | yes (yours, before the identity extension) |
 | Roster, CSV import, alerts, registration | JUnit + rules | yes | **no** |
 | Session, rotating QR, end session | JUnit + rules | yes | **no** |
@@ -141,6 +141,15 @@ Start a fresh session on the faculty device first.
 9. Scan after the session ended: "This session has ended."
 10. Scan a QR that is not an attendance code (a URL): nothing happens; the
     scanner keeps looking.
+
+### Location accuracy (do this in the real classroom)
+
+The rules accept a scan only if the phone's reported accuracy is 50 m or
+better. Inside the room, open Scan QR on two or three different phones and
+watch the status line: "Location ready" means the fix is good enough. If a
+phone stays on "Getting location…" and a scan ends with "Your location isn't
+accurate enough yet", note which phone and where it was. If that happens to
+many honest phones, the limit needs raising (D-040); a few are marked by hand.
 
 ## 7. Offline queue (student)
 

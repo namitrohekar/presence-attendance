@@ -28,18 +28,14 @@ public final class FakeAttendanceRepository implements AttendanceRepository {
         return feed;
     }
 
-    public Outcome<Boolean> hasMarkedOutcome = Outcome.success(false);
     public Outcome<MarkResult> markOutcome = Outcome.success(MarkResult.MARKED);
     public final List<String> marks = new ArrayList<>();
     public LocationFix lastFix;
 
-    @Override
-    public void hasMarked(
-            @NonNull String sessionId,
-            @NonNull String studentId,
-            @NonNull Callback<Boolean> callback) {
-        callback.onResult(hasMarkedOutcome);
-    }
+    /** The answer to a queued mark; null means the same as {@link #markOutcome}. */
+    public Outcome<MarkResult> queuedOutcome;
+
+    public PendingMark lastQueued;
 
     @Override
     public void markLive(
@@ -59,7 +55,8 @@ public final class FakeAttendanceRepository implements AttendanceRepository {
             @NonNull PendingMark mark,
             @NonNull Callback<MarkResult> callback) {
         marks.add(session.getId() + ":" + mark.getToken() + ":queued");
-        callback.onResult(markOutcome);
+        lastQueued = mark;
+        callback.onResult(queuedOutcome != null ? queuedOutcome : markOutcome);
     }
 
     public Outcome<Boolean> correctOutcome = Outcome.success(true);

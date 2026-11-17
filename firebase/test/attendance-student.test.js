@@ -94,7 +94,7 @@ describe('INV-6 LIVE mark', () => {
   test.each([
     ['the location is outside the geofence', { lat: h.GEOFENCE.lat + 0.002 }],
     ['accuracy is 0', { accuracyM: 0 }],
-    ['accuracy is above 100 m', { accuracyM: 100.5 }],
+    ['accuracy is above 50 m', { accuracyM: 50.5 }],
     ['latitude is a string', { lat: '19.076' }],
     ['a coordinate is missing', { lng: DROP }],
     ['accuracy is missing', { accuracyM: DROP }],

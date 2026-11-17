@@ -25,7 +25,7 @@ public final class Constants {
     public static final int GEO_RADIUS_MAX_M = 1000;
 
     /** A location fix less accurate than this is rejected. */
-    public static final int MAX_ACCURACY_M = 100;
+    public static final int MAX_ACCURACY_M = 50;
 
     /** Minutes after a session ends during which an offline scan may still sync. */
     public static final int QUEUE_GRACE_MIN = 30;

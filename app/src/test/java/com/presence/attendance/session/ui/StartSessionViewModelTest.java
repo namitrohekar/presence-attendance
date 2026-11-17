@@ -113,7 +113,7 @@ public final class StartSessionViewModelTest {
         location.fixOutcome = Outcome.success(new LocationFix(19.076, 72.8777, 180f, false, 0));
         viewModel.setMode(Mode.HERE);
         assertEquals(Fix.FAILED, state().fix);
-        assertEquals(AppError.LOCATION_UNAVAILABLE, state().error);
+        assertEquals(AppError.LOCATION_INACCURATE, state().error);
         viewModel.start();
         assertTrue(sessions.calls.isEmpty());
 

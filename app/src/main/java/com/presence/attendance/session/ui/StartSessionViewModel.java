@@ -229,7 +229,7 @@ public final class StartSessionViewModel extends ViewModel {
             final LocationFix fix = outcome.getValue();
             if (fix.getAccuracyM() > Constants.MAX_ACCURACY_M) {
                 // Too vague to centre a geofence on.
-                state.setValue(current().with(Fix.FAILED, 0, false, AppError.LOCATION_UNAVAILABLE));
+                state.setValue(current().with(Fix.FAILED, 0, false, AppError.LOCATION_INACCURATE));
                 return;
             }
             here = fix;

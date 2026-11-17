@@ -28,6 +28,8 @@ public enum AppError {
     LOCATION_PERMISSION_REQUIRED,
     /** No usable fix: location is off, or none arrived in time. */
     LOCATION_UNAVAILABLE,
+    /** Fixes are arriving, but none is accurate enough to compare with the area. */
+    LOCATION_INACCURATE,
     /** appConfig/campus has not been created in the console. */
     CAMPUS_NOT_CONFIGURED,
     SESSION_NOT_FOUND,

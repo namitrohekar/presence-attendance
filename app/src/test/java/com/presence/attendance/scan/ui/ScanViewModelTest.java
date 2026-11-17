@@ -127,13 +127,47 @@ public final class ScanViewModelTest {
     }
 
     @Test
-    public void alreadyMarkedIsCaughtBeforeAnythingIsSent() {
-        attendance.hasMarkedOutcome = Outcome.success(true);
+    public void aScanMakesOneReadAndOneWrite() {
         viewModel.onFix(inside());
         viewModel.onQrText(QR);
-        assertEquals(AppError.ALREADY_MARKED, state().rejection);
-        assertTrue(attendance.marks.isEmpty());
-        assertTrue("the session was not even read", sessions.calls.isEmpty());
+        assertEquals(Collections.singletonList("loadSession:" + SESSION_ID), sessions.calls);
+        assertEquals(1, attendance.marks.size());
+    }
+
+    @Test
+    public void aMarkThatExpiredOnItsWayIsSentAgainWithTheScanTime() {
+        time.now = 2_000_000;
+        attendance.markOutcome = Outcome.failure(AppError.PERMISSION_DENIED);
+        attendance.queuedOutcome = Outcome.success(MarkResult.MARKED);
+        viewModel.onFix(inside());
+        viewModel.onQrText(QR);
+        assertEquals(Stage.DONE, state().stage);
+        assertNull("marked, as a late sync", state().rejection);
+        assertFalse("sent now, not kept for later", state().queued);
+        assertEquals(
+                java.util.Arrays.asList(
+                        SESSION_ID + ":" + TOKEN, SESSION_ID + ":" + TOKEN + ":queued"),
+                attendance.marks);
+        assertEquals(2_000_000, attendance.lastQueued.getScannedAtMillis());
+        assertTrue(queue.marks.isEmpty());
+    }
+
+    @Test
+    public void ifTheConnectionDropsDuringTheSecondAttemptTheScanIsSaved() {
+        attendance.markOutcome = Outcome.failure(AppError.PERMISSION_DENIED);
+        attendance.queuedOutcome = Outcome.failure(AppError.OFFLINE);
+        viewModel.onFix(inside());
+        viewModel.onQrText(QR);
+        assertTrue(state().queued);
+        assertEquals(1, queue.marks.size());
+    }
+
+    @Test
+    public void aFixThatKeepsArrivingButIsTooVagueGetsItsOwnMessage() {
+        viewModel.onFix(fix(19.07618, 60f, false));
+        viewModel.onQrText(QR);
+        time.advance(ScanViewModel.FIX_WAIT_MS);
+        assertEquals(AppError.LOCATION_INACCURATE, state().rejection);
     }
 
     @Test
@@ -260,7 +294,7 @@ public final class ScanViewModelTest {
         assertEquals(AppError.UNAUTHENTICATED, state().rejection);
 
         setUp();
-        attendance.hasMarkedOutcome = Outcome.failure(AppError.UNKNOWN);
+        sessions.sessionOutcome = Outcome.failure(AppError.UNKNOWN);
         viewModel.onFix(inside());
         viewModel.onQrText(QR);
         assertEquals(AppError.UNKNOWN, state().rejection);
@@ -302,7 +336,7 @@ public final class ScanViewModelTest {
     public void theSavedScanCarriesTheTimeTheCodeWasRead() {
         // The connection drops mid-check; the fix arrives five seconds after the scan.
         time.now = 1_000_000;
-        attendance.hasMarkedOutcome = Outcome.failure(AppError.OFFLINE);
+        sessions.sessionOutcome = Outcome.failure(AppError.OFFLINE);
         viewModel.onQrText(QR);
         time.advance(5_000);
         viewModel.onFix(inside());

@@ -64,7 +64,8 @@ interfaces in their constructors and are tested against in-memory fakes.
     cd firebase && npm install && npm test
     cd firebase && npm run test:mutation
 
-Last run: 226 unit tests, 557 rules tests, 76 of 76 weakened rules caught.
+Last run: 229 unit tests, 560 rules tests (one of them 60 students marking at
+once), 76 of 76 weakened rules caught.
 Lint and javac treat warnings as errors.
 
 To run the app you need `app/google-services.json` from the Firebase project

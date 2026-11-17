@@ -289,4 +289,5 @@
     <string name="students_export_name">attendance.csv</string>
     <string name="students_exported">Saved the report.</string>
     <string name="students_export_failed">Couldn\'t save the report. Choose another location and try again.</string>
+    <string name="error_location_inaccurate">Your location isn\'t accurate enough yet. Turn on Wi-Fi, move near a window, wait a few seconds and try again.</string>
 </resources>

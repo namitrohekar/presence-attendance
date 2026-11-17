@@ -153,7 +153,7 @@ public final class ScanViewModel extends ViewModel {
             if (!user.isSuccess()) {
                 reject(user.getError());
             } else if (online) {
-                checkNotMarked(user.getValue(), payload);
+                checkSession(user.getValue(), payload);
             } else {
                 save(user.getValue(), payload);
             }
@@ -171,16 +171,7 @@ public final class ScanViewModel extends ViewModel {
                 return;
             }
             queue.add(
-                    new PendingMark(
-                            payload.getSessionId(),
-                            student.getUid(),
-                            payload.getToken(),
-                            fix.getLat(),
-                            fix.getLng(),
-                            fix.getAccuracyM(),
-                            scannedAtMs,
-                            PendingMark.State.PENDING,
-                            null),
+                    scan(student, payload, fix),
                     () -> {
                         requestSync.run();
                         state.setValue(new State(Stage.DONE, current().locationReady, null, true));
@@ -188,26 +179,25 @@ public final class ScanViewModel extends ViewModel {
         });
     }
 
+    /** This scan as it is kept or sent later: the code, the place, and when the code was read. */
+    @NonNull
+    private PendingMark scan(
+            @NonNull User student, @NonNull QrPayload payload, @NonNull LocationFix fix) {
+        return new PendingMark(
+                payload.getSessionId(),
+                student.getUid(),
+                payload.getToken(),
+                fix.getLat(),
+                fix.getLng(),
+                fix.getAccuracyM(),
+                scannedAtMs,
+                PendingMark.State.PENDING,
+                null);
+    }
+
     /** True for failures that say nothing about the scan itself, only about the connection. */
     private static boolean isUnreachable(@Nullable AppError error) {
         return error == AppError.OFFLINE || error == AppError.TIMEOUT;
-    }
-
-    private void checkNotMarked(@NonNull User student, @NonNull QrPayload payload) {
-        attendance.hasMarked(
-                payload.getSessionId(),
-                student.getUid(),
-                marked -> {
-                    if (isUnreachable(marked.getError())) {
-                        save(student, payload);
-                    } else if (!marked.isSuccess()) {
-                        reject(marked.getError());
-                    } else if (marked.getValue()) {
-                        reject(AppError.ALREADY_MARKED);
-                    } else {
-                        checkSession(student, payload);
-                    }
-                });
     }
 
     private void checkSession(@NonNull User student, @NonNull QrPayload payload) {
@@ -249,11 +239,36 @@ public final class ScanViewModel extends ViewModel {
                             // Whether it arrived is unknown. Sending it again later is safe:
                             // a record that exists is reported, not written twice.
                             save(student, payload);
+                        } else if (marked.getError() == AppError.PERMISSION_DENIED) {
+                            sendLate(student, session, payload, fix);
                         } else {
                             onMarked(marked);
                         }
                     });
         }
+    }
+
+    /**
+     * Every check the app can make has passed and the mark was still refused, so the code stopped
+     * being current while the mark was on its way. The same scan is sent once more with the time
+     * the code was read. The rules accept that only if the code was current at that moment, so a
+     * picture of an old code is refused here as well.
+     */
+    private void sendLate(
+            @NonNull User student,
+            @NonNull Session session,
+            @NonNull QrPayload payload,
+            @NonNull LocationFix fix) {
+        attendance.markQueued(
+                session,
+                scan(student, payload, fix),
+                marked -> {
+                    if (isUnreachable(marked.getError())) {
+                        save(student, payload);
+                    } else {
+                        onMarked(marked);
+                    }
+                });
     }
 
     private void onMarked(@NonNull Outcome<MarkResult> marked) {
@@ -264,7 +279,6 @@ public final class ScanViewModel extends ViewModel {
                 reject(AppError.ALREADY_MARKED);
             }
         } else if (marked.getError() == AppError.PERMISSION_DENIED) {
-            // Every check the app can make has passed, so the token must be stale.
             reject(AppError.QR_EXPIRED);
         } else {
             reject(marked.getError());
@@ -283,19 +297,28 @@ public final class ScanViewModel extends ViewModel {
                 scheduler.schedule(
                         () -> {
                             stopWaitingForFix();
-                            reject(AppError.LOCATION_UNAVAILABLE);
+                            // Fixes that arrive but are too vague need a different remedy
+                            // from no fix at all.
+                            reject(
+                                    latestFix != null && isRecent(latestFix)
+                                            ? AppError.LOCATION_INACCURATE
+                                            : AppError.LOCATION_UNAVAILABLE);
                         },
                         FIX_WAIT_MS);
     }
 
     /** Recent and accurate enough to be compared with the geofence. */
     private boolean isUsable(@NonNull LocationFix fix) {
+        return isRecent(fix)
+                && fix.getAccuracyM() > 0
+                && fix.getAccuracyM() <= Constants.MAX_ACCURACY_M;
+    }
+
+    private boolean isRecent(@NonNull LocationFix fix) {
         final long ageMs =
                 TimeUnit.NANOSECONDS.toMillis(
                         elapsedNanos.getAsLong() - fix.getElapsedRealtimeNanos());
-        return ageMs <= FIX_MAX_AGE_MS
-                && fix.getAccuracyM() > 0
-                && fix.getAccuracyM() <= Constants.MAX_ACCURACY_M;
+        return ageMs <= FIX_MAX_AGE_MS;
     }
 
     private void stopWaitingForFix() {

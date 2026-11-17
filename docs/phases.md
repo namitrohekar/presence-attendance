@@ -241,3 +241,25 @@ Automated gate: standing gate + `npm test`; `docs/test-matrix.md` and
 Run-checks: the full 9-step demo scenario on two physical phones, once with
 gesture navigation and once with 3-button navigation, plus TalkBack through
 sign-in, scan and result.
+
+## Proxy control and review (after the audit)
+
+Five stages, each reviewed before the next. Findings and design in
+`docs/decisions.md` from D-040.
+
+| Stage | Delivers | State |
+|-------|----------|-------|
+| 1 | Geofence accuracy 50 m, faster scan, late-delivery rescue, "N of M", 60-student test | built |
+| 2 | One phone, one student per session, enforced by the rules | next |
+| 3 | Headcount, end-of-session summary, revoke and restore, penalty, audit trail | |
+| 4 | Month calendar against the 75% criterion, per-student view | |
+| 5 | Low-attendance email from the teacher's mail app, student notification, threshold | |
+
+Run-checks for stage 1:
+1. Two students scan the same code within a second of each other: both
+   "Attendance marked", two rows on the faculty screen.
+2. The live screen shows "Present: N of M".
+3. A scan started in the last second of a code still ends in "Attendance
+   marked"; the faculty row may say "Late sync".
+4. A photo of a code older than 20 s: "This QR has expired."
+5. The accuracy check in `docs/testing-guide.md`.

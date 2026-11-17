@@ -9,7 +9,6 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.Source;
 import com.presence.attendance.attendance.domain.AttendanceRecord;
 import com.presence.attendance.attendance.domain.AttendanceRepository;
 import com.presence.attendance.attendance.domain.PendingMark;
@@ -55,24 +54,6 @@ public final class FirestoreAttendanceRepository implements AttendanceRepository
                         .whereEqualTo(AttendanceMappers.TEACHER_ID, teacherId)
                         .orderBy(AttendanceMappers.MARKED_AT, Query.Direction.DESCENDING),
                 AttendanceMappers::record);
-    }
-
-    @Override
-    public void hasMarked(
-            @NonNull String sessionId,
-            @NonNull String studentId,
-            @NonNull Callback<Boolean> callback) {
-        // Server only: a cached "no" must not let a second scan go ahead.
-        record(sessionId, studentId)
-                .get(Source.SERVER)
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        callback.onResult(Outcome.success(task.getResult().exists()));
-                    } else {
-                        callback.onResult(
-                                Outcome.failure(FirebaseErrors.toAppError(task.getException())));
-                    }
-                });
     }
 
     @Override

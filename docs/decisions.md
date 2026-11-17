@@ -535,3 +535,35 @@ Each entry: context, decision, alternatives, consequence. Newest last.
   absent for those; the last 50 sessions of a course are loaded, so a longer
   course would be computed over its most recent 50. Both are acceptable for a
   semester course and would need `joinedAt` and paging to lift.
+
+## D-040 Audit for a full class: geofence, scan path, load
+
+- Context: an audit for one teacher and 60 students scanning at once, with
+  nobody outside able to mark.
+- Geofence: a mark is accepted within `radius + reported accuracy`. With
+  accuracy allowed up to 100 m, a 30 m room accepted a phone 130 m away.
+  `MAX_ACCURACY_M` is now 50, so the worst case is radius + 50. A fix that is
+  recent but vaguer than that gets its own message (`LOCATION_INACCURATE`)
+  instead of "couldn't get your location". The value must be checked in the
+  real room: if honest phones report worse than 50 m indoors it is raised, and
+  the teacher marks the exceptions by hand.
+- Scan path: the separate "already marked" read is gone, because the mark
+  transaction reports it anyway. A scan is now one session read and one
+  transaction.
+- Late delivery: if a LIVE mark is refused after every check the app can make
+  has passed, the code stopped being current on the way. The same scan is
+  sent once as a QUEUED mark with the time the code was read. The existing
+  QUEUED rule accepts it only if the code was current at that time, so an old
+  photo is still refused. The record shows as "Late sync".
+- Load: marks never contend, since each is its own document and the session
+  document is not written during class. `firebase/test/load.test.js` submits
+  120 marks at once for 60 students while codes rotate, with six kinds of
+  intruder, and expects exactly 60 records. It proves the rules and
+  transactions under concurrency on the emulator, not a real network.
+- Quota for a 60-student, 60-minute session: about 300 token writes, 60 marks,
+  under 600 reads. The free plan allows 20,000 writes and 50,000 reads a day.
+- Practice: one phone screen for 60 people is a queue. Mirror the teacher's
+  phone to the projector so the room scans at once.
+- Alternatives: capping the accuracy credit separately from the accuracy
+  limit (two numbers to explain); hiding the geofence from students (the room
+  is public knowledge, and the app could no longer say "outside the area").

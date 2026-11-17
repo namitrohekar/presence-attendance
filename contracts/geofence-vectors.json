@@ -1,5 +1,5 @@
 {
-  "formula": "dy=(lat-lat0)*111320; dx=(lng-lng0)*111320*cosLat0; pass iff dx*dx+dy*dy <= (radiusM+accuracyM)^2, 0 < accuracyM <= 100, lat in [-90,90], lng in [-180,180]",
+  "formula": "dy=(lat-lat0)*111320; dx=(lng-lng0)*111320*cosLat0; pass iff dx*dx+dy*dy <= (radiusM+accuracyM)^2, 0 < accuracyM <= 50, lat in [-90,90], lng in [-180,180]",
   "vectors": [
     {"name": "centre", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 100, "lat": 19.076, "lng": 72.8777, "accuracyM": 10, "pass": true},
     {"name": "north well inside", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 100, "lat": 19.076808480057494, "lng": 72.8777, "accuracyM": 5, "pass": true},
@@ -13,12 +13,12 @@
     {"name": "west edge outside", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 100, "lat": 19.076, "lng": 72.87669721464931, "accuracyM": 5, "pass": false},
     {"name": "diagonal inside", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 100, "lat": 19.07666025871362, "lng": 72.87839862296944, "accuracyM": 5, "pass": true},
     {"name": "diagonal outside", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 100, "lat": 19.076673733381245, "lng": 72.87841288058107, "accuracyM": 5, "pass": false},
-    {"name": "accuracy extends reach", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 100, "lat": 19.077347466762486, "lng": 72.8777, "accuracyM": 60, "pass": true},
+    {"name": "accuracy extends reach", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 100, "lat": 19.077257635644987, "lng": 72.8777, "accuracyM": 50, "pass": true},
     {"name": "accuracy too small to reach", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 100, "lat": 19.077347466762486, "lng": 72.8777, "accuracyM": 40, "pass": false},
     {"name": "accuracy zero rejected at centre", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 100, "lat": 19.076, "lng": 72.8777, "accuracyM": 0, "pass": false},
     {"name": "accuracy negative rejected at centre", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 100, "lat": 19.076, "lng": 72.8777, "accuracyM": -5, "pass": false},
-    {"name": "accuracy at maximum", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 100, "lat": 19.076, "lng": 72.8777, "accuracyM": 100, "pass": true},
-    {"name": "accuracy above maximum rejected at centre", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 100, "lat": 19.076, "lng": 72.8777, "accuracyM": 100.5, "pass": false},
+    {"name": "accuracy at maximum", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 100, "lat": 19.076, "lng": 72.8777, "accuracyM": 50, "pass": true},
+    {"name": "accuracy above maximum rejected at centre", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 100, "lat": 19.076, "lng": 72.8777, "accuracyM": 50.5, "pass": false},
     {"name": "minimum radius inside", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 30, "lat": 19.0762694933525, "lng": 72.8777, "accuracyM": 5, "pass": true},
     {"name": "minimum radius outside", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 30, "lat": 19.076323392022996, "lng": 72.8777, "accuracyM": 5, "pass": false},
     {"name": "maximum radius inside", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 1000, "lat": 19.076, "lng": 72.8872430947118, "accuracyM": 5, "pass": true},
@@ -33,6 +33,8 @@
     {"name": "longitude out of range", "lat0": 0.0, "lng0": 179.9999, "cosLat0": 1.0, "radiusM": 100, "lat": 0.0, "lng": 180.0001, "accuracyM": 10, "pass": false},
     {"name": "exact boundary passes", "lat0": 0.0, "lng0": 0.0, "cosLat0": 1.0, "radiusM": 100, "lat": 0.0009765625, "lng": 0.0, "accuracyM": 8.7109375, "pass": true},
     {"name": "just past exact boundary", "lat0": 0.0, "lng0": 0.0, "cosLat0": 1.0, "radiusM": 100, "lat": 0.0009765625, "lng": 0.0, "accuracyM": 8.7109, "pass": false},
-    {"name": "integer inputs", "lat0": 0, "lng0": 0, "cosLat0": 1, "radiusM": 1000, "lat": 0, "lng": 0, "accuracyM": 1, "pass": true}
+    {"name": "integer inputs", "lat0": 0, "lng0": 0, "cosLat0": 1, "radiusM": 1000, "lat": 0, "lng": 0, "accuracyM": 1, "pass": true},
+    {"name": "smallest fence, largest accuracy, 79 m away", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 30, "lng": 72.8777, "accuracyM": 50, "lat": 19.076709665828243, "pass": true},
+    {"name": "smallest fence, largest accuracy, 81 m away", "lat0": 19.076, "lng0": 72.8777, "cosLat0": 0.9450858939663362, "radiusM": 30, "lng": 72.8777, "accuracyM": 50, "lat": 19.076727632051742, "pass": false}
   ]
 }

@@ -29,6 +29,7 @@ public final class AppErrorMessages {
             case FILE_UNREADABLE -> R.string.error_file_unreadable;
             case LOCATION_PERMISSION_REQUIRED -> R.string.error_location_permission;
             case LOCATION_UNAVAILABLE -> R.string.error_location_unavailable;
+            case LOCATION_INACCURATE -> R.string.error_location_inaccurate;
             case CAMPUS_NOT_CONFIGURED -> R.string.error_campus_not_configured;
             case SESSION_NOT_FOUND -> R.string.error_session_not_found;
             case SESSION_ENDED -> R.string.error_session_ended;

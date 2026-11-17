@@ -28,13 +28,6 @@ public interface AttendanceRepository {
     LiveData<Outcome<List<AttendanceRecord>>> observeSession(
             @NonNull String sessionId, @NonNull String teacherId);
 
-    /** Whether the student already has a record for the session. */
-    @MainThread
-    void hasMarked(
-            @NonNull String sessionId,
-            @NonNull String studentId,
-            @NonNull Callback<Boolean> callback);
-
     /**
      * Marks the student present now, with the token they scanned and where they are.
      *
