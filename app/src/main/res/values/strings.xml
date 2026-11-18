@@ -3,7 +3,9 @@
     <string name="app_name">Presence</string>
 
     <!-- Sign-in -->
-    <string name="sign_in_statement">Mark attendance by scanning the QR code shown in class.</string>
+    <string name="sign_in_statement">Attendance from a code on the classroom screen, marked from inside the room</string>
+    <string name="sign_in_fact_code">A new code every 12 seconds</string>
+    <string name="sign_in_fact_room">Scans from outside the room are refused</string>
     <string name="sign_in_continue_google">Continue with Google</string>
     <string name="sign_in_in_progress">Signing in…</string>
 
@@ -104,7 +106,7 @@
     <string name="add_submit">Add student</string>
     <string name="add_submitting">Adding…</string>
     <string name="entry_registered_note">Registered. A correction releases the registration, and the student registers again.</string>
-    <string name="entry_unregistered_note">Not registered yet.</string>
+    <string name="entry_unregistered_note">Not registered yet</string>
     <string name="entry_reason_label">Reason (kept in the audit log)</string>
     <string name="entry_reason_missing">Enter a reason.</string>
     <string name="entry_unchanged">Change the roll number or cohort first.</string>
@@ -194,7 +196,7 @@
         <item quantity="other">%1$d students present</item>
     </plurals>
     <string name="live_latest_header">Latest marks</string>
-    <string name="live_none_yet">No one has marked yet.</string>
+    <string name="live_none_yet">No one has marked yet</string>
     <string name="live_unknown_student">Student not on the course list</string>
     <string name="live_late_sync">Late sync</string>
     <string name="live_manual">Manual</string>
@@ -254,7 +256,7 @@
     <string name="saved_synced">Sent</string>
     <string name="saved_synced_detail">Recorded as a late sync</string>
     <string name="saved_expired">Expired</string>
-    <string name="saved_expired_detail">The session closed before this could be sent.</string>
+    <string name="saved_expired_detail">The session closed before this could be sent</string>
     <string name="saved_rejected">Not accepted</string>
     <string name="saved_dismiss_hint">Tap a scan that is no longer waiting to remove it from this list.</string>
     <string name="status_present">Present</string>
@@ -305,7 +307,7 @@
         <item quantity="one">%1$d person in the room hasn\'t marked. Mark them by hand.</item>
         <item quantity="other">%1$d people in the room haven\'t marked. Mark them by hand.</item>
     </plurals>
-    <string name="headcount_matches">Matches the number of marks.</string>
+    <string name="headcount_matches">Matches the number of marks</string>
     <string name="badge_check">Check</string>
     <string name="badge_matches">Matches</string>
     <string name="headcount_body">How many people are in the room? The number is compared with the marks.</string>
@@ -324,6 +326,9 @@
     <string name="correction_restore">Restore</string>
     <string name="correction_penalty">Revoking counts this session as absent, adds a proxy strike, and takes one more attended session off the student\'s figure. The student sees the strike and your reason.</string>
     <string name="history_strikes_title">Proxy strikes: %1$d</string>
-    <string name="history_strikes_detail">Each one also counts as one more session missed.</string>
+    <string name="history_strikes_detail">Each one also counts as one more session missed</string>
     <string name="students_row_detail_strikes">%1$s · Present: %2$d of %3$d · Strikes: %4$d</string>
+    <string name="history_figure">%1$d%%</string>
+    <string name="history_caption">Attended: %1$d of %2$d · required: %3$d%%</string>
+    <string name="history_caption_below">Attended: %1$d of %2$d · below %3$d%%</string>
 </resources>

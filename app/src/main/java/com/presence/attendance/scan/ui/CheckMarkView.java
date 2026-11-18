@@ -13,19 +13,26 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.presence.attendance.R;
 
-/** A check mark that draws itself once, the app's single success animation. */
+/**
+ * The register's ink tick on a paper disc, drawing itself once: the app's single success animation,
+ * and the same mark as the app icon.
+ */
 public final class CheckMarkView extends View {
 
     private static final long DRAW_MS = 400;
-    // The check's three points, as fractions of the view's size.
-    private static final float START_X = 0.20f;
-    private static final float START_Y = 0.53f;
-    private static final float ELBOW_X = 0.42f;
-    private static final float ELBOW_Y = 0.74f;
-    private static final float END_X = 0.82f;
-    private static final float END_Y = 0.30f;
+    // The tick, as fractions of the view's size: a short down-stroke, then a long up-stroke
+    // that lifts slightly, as a pen does. The same shape as the app icon.
+    private static final float START_X = 0.30f;
+    private static final float START_Y = 0.52f;
+    private static final float ELBOW_X = 0.44f;
+    private static final float ELBOW_Y = 0.65f;
+    private static final float CONTROL_X = 0.54f;
+    private static final float CONTROL_Y = 0.50f;
+    private static final float END_X = 0.71f;
+    private static final float END_Y = 0.36f;
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint disc = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path full = new Path();
     private final Path drawn = new Path();
     private final PathMeasure measure = new PathMeasure();
@@ -37,7 +44,8 @@ public final class CheckMarkView extends View {
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeCap(Paint.Cap.ROUND);
         paint.setStrokeJoin(Paint.Join.ROUND);
-        paint.setColor(context.getColor(R.color.success));
+        paint.setColor(context.getColor(R.color.accent));
+        disc.setColor(context.getColor(R.color.tick_disc));
         paint.setStrokeWidth(getResources().getDimension(R.dimen.check_stroke));
     }
 
@@ -67,13 +75,15 @@ public final class CheckMarkView extends View {
         full.reset();
         full.moveTo(width * START_X, height * START_Y);
         full.lineTo(width * ELBOW_X, height * ELBOW_Y);
-        full.lineTo(width * END_X, height * END_Y);
+        full.quadTo(width * CONTROL_X, height * CONTROL_Y, width * END_X, height * END_Y);
         measure.setPath(full, false);
     }
 
     @Override
     protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
+        final float radius = Math.min(getWidth(), getHeight()) / 2f;
+        canvas.drawCircle(getWidth() / 2f, getHeight() / 2f, radius, disc);
         drawn.reset();
         measure.getSegment(0, measure.getLength() * fraction, drawn, true);
         canvas.drawPath(drawn, paint);

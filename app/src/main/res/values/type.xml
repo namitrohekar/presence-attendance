@@ -48,6 +48,14 @@
         <item name="android:lineHeight">@dimen/line_caption</item>
     </style>
 
+    <!-- The one large figure on a screen, like a student's attendance. -->
+    <style name="TextAppearance.Presence.Figure" parent="TextAppearance.Presence.Semibold">
+        <item name="android:textSize">@dimen/text_figure</item>
+        <item name="android:lineHeight">@dimen/line_figure</item>
+        <item name="android:letterSpacing">-0.02</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+    </style>
+
     <!-- Codes and numbers: tabular figures so digits line up and do not shift. -->
     <style name="TextAppearance.Presence.Code" parent="TextAppearance.Presence.LargeTitle">
         <item name="android:fontFeatureSettings">tnum</item>

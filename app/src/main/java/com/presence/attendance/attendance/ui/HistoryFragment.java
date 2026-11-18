@@ -76,6 +76,7 @@ public final class HistoryFragment extends Fragment {
         final boolean empty = state.status == HistoryViewModel.Status.EMPTY;
         final boolean error = state.status == HistoryViewModel.Status.ERROR;
         adapter.submitList(lines(state));
+        renderFigure(binding, state);
         binding.listProgress.setVisibility(
                 visibleIf(state.status == HistoryViewModel.Status.LOADING));
         binding.listRecycler.setVisibility(
@@ -96,19 +97,6 @@ public final class HistoryFragment extends Fragment {
     private List<Line> lines(@NonNull HistoryViewModel.State state) {
         final List<Line> lines = new ArrayList<>();
         final AttendanceStats stats = state.stats;
-        if (stats != null && stats.hasSessions()) {
-            final boolean below = stats.isBelow(args.getThreshold());
-            lines.add(
-                    Line.row(
-                            "summary",
-                            getString(R.string.history_summary_title, stats.percent()),
-                            getString(
-                                    R.string.history_summary_detail,
-                                    stats.getPresent(),
-                                    stats.getTotal()),
-                            below ? getString(R.string.history_below, args.getThreshold()) : null,
-                            Line.Tone.DANGER));
-        }
         if (stats != null && stats.getStrikes() > 0) {
             lines.add(
                     Line.row(
@@ -134,9 +122,50 @@ public final class HistoryFragment extends Fragment {
                                     open
                                             ? R.string.status_in_progress
                                             : AttendanceLabels.label(record)),
-                            AttendanceLabels.tone(record)));
+                            open ? Line.Tone.NEUTRAL : AttendanceLabels.tone(record)));
         }
         return Line.grouped(lines);
+    }
+
+    /** The student's figure, what it means against the requirement, and their register row. */
+    private void renderFigure(
+            @NonNull FragmentListBinding binding, @NonNull HistoryViewModel.State state) {
+        final AttendanceStats stats = state.stats;
+        final boolean shown =
+                state.status == HistoryViewModel.Status.CONTENT
+                        && stats != null
+                        && stats.hasSessions();
+        binding.listHeader.setVisibility(visibleIf(shown));
+        if (!shown) {
+            return;
+        }
+        final boolean below = stats.isBelow(args.getThreshold());
+        binding.listFigure.setText(getString(R.string.history_figure, stats.percent()));
+        binding.listFigure.setTextColor(
+                requireContext().getColor(below ? R.color.danger_text : R.color.text));
+        binding.listFigureCaption.setText(
+                getString(
+                        below ? R.string.history_caption_below : R.string.history_caption,
+                        stats.getPresent(),
+                        stats.getTotal(),
+                        args.getThreshold()));
+        // Oldest first, as a register is filled in. Only classes that are over.
+        final List<RegisterStripView.Mark> marks = new ArrayList<>();
+        for (int i = state.sessions.size() - 1; i >= 0; i--) {
+            final Session session = state.sessions.get(i);
+            if (session.isLive(state.loadedAtMillis)) {
+                continue;
+            }
+            final AttendanceRecord record = state.recordBySession.get(session.getId());
+            if (record != null && record.getStatus().countsAsPresent()) {
+                marks.add(RegisterStripView.Mark.ATTENDED);
+            } else if (record != null && record.getStatus() == AttendanceRecord.Status.REVOKED) {
+                marks.add(RegisterStripView.Mark.REVOKED);
+            } else {
+                marks.add(RegisterStripView.Mark.MISSED);
+            }
+        }
+        binding.listStrip.setMarks(marks);
     }
 
     private static int visibleIf(boolean visible) {

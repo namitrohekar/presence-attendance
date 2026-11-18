@@ -76,8 +76,21 @@ public final class LineAdapter extends ListAdapter<Line, RecyclerView.ViewHolder
         binding.lineDetail.setVisibility(line.detail == null ? View.GONE : View.VISIBLE);
         binding.lineBadge.setText(line.badge);
         binding.lineBadge.setVisibility(line.badge == null ? View.GONE : View.VISIBLE);
-        binding.lineBadge.setBackgroundTintList(
-                ColorStateList.valueOf(binding.getRoot().getContext().getColor(fill(line.tone))));
+        // Colour marks an exception. A neutral badge is quiet text with no pill.
+        final boolean quiet = line.tone == Line.Tone.NEUTRAL;
+        binding.lineBadge.setBackgroundResource(quiet ? 0 : R.drawable.bg_badge);
+        final int side = quiet ? 0 : res(binding, R.dimen.space_8);
+        final int top = quiet ? 0 : res(binding, R.dimen.space_4);
+        binding.lineBadge.setPaddingRelative(side, top, side, top);
+        if (!quiet) {
+            binding.lineBadge.setBackgroundTintList(
+                    ColorStateList.valueOf(
+                            binding.getRoot().getContext().getColor(fill(line.tone))));
+        }
+        binding.lineBadge.setTextColor(
+                binding.getRoot()
+                        .getContext()
+                        .getColor(quiet ? R.color.text_secondary : R.color.text));
         binding.lineRoot.setBackgroundResource(background(line.place));
         binding.lineChevron.setVisibility(line.chevron ? View.VISIBLE : View.GONE);
         final boolean endsSection =
@@ -88,10 +101,14 @@ public final class LineAdapter extends ListAdapter<Line, RecyclerView.ViewHolder
         }
     }
 
+    private static int res(@NonNull ItemLineBinding binding, int dimen) {
+        return binding.getRoot().getResources().getDimensionPixelSize(dimen);
+    }
+
     @ColorRes
     private static int fill(@NonNull Line.Tone tone) {
         return switch (tone) {
-            case NEUTRAL -> R.color.fill;
+            case NEUTRAL -> android.R.color.transparent;
             case SUCCESS -> R.color.badge_success;
             case WARNING -> R.color.badge_warning;
             case DANGER -> R.color.badge_danger;

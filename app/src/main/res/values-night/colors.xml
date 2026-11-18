@@ -1,24 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The same graphite ramp at night. Depth comes from surface steps, not shadows. -->
 <resources>
-    <color name="background">#000000</color>
-    <color name="surface">#1C1C1E</color>
-    <color name="fill">#2C2C2E</color>
-    <color name="text">#FFFFFF</color>
-    <color name="text_secondary">#98989F</color>
-    <color name="separator">#38383A</color>
+    <color name="background">#0E1014</color>
+    <color name="surface">#181B21</color>
+    <color name="fill">#23272F</color>
+    <color name="text">#ECEEF2</color>
+    <color name="text_secondary">#9AA0AB</color>
+    <color name="separator">#2A2E37</color>
 
-    <color name="accent">#0A84FF</color>
+    <!-- Ink reads light on dark; buttons carry dark text on it (9.6:1). -->
+    <color name="accent">#9DAEFF</color>
+    <color name="on_accent">#0E1014</color>
 
-    <color name="success">#30D158</color>
-    <color name="warning">#FF9F0A</color>
-    <color name="danger">#FF453A</color>
-    <color name="danger_text">#FF6961</color>
+    <color name="success">#52C483</color>
+    <color name="warning">#E3A644</color>
+    <color name="danger">#FF6F62</color>
+    <color name="danger_text">#FF8B80</color>
 
     <color name="google_button_fill">#131314</color>
     <color name="google_button_stroke">#8E918F</color>
     <color name="google_button_text">#E3E3E3</color>
     <!-- Tinted fills behind badge text. The text itself uses the primary text colour (D-006). -->
-    <color name="badge_success">#3D30D158</color>
-    <color name="badge_warning">#3DFF9F0A</color>
-    <color name="badge_danger">#3DFF453A</color>
+    <color name="badge_success">#3352C483</color>
+    <color name="badge_warning">#33E3A644</color>
+    <color name="badge_danger">#33FF6F62</color>
+
+    <color name="tick_disc">#1F2433</color>
 </resources>

@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The register's ink tick: a short down-stroke and a long, slightly lifted up-stroke. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:pathData="M38,56 L49,67 L71,43"
+        android:pathData="M37,56.5 L48,67 C55,56 63,47.5 72.5,40.5"
         android:strokeWidth="7"
-        android:strokeColor="@color/on_accent"
+        android:strokeColor="@color/brand_paper"
         android:strokeLineCap="round"
         android:strokeLineJoin="round" />
 </vector>

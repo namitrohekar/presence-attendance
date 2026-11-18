@@ -164,7 +164,7 @@ public final class RosterFragment extends Fragment {
                             entry.getRollNo(),
                             entry.getEmail(),
                             entry.isRegistered() ? getString(R.string.roster_registered) : null,
-                            Line.Tone.SUCCESS));
+                            Line.Tone.NEUTRAL));
         }
         return Line.grouped(lines);
     }

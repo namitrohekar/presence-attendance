@@ -22,7 +22,7 @@
     <dimen name="ring_size">24dp</dimen>
     <dimen name="viewfinder_stroke">4dp</dimen>
     <dimen name="viewfinder_corner">28dp</dimen>
-    <dimen name="check_size">72dp</dimen>
+    <dimen name="check_size">96dp</dimen>
     <dimen name="check_stroke">6dp</dimen>
     <!-- The QR fills the column up to this size: over 80% of a phone screen\'s width. -->
     <dimen name="qr_max_size">360dp</dimen>
@@ -40,6 +40,8 @@
     <dimen name="radius_qr">24dp</dimen>
 
     <!-- Type scale: size / line height. -->
+    <dimen name="text_figure">56sp</dimen>
+    <dimen name="line_figure">60sp</dimen>
     <dimen name="text_large_title">34sp</dimen>
     <dimen name="line_large_title">40sp</dimen>
     <dimen name="text_title">22sp</dimen>

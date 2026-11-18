@@ -652,3 +652,31 @@ Each entry: context, decision, alternatives, consequence. Newest last.
   is still decided by the roster, as in D-038.
 - Not built: a screen showing the history. It is in Firestore and protected;
   the console shows it.
+
+## D-044 Visual direction: the register
+
+- Context: the first design used the iOS system palette as it ships, so every
+  screen read as a settings app; a filled pill sat on every row, so colour no
+  longer marked anything.
+- Direction: the college attendance register. Paper and blue-black ink. One
+  cool graphite ramp for surfaces, borders and text (`values/colors.xml`, and
+  the same ramp at night), one ink accent (`#2B45C4`, 7.6:1 on white; at night
+  a light ink with dark text on buttons), semantic colours toned to sit beside
+  it. The app mark keeps fixed brand colours so the launcher does not follow
+  the app's theme.
+- Colour marks an exception. A neutral badge is quiet secondary text with no
+  pill: "Present", "Ended", "Registered", a percentage. Tinted pills are left
+  for Live, Absent, Late, Check, At risk and Revoked.
+- Signature: the register's ink tick, a short down-stroke and a long lifted
+  up-stroke. It is the app icon, the result on a paper disc, and the student's
+  register strip (one box per class held: tick, empty, or struck through).
+- Moments: the live code card for faculty; for students the result tick and
+  their attendance as one large figure (red when below the requirement) above
+  the register strip.
+- Sign-in shows what the product does: a code inside the room's dashed
+  boundary, with two plain facts under it. The pattern is not a decodable QR.
+- Icons are one stroked set: 24 dp, 1.75 stroke, round caps, coloured by their
+  text role.
+- Kept: Inter at 400 and 600, the type scale, spacing, radii, elevation 0 and
+  every layout's structure and ids. Error and validation messages keep their
+  periods (they are sentences); row captions and labels do not.

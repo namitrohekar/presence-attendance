@@ -13,6 +13,14 @@
         android:paddingTop="@dimen/space_48"
         android:paddingBottom="@dimen/space_24">
 
+        <!-- The outcome sits a little above the optical centre, not pinned to the top edge. -->
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/result_top"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.16" />
+
         <LinearLayout
             android:id="@+id/result_text"
             android:layout_width="0dp"
@@ -20,14 +28,14 @@
             android:orientation="vertical"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/result_top"
             app:layout_constraintWidth_max="@dimen/content_max_width">
 
             <com.presence.attendance.scan.ui.CheckMarkView
                 android:id="@+id/result_check"
                 android:layout_width="@dimen/check_size"
                 android:layout_height="@dimen/check_size"
-                android:layout_marginBottom="@dimen/space_16"
+                android:layout_marginBottom="@dimen/space_24"
                 android:importantForAccessibility="no"
                 android:visibility="gone" />
 

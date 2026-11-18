@@ -43,9 +43,10 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="@dimen/space_12"
             android:background="@drawable/bg_badge"
+            android:fontFeatureSettings="tnum"
             android:paddingHorizontal="@dimen/space_8"
             android:paddingVertical="@dimen/space_4"
-            android:textAppearance="@style/TextAppearance.Presence.Caption"
+            android:textAppearance="@style/TextAppearance.Presence.Footnote"
             android:visibility="gone" />
 
         <ImageView

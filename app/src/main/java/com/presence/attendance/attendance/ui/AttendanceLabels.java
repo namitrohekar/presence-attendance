@@ -32,11 +32,14 @@ final class AttendanceLabels {
         }
     }
 
+    /** Quiet when the student counts as present; amber for an absence; red for a revoke. */
     @NonNull
     static Line.Tone tone(@Nullable AttendanceRecord record) {
-        if (record == null) {
+        if (record != null && record.getStatus().countsAsPresent()) {
             return Line.Tone.NEUTRAL;
         }
-        return record.getStatus().countsAsPresent() ? Line.Tone.SUCCESS : Line.Tone.DANGER;
+        return record != null && record.getStatus() == AttendanceRecord.Status.REVOKED
+                ? Line.Tone.DANGER
+                : Line.Tone.WARNING;
     }
 }

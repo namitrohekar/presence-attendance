@@ -123,7 +123,7 @@ public final class SavedScansFragment extends Fragment {
             case PENDING:
                 return Line.Tone.NEUTRAL;
             case SYNCED:
-                return Line.Tone.SUCCESS;
+                return Line.Tone.NEUTRAL;
             case EXPIRED:
                 return Line.Tone.WARNING;
             default:
