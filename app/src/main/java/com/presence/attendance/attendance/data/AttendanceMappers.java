@@ -33,6 +33,16 @@ final class AttendanceMappers {
     private static final String SOURCE_QUEUED = "QUEUED";
     private static final String SOURCE_MANUAL = "MANUAL";
     private static final String DEVICE_ID = "deviceId";
+    private static final String REVISION = "revision";
+    private static final String RECORD_ID = "recordId";
+    private static final String FROM = "from";
+    private static final String TO = "to";
+    private static final String BY = "by";
+    private static final String AT = "at";
+
+    /** The status before a change that created the record. */
+    static final String NO_RECORD = "NONE";
+
     private static final String NOTE = "note";
     private static final String UPDATED_BY = "updatedBy";
     private static final String UPDATED_AT = "updatedAt";
@@ -52,7 +62,18 @@ final class AttendanceMappers {
         if (sessionId == null || studentId == null || status == null || markedAt == null) {
             return null;
         }
-        return new AttendanceRecord(sessionId, studentId, status, markedAt.toDate().getTime());
+        final String source = Snapshots.string(snapshot, SOURCE);
+        final Long revision = Snapshots.integer(snapshot, REVISION);
+        return new AttendanceRecord(
+                sessionId,
+                studentId,
+                status,
+                markedAt.toDate().getTime(),
+                SOURCE_LIVE.equals(source) || SOURCE_QUEUED.equals(source),
+                Snapshots.string(snapshot, NOTE),
+                snapshot.getDouble(LAT),
+                snapshot.getDouble(LNG),
+                revision != null ? revision.intValue() : 0);
     }
 
     /**
@@ -107,7 +128,7 @@ final class AttendanceMappers {
         return document;
     }
 
-    /** A teacher marking present a student who has no record for the session. */
+    /** A teacher marking present a student who has no record for the session: revision 1. */
     @NonNull
     static Map<String, Object> manualPresent(
             @NonNull String teacherId,
@@ -115,7 +136,8 @@ final class AttendanceMappers {
             @NonNull String sessionId,
             @NonNull String studentId,
             @NonNull String note) {
-        final Map<String, Object> document = correction(teacherId, true, note);
+        final Map<String, Object> document =
+                correction(teacherId, AttendanceRecord.Status.MANUAL_PRESENT, note, 1);
         document.put(SESSION_ID, sessionId);
         document.put(COURSE_ID, courseId);
         document.put(TEACHER_ID, teacherId);
@@ -128,18 +150,55 @@ final class AttendanceMappers {
     /** The only fields a teacher may change on an existing record. */
     @NonNull
     static Map<String, Object> correction(
-            @NonNull String teacherId, boolean present, @NonNull String note) {
+            @NonNull String teacherId,
+            @NonNull AttendanceRecord.Status status,
+            @NonNull String note,
+            long revision) {
         final Map<String, Object> changes = new HashMap<>();
-        changes.put(
-                STATUS,
-                (present
-                                ? AttendanceRecord.Status.MANUAL_PRESENT
-                                : AttendanceRecord.Status.MANUAL_ABSENT)
-                        .name());
+        changes.put(STATUS, status.name());
         changes.put(NOTE, note);
         changes.put(UPDATED_BY, teacherId);
         changes.put(UPDATED_AT, FieldValue.serverTimestamp());
+        changes.put(REVISION, revision);
         return changes;
+    }
+
+    /**
+     * The history entry written with a teacher's change: {@code attendanceChanges/{recordId}_
+     * {revision}}. {@code from} is the status before, or {@link #NO_RECORD}.
+     */
+    @NonNull
+    static Map<String, Object> change(
+            @NonNull String recordId,
+            long revision,
+            @NonNull String teacherId,
+            @NonNull String studentId,
+            @NonNull String from,
+            @NonNull AttendanceRecord.Status to,
+            @NonNull String note) {
+        final Map<String, Object> entry = new HashMap<>();
+        entry.put(RECORD_ID, recordId);
+        entry.put(REVISION, revision);
+        entry.put(TEACHER_ID, teacherId);
+        entry.put(STUDENT_ID, studentId);
+        entry.put(FROM, from);
+        entry.put(TO, to.name());
+        entry.put(NOTE, note);
+        entry.put(BY, teacherId);
+        entry.put(AT, FieldValue.serverTimestamp());
+        return entry;
+    }
+
+    /** The status and revision a record has now, read inside a correction. */
+    @NonNull
+    static String status(@NonNull DocumentSnapshot snapshot) {
+        final String status = Snapshots.string(snapshot, STATUS);
+        return status != null ? status : NO_RECORD;
+    }
+
+    static long revision(@NonNull DocumentSnapshot snapshot) {
+        final Long revision = Snapshots.integer(snapshot, REVISION);
+        return revision != null ? revision : 0;
     }
 
     /**

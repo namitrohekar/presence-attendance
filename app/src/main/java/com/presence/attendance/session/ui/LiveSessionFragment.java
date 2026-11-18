@@ -12,6 +12,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.NavController;
+import androidx.navigation.NavDestination;
 import androidx.navigation.fragment.NavHostFragment;
 import com.presence.attendance.R;
 import com.presence.attendance.attendance.domain.AttendanceRecord;
@@ -24,6 +26,7 @@ import com.presence.attendance.core.ui.ViewModels;
 import com.presence.attendance.core.ui.WindowInsetsPadding;
 import com.presence.attendance.course.domain.Member;
 import com.presence.attendance.databinding.FragmentLiveSessionBinding;
+import com.presence.attendance.session.domain.Session;
 import com.presence.attendance.session.domain.Tokens;
 import com.presence.attendance.session.ui.LiveSessionViewModel.Phase;
 import java.security.SecureRandom;
@@ -140,6 +143,10 @@ public final class LiveSessionFragment extends Fragment {
                 visibleIf(state.phase == Phase.ENDED || state.phase == Phase.ERROR));
         setBright(live && isStarted());
 
+        if (state.phase == Phase.ENDED && state.session != null) {
+            openSummary(state.session);
+            return;
+        }
         if (state.phase == Phase.ENDED) {
             binding.liveMessageTitle.setText(R.string.live_ended_title);
             binding.liveMessageBody.setText(R.string.live_ended_body);
@@ -271,12 +278,32 @@ public final class LiveSessionFragment extends Fragment {
             case PRESENT -> null;
             case LATE_SYNC -> getString(R.string.live_late_sync);
             case MANUAL_PRESENT, MANUAL_ABSENT -> getString(R.string.live_manual);
+            case REVOKED -> getString(R.string.status_revoked);
         };
     }
 
     private void confirmEnd() {
         if (getChildFragmentManager().findFragmentByTag(TAG_SHEET) == null) {
             new EndSessionSheet().show(getChildFragmentManager(), TAG_SHEET);
+        }
+    }
+
+    /** Replaces this screen with the session's summary, where the marks are reviewed. */
+    private void openSummary(@NonNull Session session) {
+        final NavController navController = NavHostFragment.findNavController(this);
+        final NavDestination current = navController.getCurrentDestination();
+        if (current != null && current.getId() == R.id.liveSessionFragment) {
+            navController.navigate(
+                    LiveSessionFragmentDirections.actionLiveToSessionRoster(
+                            session.getCourseId(),
+                            session.getId(),
+                            DateUtils.formatDateTime(
+                                    requireContext(),
+                                    session.getStartedAtMillis(),
+                                    DateUtils.FORMAT_SHOW_DATE
+                                            | DateUtils.FORMAT_SHOW_TIME
+                                            | DateUtils.FORMAT_SHOW_WEEKDAY
+                                            | DateUtils.FORMAT_ABBREV_ALL)));
         }
     }
 

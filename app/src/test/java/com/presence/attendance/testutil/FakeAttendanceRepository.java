@@ -69,7 +69,7 @@ public final class FakeAttendanceRepository implements AttendanceRepository {
             @NonNull String sessionId,
             @NonNull String studentId,
             boolean hasRecord,
-            boolean present,
+            @NonNull AttendanceRecord.Status status,
             @NonNull String note,
             @NonNull Callback<Boolean> callback) {
         corrections.add(
@@ -80,7 +80,7 @@ public final class FakeAttendanceRepository implements AttendanceRepository {
                         sessionId,
                         studentId,
                         hasRecord ? "update" : "create",
-                        String.valueOf(present),
+                        status.name(),
                         note));
         callback.onResult(correctOutcome);
     }

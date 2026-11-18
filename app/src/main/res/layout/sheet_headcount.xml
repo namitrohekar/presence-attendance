@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="@dimen/screen_margin"
+    android:paddingBottom="@dimen/space_24">
+
+    <include layout="@layout/view_sheet_handle" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_16"
+        android:accessibilityHeading="true"
+        android:text="@string/headcount_title"
+        android:textAppearance="@style/TextAppearance.Presence.Title" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_4"
+        android:text="@string/headcount_body"
+        android:textAppearance="@style/TextAppearance.Presence.Body"
+        android:textColor="@color/text_secondary" />
+
+    <TextView
+        style="@style/Widget.Presence.FieldLabel"
+        android:labelFor="@id/headcount_input"
+        android:text="@string/headcount_label" />
+
+    <EditText
+        android:id="@+id/headcount_input"
+        style="@style/Widget.Presence.TextField"
+        android:autofillHints=""
+        android:importantForAutofill="no"
+        android:imeOptions="actionDone"
+        android:inputType="number"
+        android:maxLength="4" />
+
+    <TextView
+        android:id="@+id/headcount_error"
+        style="@style/Widget.Presence.InlineError"
+        android:text="@string/headcount_invalid" />
+
+    <com.presence.attendance.core.ui.SpringButton
+        android:id="@+id/headcount_save"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_24"
+        android:text="@string/headcount_save" />
+</LinearLayout>

@@ -53,4 +53,25 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_24" />
+
+    <!-- Scanned marks only: the one action with a penalty, explained before it is taken. -->
+    <com.presence.attendance.core.ui.SpringButton
+        android:id="@+id/correction_revoke"
+        style="@style/Widget.Presence.Button.Text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_4"
+        android:text="@string/correction_revoke"
+        android:textColor="@color/danger_text"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/correction_penalty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_4"
+        android:text="@string/correction_penalty"
+        android:textAppearance="@style/TextAppearance.Presence.Footnote"
+        android:textColor="@color/text_secondary"
+        android:visibility="gone" />
 </LinearLayout>

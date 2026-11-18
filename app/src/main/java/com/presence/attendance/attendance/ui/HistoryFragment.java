@@ -109,6 +109,15 @@ public final class HistoryFragment extends Fragment {
                             below ? getString(R.string.history_below, args.getThreshold()) : null,
                             Line.Tone.DANGER));
         }
+        if (stats != null && stats.getStrikes() > 0) {
+            lines.add(
+                    Line.row(
+                            "strikes",
+                            getString(R.string.history_strikes_title, stats.getStrikes()),
+                            getString(R.string.history_strikes_detail),
+                            null,
+                            Line.Tone.DANGER));
+        }
         lines.add(Line.header("h_sessions", getString(R.string.course_sessions_header)));
         for (Session session : state.sessions) {
             final AttendanceRecord record = state.recordBySession.get(session.getId());
@@ -119,7 +128,8 @@ public final class HistoryFragment extends Fragment {
                             session.getId(),
                             DateUtils.formatDateTime(
                                     requireContext(), session.getStartedAtMillis(), DATE_FLAGS),
-                            null,
+                            // The teacher's reason, when they revoked or changed it.
+                            record != null && record.getRevision() > 0 ? record.getNote() : null,
                             getString(
                                     open
                                             ? R.string.status_in_progress

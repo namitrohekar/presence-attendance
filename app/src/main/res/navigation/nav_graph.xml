@@ -139,6 +139,12 @@
         <argument
             android:name="courseName"
             app:argType="string" />
+        <!-- Ending a session opens its summary in place of the QR. -->
+        <action
+            android:id="@+id/action_live_to_session_roster"
+            app:destination="@id/sessionRosterFragment"
+            app:popUpTo="@id/liveSessionFragment"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment

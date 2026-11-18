@@ -21,6 +21,8 @@ the only verifier and the server clock is the only clock.
 | Offline queue with background sync | built |
 | Session roster, manual correction with a reason | built |
 | Percentages, student history, at-risk list, CSV export | built |
+| One phone per student per session | built |
+| Session summary, headcount, review flags, revoke as proxy with a penalty, change history | built |
 | Threshold setting, low-attendance notification | not built |
 | Polish pass, TalkBack pass, seed tool, remaining docs | not built |
 
@@ -67,8 +69,8 @@ interfaces in their constructors and are tested against in-memory fakes.
     cd firebase && npm install && npm test
     cd firebase && npm run test:mutation
 
-Last run: 235 unit tests, 574 rules tests (one of them 60 students marking at
-once), 82 of 82 weakened rules caught.
+Last run: 248 unit tests, 606 rules tests (one of them 60 students marking at
+once), 97 of 97 weakened rules caught.
 Lint and javac treat warnings as errors.
 
 To run the app you need `app/google-services.json` from the Firebase project

@@ -9,7 +9,7 @@ deployed yet, and I cannot sign in as you.
 
 | Area | Automated | On an emulator with stand-in data | Real Firebase, real accounts |
 |------|-----------|-----------------------------------|------------------------------|
-| Security rules | 574 Jest tests, 82 of 82 mutations caught, 60-student concurrency test | n/a | Phase 2 rules only (yours) |
+| Security rules | 606 Jest tests, 97 of 97 mutations caught, 60-student concurrency test | n/a | Phase 2 rules only (yours) |
 | Sign-in, courses | JUnit | yes | yes (yours, before the identity extension) |
 | Roster, CSV import, alerts, registration | JUnit + rules | yes | **no** |
 | Session, rotating QR, end session | JUnit + rules | yes | **no** |
@@ -141,6 +141,14 @@ Start a fresh session on the faculty device first.
 9. Scan after the session ended: "This session has ended."
 10. Scan a QR that is not an attendance code (a URL): nothing happens; the
     scanner keeps looking.
+
+### Session summary, revoke and penalty
+
+After ending a session the summary opens. The steps are the stage 3
+run-checks at the end of `docs/phases.md`. On the emulator with stand-in data
+I checked the summary, the headcount comparison, the review list, expanding
+the list, revoking and the Restore action; none of it has run against real
+Firestore.
 
 ### One phone, one student
 

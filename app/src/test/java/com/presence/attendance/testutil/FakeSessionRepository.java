@@ -66,6 +66,15 @@ public final class FakeSessionRepository implements SessionRepository {
         callback.onResult(endOutcome);
     }
 
+    public Outcome<Integer> headcountOutcome;
+
+    @Override
+    public void setHeadcount(
+            @NonNull String sessionId, int headcount, @NonNull Callback<Integer> callback) {
+        calls.add("setHeadcount:" + sessionId + ":" + headcount);
+        callback.onResult(headcountOutcome != null ? headcountOutcome : Outcome.success(headcount));
+    }
+
     @Override
     public void loadSession(@NonNull String sessionId, @NonNull Callback<Session> callback) {
         calls.add("loadSession:" + sessionId);

@@ -25,6 +25,8 @@ final class AttendanceLabels {
                 return R.string.live_late_sync;
             case MANUAL_PRESENT:
                 return R.string.status_manual_present;
+            case REVOKED:
+                return R.string.status_revoked;
             default:
                 return R.string.status_manual_absent;
         }

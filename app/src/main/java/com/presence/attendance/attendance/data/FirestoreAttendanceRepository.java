@@ -30,6 +30,7 @@ public final class FirestoreAttendanceRepository implements AttendanceRepository
     private static final String ATTENDANCE = "attendance";
     private static final String SESSIONS = "sessions";
     private static final String DEVICES = "devices";
+    private static final String CHANGES = "attendanceChanges";
 
     /** How long a LIVE mark may take before the app stops waiting for the server. */
     private static final long MARK_BUDGET_MS = 8_000;
@@ -100,28 +101,40 @@ public final class FirestoreAttendanceRepository implements AttendanceRepository
             @NonNull String sessionId,
             @NonNull String studentId,
             boolean hasRecord,
-            boolean present,
+            @NonNull AttendanceRecord.Status status,
             @NonNull String note,
             @NonNull Callback<Boolean> callback) {
-        if (!hasRecord && !present) {
+        if (!hasRecord && status != AttendanceRecord.Status.MANUAL_PRESENT) {
+            // No record already means absent; there is nothing to revoke.
             callback.onResult(Outcome.success(false));
             return;
         }
-        final DocumentReference ref = record(sessionId, studentId);
-        // A transaction with no read: offline it fails instead of being queued. Updating a
-        // record that is gone fails, and creating one that exists is refused by the rules,
-        // because a full overwrite touches fields a teacher may not change.
+        final String recordId = sessionId + "_" + studentId;
+        final DocumentReference ref = attendance().document(recordId);
+        // A transaction, so offline it fails instead of being queued. An existing record is
+        // read for its status and revision; a missing one cannot be read by a teacher, so the
+        // roster's "no record" decides the create, and the rules refuse it if that was stale.
         firestore
                 .runTransaction(transaction -> {
+                    String from = AttendanceMappers.NO_RECORD;
+                    long revision = 1;
                     if (hasRecord) {
+                        final DocumentSnapshot before = transaction.get(ref);
+                        from = AttendanceMappers.status(before);
+                        revision = AttendanceMappers.revision(before) + 1;
                         transaction.update(
-                                ref, AttendanceMappers.correction(teacherId, present, note));
+                                ref,
+                                AttendanceMappers.correction(teacherId, status, note, revision));
                     } else {
                         transaction.set(
                                 ref,
                                 AttendanceMappers.manualPresent(
                                         teacherId, courseId, sessionId, studentId, note));
                     }
+                    transaction.set(
+                            firestore.collection(CHANGES).document(recordId + "_" + revision),
+                            AttendanceMappers.change(
+                                    recordId, revision, teacherId, studentId, from, status, note));
                     return true;
                 })
                 .addOnCompleteListener(task ->

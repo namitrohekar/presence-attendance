@@ -327,29 +327,39 @@ async function endSession(db, sessionId) {
 }
 
 /**
- * FirestoreAttendanceRepository.correct: a teacher marks a student present or absent by hand.
- * No read: a teacher cannot read a record that does not exist. hasRecord comes from the roster.
- * Resolves to true if something was written, false if there was nothing to change.
+ * FirestoreAttendanceRepository.correct: a teacher sets a student's status by hand, with a reason.
+ * status is MANUAL_PRESENT, MANUAL_ABSENT or REVOKED. hasRecord comes from the live roster: a
+ * teacher cannot read a record that does not exist. An existing record is read inside the
+ * transaction for its status and revision; the change and its history entry are written
+ * together. Resolves to true if something was written, false if there was nothing to change.
  */
-function correctAttendance(db, teacher, courseId, sessionId, studentId, hasRecord, present, note) {
-  if (!hasRecord && !present) {
+function correctAttendance(db, teacher, courseId, sessionId, studentId, hasRecord, status, note) {
+  if (!hasRecord && status !== 'MANUAL_PRESENT') {
     return Promise.resolve(false);
   }
-  const ref = doc(db, 'attendance', `${sessionId}_${studentId}`);
-  const correction = build('attendance.correction', {
-    status: present ? 'MANUAL_PRESENT' : 'MANUAL_ABSENT',
-    note,
-    updatedBy: teacher.uid,
-    updatedAt: serverTimestamp(),
-  });
+  const recordId = `${sessionId}_${studentId}`;
+  const ref = doc(db, 'attendance', recordId);
   return runTransaction(db, async (tx) => {
+    let from = 'NONE';
+    let revision = 1;
+    const change = (rev) =>
+      build('attendance.correction', {
+        status,
+        note,
+        updatedBy: teacher.uid,
+        updatedAt: serverTimestamp(),
+        revision: rev,
+      });
     if (hasRecord) {
-      tx.update(ref, correction);
+      const before = (await tx.get(ref)).data();
+      from = before.status;
+      revision = (before.revision ?? 0) + 1;
+      tx.update(ref, change(revision));
     } else {
       tx.set(
         ref,
         build('attendance.manual', {
-          ...correction,
+          ...change(1),
           sessionId,
           courseId,
           teacherId: teacher.uid,
@@ -359,7 +369,31 @@ function correctAttendance(db, teacher, courseId, sessionId, studentId, hasRecor
         }),
       );
     }
+    tx.set(
+      doc(db, 'attendanceChanges', `${recordId}_${revision}`),
+      build('attendanceChanges', {
+        recordId,
+        revision,
+        teacherId: teacher.uid,
+        studentId,
+        from,
+        to: status,
+        note,
+        by: teacher.uid,
+        at: serverTimestamp(),
+      }),
+    );
     return true;
+  });
+}
+
+/** FirestoreSessionRepository.setHeadcount: how many people the teacher counted in the room. */
+function setHeadcount(db, sessionId, headcount) {
+  const ref = doc(db, 'sessions', sessionId);
+  return runTransaction(db, async (tx) => {
+    await tx.get(ref);
+    tx.update(ref, { headcount });
+    return headcount;
   });
 }
 
@@ -442,6 +476,7 @@ function markQueued(db, session, mark, deviceId = deviceOf(mark.studentId)) {
 module.exports = {
   markLive,
   correctAttendance,
+  setHeadcount,
   markQueued,
   startSession,
   writeToken,

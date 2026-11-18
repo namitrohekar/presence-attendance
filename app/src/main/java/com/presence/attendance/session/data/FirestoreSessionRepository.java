@@ -149,6 +149,26 @@ public final class FirestoreSessionRepository implements SessionRepository {
     }
 
     @Override
+    public void setHeadcount(
+            @NonNull String sessionId, int headcount, @NonNull Callback<Integer> callback) {
+        final DocumentReference ref = sessions().document(sessionId);
+        // A transaction so that offline it fails instead of being queued.
+        firestore
+                .runTransaction(transaction -> {
+                    transaction.get(ref);
+                    transaction.update(ref, SessionMappers.HEADCOUNT, headcount);
+                    return headcount;
+                })
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        callback.onResult(Outcome.success(task.getResult()));
+                    } else {
+                        fail(callback, task.getException());
+                    }
+                });
+    }
+
+    @Override
     public void loadSession(@NonNull String sessionId, @NonNull Callback<Session> callback) {
         sessions()
                 .document(sessionId)

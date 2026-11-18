@@ -598,3 +598,57 @@ Each entry: context, decision, alternatives, consequence. Newest last.
   binding an account to one phone for good (breaks on a new phone and needs a
   release procedure); a random id kept by the app (cleared with app data in
   seconds).
+
+## D-042 Session summary and headcount
+
+- Context: after a session the teacher saw only "Session ended". A proxy who
+  scans from inside the room with their own phone and a friend's account is
+  invisible to the rules; a person counting the room is not.
+- Decision: ending a session opens its summary in place of the QR. It shows
+  "Present: N of M" (enrolled), the headcount and whether it matches, a
+  "Review first" list, and the full list on request ("Show all students"),
+  split into Present and Not present. Tapping any student opens the
+  correction sheet.
+- Headcount: an optional whole number from 0 to `HEADCOUNT_MAX` (1000) on the
+  session, written only by its teacher, only once the session is over (ended,
+  or past its end time), and as the only field changed. It can be corrected.
+  It is entered after ending, so the end-session write did not change.
+- The headcount is advice: "1 more mark than people in the room. Review the
+  list." or "2 people in the room haven't marked. Mark them by hand." Nothing
+  changes a record automatically: people arrive late, leave early, and counts
+  are wrong.
+- Review flags, computed on the teacher's phone (`SessionReview`, pure and
+  tested): two enrolled students with exactly the same coordinates (real
+  phones essentially never report identical positions; a shared fake location
+  does), and marks sent late from a saved scan. Hints, never verdicts.
+- Alternatives: flagging marks in the last seconds of a code (normal at a
+  busy door); a per-device "trust score" (needs a server).
+
+## D-043 Revoke as proxy, the penalty, and the history of changes
+
+- Revoke: a new status, `REVOKED`, set only by the session's teacher, with a
+  required reason, and only on a record that came from a scan (live or sent
+  late). It cannot be created: there is nothing to revoke without a mark. The
+  student can still read their record, so they see the status and the reason.
+  A revoked student cannot mark that session again: the record exists.
+- Restore: on a revoked record the sheet offers only "Restore", which sets it
+  to marked present with a reason. The scan's source, code and coordinates are
+  kept, so the record still shows it began as a scan.
+- Penalty (your choice): a revoked session counts as absent, and each strike
+  takes `PROXY_PENALTY_SESSIONS` (1) more attended session off the figure,
+  never below zero. It is derived from the records in `AttendanceStats`, never
+  stored, so it cannot drift and Restore removes it. Only sessions that are
+  over count. Shown as "Proxy strikes: N" on the student's course screen, in
+  the Students report, and as a CSV column.
+- History: every change a teacher makes, including a hand-made present, raises
+  the record's `revision` by one and must be written in the same batch as
+  `attendanceChanges/{recordId}_{revision}`: status before ('NONE' for a create),
+  status after, reason, author and server time. The rules check the entry
+  against the record before and after the write, so it cannot describe
+  anything else, and there is no update or delete rule. Readable by the
+  record's teacher and its student. Same pattern as `registryCorrections`.
+- The correction reads an existing record inside its transaction for its
+  status and revision (a teacher may read records that exist); a missing one
+  is still decided by the roster, as in D-038.
+- Not built: a screen showing the history. It is in Firestore and protected;
+  the console shows it.

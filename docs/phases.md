@@ -251,8 +251,8 @@ Five stages, each reviewed before the next. Findings and design in
 |-------|----------|-------|
 | 1 | Geofence accuracy 50 m, faster scan, late-delivery rescue, "N of M", 60-student test | built |
 | 2 | One phone, one student per session, enforced by the rules | built |
-| 3 | Headcount, end-of-session summary, revoke and restore, penalty, audit trail | next |
-| 4 | Month calendar against the 75% criterion, per-student view | |
+| 3 | Headcount, end-of-session summary, revoke and restore, penalty, audit trail | built |
+| 4 | Month calendar against the 75% criterion, per-student view | next |
 | 5 | Low-attendance email from the teacher's mail app, student notification, threshold | |
 
 Run-checks for stage 1:
@@ -275,4 +275,25 @@ Run-checks for stage 2 (needs the rules deployed and two student accounts):
    session).
 5. Uninstall and reinstall the app on A's phone, sign in as B, scan in the
    session A already marked: still refused.
+
+Run-checks for stage 3 (needs the rules deployed):
+1. End a session: the summary opens. "Present: N of M" counts enrolled
+   students only.
+2. Tap "Headcount: not entered", enter the number of people in the room. One
+   fewer than the marks: "1 more mark than people in the room. Review the
+   list." One more: "1 person in the room hasn't marked. Mark them by hand."
+   Equal: "Matches".
+3. "Show all students" lists Present and Not present; "Hide the list" folds it.
+4. Tap a scanned student: the sheet offers "Mark absent" and "Revoke as proxy"
+   with the penalty explained. Revoke without a reason: refused. With one: the
+   row says "Revoked (proxy)" and the count drops.
+5. Student's phone: the course screen shows "Proxy strikes: 1", the session
+   says "Revoked (proxy)" with the teacher's reason, and the percentage is one
+   more session lower than the absence alone.
+6. Faculty Students report and CSV show the strike.
+7. Tap the revoked student: only "Restore". After it the strike is gone.
+8. Console: `attendanceChanges` has one entry per change, with the status
+   before and after.
+9. Two students with a shared fake location (the same coordinates) appear
+   under "Review first" as "Same location as …".
 

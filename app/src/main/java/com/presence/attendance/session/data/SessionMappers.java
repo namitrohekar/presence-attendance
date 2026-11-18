@@ -5,6 +5,7 @@ import androidx.annotation.Nullable;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
+import com.presence.attendance.core.Constants;
 import com.presence.attendance.core.data.Snapshots;
 import com.presence.attendance.session.domain.Geofence;
 import com.presence.attendance.session.domain.Session;
@@ -21,6 +22,7 @@ final class SessionMappers {
     static final String STARTED_AT = "startedAt";
     static final String ENDS_AT = "endsAt";
     private static final String GEOFENCE = "geofence";
+    static final String HEADCOUNT = "headcount";
     private static final String LAT = "lat";
     private static final String LNG = "lng";
     private static final String RADIUS_M = "radiusM";
@@ -57,7 +59,16 @@ final class SessionMappers {
                 status,
                 startedAt.toDate().getTime(),
                 endsAt.toDate().getTime(),
-                geofence);
+                geofence,
+                headcount(Snapshots.integer(snapshot, HEADCOUNT)));
+    }
+
+    /** A stored headcount, or null if there is none or it is out of range. */
+    @Nullable
+    private static Integer headcount(@Nullable Long value) {
+        return value != null && value >= 0 && value <= Constants.HEADCOUNT_MAX
+                ? value.intValue()
+                : null;
     }
 
     /** The campus geofence, or null if {@code appConfig/campus} is missing or malformed. */

@@ -20,6 +20,7 @@ public final class AttendanceCsv {
         final int attended;
         final int held;
         final int percent;
+        final int strikes;
         final boolean belowThreshold;
 
         public Row(
@@ -29,6 +30,7 @@ public final class AttendanceCsv {
                 int attended,
                 int held,
                 int percent,
+                int strikes,
                 boolean belowThreshold) {
             this.rollNo = rollNo;
             this.name = name;
@@ -36,6 +38,7 @@ public final class AttendanceCsv {
             this.attended = attended;
             this.held = held;
             this.percent = percent;
+            this.strikes = strikes;
             this.belowThreshold = belowThreshold;
         }
     }
@@ -45,7 +48,8 @@ public final class AttendanceCsv {
 
     private static final String NEW_LINE = "\r\n";
     private static final String HEADER =
-            "Roll number,Name,Email,Sessions attended,Sessions held,Percent,Below requirement";
+            "Roll number,Name,Email,Sessions attended,Sessions held,Percent,Proxy strikes,Below"
+                    + " requirement";
 
     private AttendanceCsv() {}
 
@@ -64,6 +68,8 @@ public final class AttendanceCsv {
                     .append(row.held)
                     .append(',')
                     .append(row.percent)
+                    .append(',')
+                    .append(row.strikes)
                     .append(',')
                     .append(row.belowThreshold ? "Yes" : "No")
                     .append(NEW_LINE);

@@ -293,7 +293,16 @@ describe('app flow: a scan saved offline is sent later', () => {
 describe('app flow: a teacher corrects attendance by hand', () => {
   const record = (db, student) => getDoc(doc(db, 'attendance', `${h.SESSION}_${student.uid}`));
   const correct = (db, who, student, hasRecord, present, note = 'Seen in class') =>
-    flows.correctAttendance(db, who, h.COURSE, h.SESSION, student.uid, hasRecord, present, note);
+    flows.correctAttendance(
+      db,
+      who,
+      h.COURSE,
+      h.SESSION,
+      student.uid,
+      hasRecord,
+      present ? 'MANUAL_PRESENT' : 'MANUAL_ABSENT',
+      note,
+    );
 
   test('a teacher cannot read a record that does not exist, so the app never tries', async () => {
     await assertFails(record(t.as(TEACHER), STUDENT));

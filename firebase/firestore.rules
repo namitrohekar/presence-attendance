@@ -30,6 +30,7 @@ service cloud.firestore {
     function METERS_PER_DEGREE() { return 111320; }
     function ALERT_RETENTION_DAYS() { return 90; }
     function CORRECTION_RETENTION_DAYS() { return 365; }
+    function HEADCOUNT_MAX() { return 1000; }
 
     // Students must sign in with an address in exactly this domain. Faculty
     // are identified by the allowlist and may use any domain.
@@ -611,6 +612,17 @@ service cloud.firestore {
             || (request.time >= resource.data.endsAt
                 && request.resource.data.endsAt == resource.data.endsAt));
 
+      // Lookups: 0. Once a session is over its teacher may record how many
+      // people were in the room, and correct it. Only that field changes. A
+      // session past its end that nobody closed counts as over.
+      allow update: if signedIn()
+        && resource.data.teacherId == uid()
+        && (resource.data.status == 'ENDED' || request.time >= resource.data.endsAt)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['headcount'])
+        && request.resource.data.headcount is int
+        && request.resource.data.headcount >= 0
+        && request.resource.data.headcount <= HEADCOUNT_MAX();
+
       match /tokens/{token} {
         function session() {
           return get(/databases/$(database)/documents/sessions/$(sessionId)).data;
@@ -728,13 +740,21 @@ service cloud.firestore {
           && data.updatedAt == request.time;
       }
 
-      // Lookups: 2 (session, membership). Absent means "no document", so the
-      // only record a teacher can create is MANUAL_PRESENT.
+      // Every change a teacher makes is written together with its history
+      // entry, attendanceChanges/{recordId}_{revision}, so nothing a teacher
+      // does to a record is lost when the note is overwritten.
+      function historyWrittenAfter(revision) {
+        return existsAfter(/databases/$(database)/documents/attendanceChanges/$(attendanceId + '_' + string(revision)));
+      }
+
+      // Lookups: 3 (session, membership, history entry after the write).
+      // Absent means "no document", so the only record a teacher can create is
+      // MANUAL_PRESENT.
       function manualCreate(data) {
         let session = sessionOf(data.sessionId);
         return hasExactly(data,
             ['sessionId', 'courseId', 'teacherId', 'studentId', 'status', 'source',
-             'markedAt', 'note', 'updatedBy', 'updatedAt'])
+             'markedAt', 'note', 'updatedBy', 'updatedAt', 'revision'])
           && isId(data.sessionId)
           && isId(data.studentId)
           && attendanceId == data.sessionId + '_' + data.studentId
@@ -745,17 +765,25 @@ service cloud.firestore {
           && data.status == 'MANUAL_PRESENT'
           && data.source == 'MANUAL'
           && data.markedAt == request.time
-          && validCorrection(data);
+          && validCorrection(data)
+          && data.revision == 1
+          && historyWrittenAfter(1);
       }
 
-      // Lookups: 0. teacherId on the document was checked against the session
-      // when the document was created and cannot change afterwards.
+      // Lookups: 1 (history entry after the write). teacherId on the document
+      // was checked against the session when the document was created and
+      // cannot change afterwards. REVOKED marks a scan as a proxy: it carries
+      // a penalty, so only a record that came from a scan can be revoked.
       function manualUpdate() {
         return resource.data.teacherId == uid()
           && request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['status', 'note', 'updatedBy', 'updatedAt'])
-          && request.resource.data.status in ['MANUAL_PRESENT', 'MANUAL_ABSENT']
-          && validCorrection(request.resource.data);
+              .hasOnly(['status', 'note', 'updatedBy', 'updatedAt', 'revision'])
+          && request.resource.data.status in ['MANUAL_PRESENT', 'MANUAL_ABSENT', 'REVOKED']
+          && (request.resource.data.status != 'REVOKED'
+              || resource.data.source in ['LIVE', 'QUEUED'])
+          && validCorrection(request.resource.data)
+          && request.resource.data.revision == resource.data.get('revision', 0) + 1
+          && historyWrittenAfter(request.resource.data.revision);
       }
 
       allow get: if signedIn()
@@ -770,6 +798,45 @@ service cloud.firestore {
       // Students have no update rule, and nobody has a delete rule: one
       // record per student per session, kept forever.
       allow update: if signedIn() && manualUpdate();
+    }
+
+    // ---- attendanceChanges: every change a teacher made to a record --------
+    // Written in the same batch as the change, and only then. Never updated or
+    // deleted. Readable by the record's teacher and its student.
+    match /attendanceChanges/{changeId} {
+      function recordPath(recordId) {
+        return /databases/$(database)/documents/attendance/$(recordId);
+      }
+
+      // Lookups: 3 (record after, record before, its existence before). The
+      // entry must describe the change exactly: the status before ('NONE' for
+      // a record the change creates), the status and note after, and the
+      // record's new revision, which is also the entry's id.
+      function validChange(data) {
+        let after = getAfter(recordPath(data.recordId)).data;
+        return hasExactly(data,
+            ['recordId', 'revision', 'teacherId', 'studentId', 'from', 'to', 'note', 'by', 'at'])
+          && data.recordId is string
+          && data.recordId.matches('^[A-Za-z0-9]+_[A-Za-z0-9]+$')
+          && data.revision is int
+          && changeId == data.recordId + '_' + string(data.revision)
+          && after.revision == data.revision
+          && after.teacherId == uid()
+          && data.teacherId == uid()
+          && data.studentId == after.studentId
+          && data.to == after.status
+          && data.note == after.note
+          && data.by == uid()
+          && data.at == request.time
+          && (exists(recordPath(data.recordId))
+              ? data.from == get(recordPath(data.recordId)).data.status
+              : data.from == 'NONE');
+      }
+
+      allow read: if signedIn()
+        && (resource.data.teacherId == uid() || resource.data.studentId == uid());
+
+      allow create: if signedIn() && validChange(request.resource.data);
     }
   }
 }

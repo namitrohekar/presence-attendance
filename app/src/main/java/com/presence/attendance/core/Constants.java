@@ -66,5 +66,11 @@ public final class Constants {
     /** Days a roster correction record must be kept before a faculty app may purge it. */
     public static final int CORRECTION_RETENTION_DAYS = 365;
 
+    /** The largest headcount a teacher can record for a session. */
+    public static final int HEADCOUNT_MAX = 1000;
+
+    /** Attended sessions taken off a student's figure for each mark revoked as a proxy. */
+    public static final int PROXY_PENALTY_SESSIONS = 1;
+
     private Constants() {}
 }

@@ -114,4 +114,40 @@ public final class AttendanceStatsTest {
         assertFalse("a threshold of 1 is met by a single session", stats(1, 100).isBelow(1));
         assertTrue(stats(0, 100).isBelow(1));
     }
+
+    @Test
+    public void aRevokedMarkIsAbsentAndCostsOneMoreAttendedSession() {
+        final AttendanceStats stats =
+                AttendanceStats.of(
+                        ids("a", "b", "c", "d", "e"),
+                        Arrays.asList(
+                                record("a", Status.PRESENT),
+                                record("b", Status.PRESENT),
+                                record("c", Status.LATE_SYNC),
+                                record("d", Status.REVOKED)));
+        assertEquals(1, stats.getStrikes());
+        assertEquals("three attended, one taken off for the strike", 2, stats.getPresent());
+        assertEquals(40, stats.percent());
+        assertTrue(stats.isBelow(75));
+    }
+
+    @Test
+    public void thePenaltyNeverTakesTheFigureBelowZero() {
+        final AttendanceStats stats =
+                AttendanceStats.of(
+                        ids("a", "b", "c"),
+                        Arrays.asList(record("a", Status.REVOKED), record("b", Status.REVOKED)));
+        assertEquals(2, stats.getStrikes());
+        assertEquals(0, stats.getPresent());
+    }
+
+    @Test
+    public void aRevokeInASessionStillRunningIsNotCountedYet() {
+        final AttendanceStats stats =
+                AttendanceStats.of(
+                        ids("a"),
+                        Arrays.asList(record("a", Status.PRESENT), record("live", Status.REVOKED)));
+        assertEquals(0, stats.getStrikes());
+        assertEquals(1, stats.getPresent());
+    }
 }

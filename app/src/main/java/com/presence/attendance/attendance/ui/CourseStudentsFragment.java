@@ -128,11 +128,18 @@ public final class CourseStudentsFragment extends Fragment {
         final List<Line> lines = new ArrayList<>();
         for (CourseStudentsViewModel.Row row : state.rows) {
             final String detail =
-                    getString(
-                            R.string.students_row_detail,
-                            row.member.getRollNo(),
-                            row.stats.getPresent(),
-                            row.stats.getTotal());
+                    row.stats.getStrikes() > 0
+                            ? getString(
+                                    R.string.students_row_detail_strikes,
+                                    row.member.getRollNo(),
+                                    row.stats.getPresent(),
+                                    row.stats.getTotal(),
+                                    row.stats.getStrikes())
+                            : getString(
+                                    R.string.students_row_detail,
+                                    row.member.getRollNo(),
+                                    row.stats.getPresent(),
+                                    row.stats.getTotal());
             // The words "At risk" carry the meaning; the colour only reinforces it.
             final String badge =
                     !row.stats.hasSessions()
@@ -175,6 +182,7 @@ public final class CourseStudentsFragment extends Fragment {
                             row.stats.getPresent(),
                             row.stats.getTotal(),
                             row.stats.percent(),
+                            row.stats.getStrikes(),
                             row.atRisk));
         }
         final String csv = AttendanceCsv.build(rows);

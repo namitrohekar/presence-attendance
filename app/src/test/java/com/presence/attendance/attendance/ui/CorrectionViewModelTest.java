@@ -6,6 +6,7 @@ import static org.junit.Assert.assertTrue;
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 import androidx.lifecycle.MutableLiveData;
+import com.presence.attendance.attendance.domain.AttendanceRecord.Status;
 import com.presence.attendance.core.AppError;
 import com.presence.attendance.core.Constants;
 import com.presence.attendance.core.Outcome;
@@ -41,31 +42,31 @@ public final class CorrectionViewModelTest {
 
     @Test
     public void aCorrectionIsSentAsTheSignedInTeacherWithATrimmedNote() {
-        viewModel.save(true, "  Phone battery died  ");
+        viewModel.save(Status.MANUAL_PRESENT, "  Phone battery died  ");
         assertEquals(
                 Collections.singletonList(
                         Fixtures.TEACHER.getUid()
-                                + ":courseA:sessA:studentA:update:true:Phone battery died"),
+                                + ":courseA:sessA:studentA:update:MANUAL_PRESENT:Phone battery died"),
                 attendance.corrections);
         assertTrue(state().done);
     }
 
     @Test
     public void aBlankOrOverlongNoteIsRefusedBeforeAnythingIsSent() {
-        viewModel.save(false, "   ");
+        viewModel.save(Status.MANUAL_ABSENT, "   ");
         assertTrue(state().noteMissing);
         final String tooLong = "x".repeat(Constants.NOTE_MAX_LEN + 1);
-        viewModel.save(false, tooLong);
+        viewModel.save(Status.MANUAL_ABSENT, tooLong);
         assertTrue(state().noteMissing);
         assertTrue(attendance.corrections.isEmpty());
-        viewModel.save(false, "x".repeat(Constants.NOTE_MAX_LEN));
+        viewModel.save(Status.MANUAL_ABSENT, "x".repeat(Constants.NOTE_MAX_LEN));
         assertEquals("the longest allowed note is sent", 1, attendance.corrections.size());
     }
 
     @Test
     public void aRefusalKeepsTheSheetOpenWithTheReason() {
         attendance.correctOutcome = Outcome.failure(AppError.PERMISSION_DENIED);
-        viewModel.save(true, "why");
+        viewModel.save(Status.MANUAL_PRESENT, "why");
         assertFalse(state().done);
         assertEquals(AppError.PERMISSION_DENIED, state().error);
         assertTrue("it can be tried again", state().canSave());
@@ -74,8 +75,19 @@ public final class CorrectionViewModelTest {
     @Test
     public void offlineNothingIsSent() {
         online.setValue(false);
-        viewModel.save(true, "why");
+        viewModel.save(Status.MANUAL_PRESENT, "why");
         assertTrue(attendance.corrections.isEmpty());
         assertFalse(state().canSave());
+    }
+
+    @Test
+    public void aRevokeIsSentWithItsReason() {
+        viewModel.save(Status.REVOKED, "Friend scanned for them");
+        assertEquals(
+                Collections.singletonList(
+                        Fixtures.TEACHER.getUid()
+                                + ":courseA:sessA:studentA:update:REVOKED:Friend scanned for them"),
+                attendance.corrections);
+        assertTrue(state().done);
     }
 }

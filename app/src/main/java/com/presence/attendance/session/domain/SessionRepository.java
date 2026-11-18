@@ -29,6 +29,14 @@ public interface SessionRepository {
     @MainThread
     void endSession(@NonNull String sessionId, @NonNull Callback<Session> callback);
 
+    /**
+     * Records how many people the teacher counted in the room, once the session is over. Never
+     * queued: fails offline. Succeeds with the stored count.
+     */
+    @MainThread
+    void setHeadcount(
+            @NonNull String sessionId, int headcount, @NonNull Callback<Integer> callback);
+
     /** Fails with SESSION_NOT_FOUND. */
     @MainThread
     void loadSession(@NonNull String sessionId, @NonNull Callback<Session> callback);

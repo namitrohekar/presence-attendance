@@ -5,14 +5,15 @@ import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.ViewModel;
+import com.presence.attendance.attendance.domain.AttendanceRecord;
 import com.presence.attendance.attendance.domain.AttendanceRepository;
 import com.presence.attendance.auth.domain.AuthRepository;
 import com.presence.attendance.core.AppError;
 import com.presence.attendance.core.Constants;
 
 /**
- * Faculty: marks one student present or absent for one session by hand. A note saying why is
- * required, and the rules require it too.
+ * Faculty: marks one student present or absent for one session by hand, or revokes a scan as a
+ * proxy. A note saying why is required, and the rules require it too.
  */
 public final class CorrectionViewModel extends ViewModel {
 
@@ -84,8 +85,8 @@ public final class CorrectionViewModel extends ViewModel {
         return state;
     }
 
-    /** Records the student as present or absent, with the reason. */
-    public void save(boolean present, @NonNull String rawNote) {
+    /** Sets the student's status for the session, with the reason. */
+    public void save(@NonNull AttendanceRecord.Status status, @NonNull String rawNote) {
         final State s = current();
         if (!s.canSave()) {
             return;
@@ -107,7 +108,7 @@ public final class CorrectionViewModel extends ViewModel {
                     sessionId,
                     studentId,
                     hasRecord,
-                    present,
+                    status,
                     note,
                     saved -> finish(saved.getError()));
         });

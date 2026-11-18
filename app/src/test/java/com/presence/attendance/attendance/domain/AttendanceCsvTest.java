@@ -22,12 +22,13 @@ public final class AttendanceCsvTest {
                                         3,
                                         4,
                                         75,
+                                        0,
                                         false)));
         assertTrue(csv.startsWith(AttendanceCsv.BOM + "Roll number,Name,Email,"));
         final String[] lines = csv.split("\r\n", -1);
         assertEquals("header, one row, and the empty end after the last CRLF", 3, lines.length);
-        assertEquals("262010016,Meera Joshi,m@mc.vjti.ac.in,3,4,75,No", lines[1]);
-        assertEquals(7, lines[0].split(",").length);
+        assertEquals("262010016,Meera Joshi,m@mc.vjti.ac.in,3,4,75,0,No", lines[1]);
+        assertEquals(8, lines[0].split(",").length);
     }
 
     @Test
@@ -61,9 +62,9 @@ public final class AttendanceCsvTest {
         final String csv =
                 AttendanceCsv.build(
                         Arrays.asList(
-                                new Row("1", "A", "a@x", 1, 4, 25, true),
-                                new Row("2", "B", "b@x", 4, 4, 100, false)));
-        assertTrue(csv.contains("1,A,a@x,1,4,25,Yes\r\n"));
-        assertTrue(csv.contains("2,B,b@x,4,4,100,No\r\n"));
+                                new Row("1", "A", "a@x", 1, 4, 25, 0, true),
+                                new Row("2", "B", "b@x", 4, 4, 100, 0, false)));
+        assertTrue(csv.contains("1,A,a@x,1,4,25,0,Yes\r\n"));
+        assertTrue(csv.contains("2,B,b@x,4,4,100,0,No\r\n"));
     }
 }

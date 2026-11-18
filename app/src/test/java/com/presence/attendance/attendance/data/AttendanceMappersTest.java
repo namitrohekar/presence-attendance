@@ -3,6 +3,7 @@ package com.presence.attendance.attendance.data;
 import static org.junit.Assert.assertEquals;
 
 import com.google.firebase.Timestamp;
+import com.presence.attendance.attendance.domain.AttendanceRecord;
 import com.presence.attendance.attendance.domain.PendingMark;
 import com.presence.attendance.core.AppError;
 import com.presence.attendance.core.location.LocationFix;
@@ -109,7 +110,8 @@ public final class AttendanceMappersTest {
     }
 
     @Test
-    public void aManualRecordAndACorrectionHaveExactlyTheContractFields() throws IOException {
+    public void aManualRecordACorrectionAndItsHistoryHaveExactlyTheContractFields()
+            throws IOException {
         final Map<String, Object> created =
                 AttendanceMappers.manualPresent("teacherA", "courseA", "sessA", "studentA", "why");
         assertEquals(
@@ -118,13 +120,30 @@ public final class AttendanceMappersTest {
         assertEquals("MANUAL_PRESENT", created.get("status"));
         assertEquals("MANUAL", created.get("source"));
         assertEquals("teacherA", created.get("updatedBy"));
+        assertEquals(1L, created.get("revision"));
 
-        final Map<String, Object> absent = AttendanceMappers.correction("teacherA", false, "why");
+        final Map<String, Object> revoked =
+                AttendanceMappers.correction("teacherA", AttendanceRecord.Status.REVOKED, "why", 3);
         assertEquals(
                 DocumentContract.fields("attendance.correction", false),
-                new TreeSet<>(absent.keySet()));
-        assertEquals("MANUAL_ABSENT", absent.get("status"));
-        assertEquals("why", absent.get("note"));
+                new TreeSet<>(revoked.keySet()));
+        assertEquals("REVOKED", revoked.get("status"));
+        assertEquals(3L, revoked.get("revision"));
+
+        final Map<String, Object> entry =
+                AttendanceMappers.change(
+                        "sessA_studentA",
+                        3,
+                        "teacherA",
+                        "studentA",
+                        "PRESENT",
+                        AttendanceRecord.Status.REVOKED,
+                        "why");
+        assertEquals(
+                DocumentContract.fields("attendanceChanges", false), new TreeSet<>(entry.keySet()));
+        assertEquals("PRESENT", entry.get("from"));
+        assertEquals("REVOKED", entry.get("to"));
+        assertEquals("teacherA", entry.get("by"));
     }
 
     @Test

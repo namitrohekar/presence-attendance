@@ -291,4 +291,39 @@
     <string name="students_export_failed">Couldn\'t save the report. Choose another location and try again.</string>
     <string name="error_location_inaccurate">Your location isn\'t accurate enough yet. Turn on Wi-Fi, move near a window, wait a few seconds and try again.</string>
     <string name="error_device_used">This phone already marked another student in this session. Ask your teacher to mark you.</string>
+    <string name="status_revoked">Revoked (proxy)</string>
+    <string name="headcount_title">Headcount</string>
+    <string name="headcount_value">Headcount: %1$d</string>
+    <string name="headcount_not_entered">Headcount: not entered</string>
+    <string name="headcount_prompt">Count the people in the room and enter the number to check the marks.</string>
+    <string name="headcount_saving">Saving…</string>
+    <plurals name="headcount_more_marks">
+        <item quantity="one">%1$d more mark than people in the room. Review the list.</item>
+        <item quantity="other">%1$d more marks than people in the room. Review the list.</item>
+    </plurals>
+    <plurals name="headcount_unmarked">
+        <item quantity="one">%1$d person in the room hasn\'t marked. Mark them by hand.</item>
+        <item quantity="other">%1$d people in the room haven\'t marked. Mark them by hand.</item>
+    </plurals>
+    <string name="headcount_matches">Matches the number of marks.</string>
+    <string name="badge_check">Check</string>
+    <string name="badge_matches">Matches</string>
+    <string name="headcount_body">How many people are in the room? The number is compared with the marks.</string>
+    <string name="headcount_label">Number of people</string>
+    <string name="headcount_invalid">Enter a number from 0 to 1000.</string>
+    <string name="headcount_save">Save</string>
+    <string name="review_header">Review first</string>
+    <string name="review_same_place">Same location as %1$s</string>
+    <string name="review_same_place_unknown">Same location as another student</string>
+    <string name="review_sent_late">Sent late from a saved scan</string>
+    <string name="roster_show_all">Show all students (%1$d)</string>
+    <string name="roster_hide_all">Hide the list</string>
+    <string name="roster_present_header">Present (%1$d)</string>
+    <string name="roster_absent_header">Not present (%1$d)</string>
+    <string name="correction_revoke">Revoke as proxy</string>
+    <string name="correction_restore">Restore</string>
+    <string name="correction_penalty">Revoking counts this session as absent, adds a proxy strike, and takes one more attended session off the student\'s figure. The student sees the strike and your reason.</string>
+    <string name="history_strikes_title">Proxy strikes: %1$d</string>
+    <string name="history_strikes_detail">Each one also counts as one more session missed.</string>
+    <string name="students_row_detail_strikes">%1$s · Present: %2$d of %3$d · Strikes: %4$d</string>
 </resources>

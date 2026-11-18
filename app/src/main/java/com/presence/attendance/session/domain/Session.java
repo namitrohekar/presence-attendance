@@ -1,6 +1,7 @@
 package com.presence.attendance.session.domain;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /** One attendance session of a course. Immutable. */
 public final class Session {
@@ -18,6 +19,7 @@ public final class Session {
     private final long startedAtMillis;
     private final long endsAtMillis;
     @NonNull private final Geofence geofence;
+    @Nullable private final Integer headcount;
 
     public Session(
             @NonNull String id,
@@ -27,6 +29,21 @@ public final class Session {
             long startedAtMillis,
             long endsAtMillis,
             @NonNull Geofence geofence) {
+        this(id, courseId, teacherId, status, startedAtMillis, endsAtMillis, geofence, null);
+    }
+
+    /**
+     * @param headcount how many people the teacher counted in the room; null if not entered
+     */
+    public Session(
+            @NonNull String id,
+            @NonNull String courseId,
+            @NonNull String teacherId,
+            @NonNull Status status,
+            long startedAtMillis,
+            long endsAtMillis,
+            @NonNull Geofence geofence,
+            @Nullable Integer headcount) {
         this.id = id;
         this.courseId = courseId;
         this.teacherId = teacherId;
@@ -34,6 +51,7 @@ public final class Session {
         this.startedAtMillis = startedAtMillis;
         this.endsAtMillis = endsAtMillis;
         this.geofence = geofence;
+        this.headcount = headcount;
     }
 
     /**
@@ -76,5 +94,10 @@ public final class Session {
     @NonNull
     public Geofence getGeofence() {
         return geofence;
+    }
+
+    @Nullable
+    public Integer getHeadcount() {
+        return headcount;
     }
 }

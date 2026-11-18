@@ -35,6 +35,7 @@ const ENFORCED_BY_RULES = [
   'METERS_PER_DEGREE',
   'ALERT_RETENTION_DAYS',
   'CORRECTION_RETENTION_DAYS',
+  'HEADCOUNT_MAX',
 ];
 
 describe('constants parity (rules)', () => {

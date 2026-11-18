@@ -56,7 +56,8 @@ public interface AttendanceRepository {
             @NonNull Callback<MarkResult> callback);
 
     /**
-     * A teacher's correction for one student in one of their sessions, with the reason.
+     * A teacher's correction for one student in one of their sessions, with the reason: present,
+     * absent, or revoked as a proxy. Each change is written with an entry in its history.
      *
      * <p>{@code hasRecord} comes from the live roster: a teacher cannot read a record that does not
      * exist, so the write is chosen without reading. If the roster was stale the rules refuse the
@@ -70,7 +71,7 @@ public interface AttendanceRepository {
             @NonNull String sessionId,
             @NonNull String studentId,
             boolean hasRecord,
-            boolean present,
+            @NonNull AttendanceRecord.Status status,
             @NonNull String note,
             @NonNull Callback<Boolean> callback);
 

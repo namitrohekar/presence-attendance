@@ -266,8 +266,51 @@ function manualMark(student = STUDENT, overrides = {}) {
     note: 'Phone battery died, seen in class',
     updatedBy: TEACHER.uid,
     updatedAt: serverTimestamp(),
+    revision: 1,
     ...overrides,
   };
+}
+
+/**
+ * The history entry a teacher's change must be written with, describing `record` as the new
+ * state of the student's record. `from` is the status before, or 'NONE' for a create.
+ */
+function historyEntry(student, revision, from, record, teacher = TEACHER, overrides = {}) {
+  const or = (v) => (v === undefined ? null : v);
+  return {
+    recordId: attendanceId(student),
+    revision,
+    teacherId: teacher.uid,
+    studentId: student.uid,
+    from,
+    to: or(record.status),
+    note: or(record.note),
+    by: teacher.uid,
+    at: serverTimestamp(),
+    ...overrides,
+  };
+}
+
+/**
+ * A teacher's change written as the app writes it: the record, created or updated, and its
+ * history entry in one batch. Pass `history: null` to leave the entry out.
+ */
+function teacherWrite(db, student, record, options) {
+  const { from, revision, create = false, teacher = TEACHER, history = {} } = options;
+  const batch = writeBatch(db);
+  const ref = doc(db, 'attendance', attendanceId(student));
+  if (create) {
+    batch.set(ref, record);
+  } else {
+    batch.update(ref, record);
+  }
+  if (history !== null) {
+    batch.set(
+      doc(db, 'attendanceChanges', `${attendanceId(student)}_${revision}`),
+      historyEntry(student, revision, from, record, teacher, history),
+    );
+  }
+  return batch.commit();
 }
 
 /** An attendance document as it would exist after a successful LIVE mark. */
@@ -351,6 +394,8 @@ module.exports = {
   liveMark,
   queuedMark,
   manualMark,
+  historyEntry,
+  teacherWrite,
   storedMark,
   patch,
   attendanceId,
