@@ -29,7 +29,8 @@ public final class FirestoreSessionRepository implements SessionRepository {
     private static final String SESSIONS = "sessions";
     private static final String TOKENS = "tokens";
     private static final String CAMPUS = "appConfig/campus";
-    private static final int HISTORY_PAGE = 50;
+    // A semester of daily classes fits; the figures are computed over everything loaded.
+    private static final int HISTORY_PAGE = 300;
 
     private final FirebaseFirestore firestore;
 

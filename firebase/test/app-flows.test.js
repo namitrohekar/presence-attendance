@@ -372,6 +372,26 @@ describe('app flow: attendance reports', () => {
     expect((await assertSucceeds(getDocs(courseSessions(t.as(STUDENT))))).size).toBe(1);
   });
 
+  test('the teacher loads one student\'s records; another teacher gets nothing', async () => {
+    const one = (db, teacher) =>
+      query(
+        collection(db, 'attendance'),
+        where('teacherId', '==', teacher.uid),
+        where('studentId', '==', STUDENT.uid),
+        where('courseId', '==', h.COURSE),
+      );
+    const mine = await assertSucceeds(getDocs(one(t.as(TEACHER), TEACHER)));
+    expect(mine.docs.map((d) => d.data().studentId)).toEqual([STUDENT.uid]);
+    expect((await assertSucceeds(getDocs(one(t.as(h.OTHER_TEACHER), h.OTHER_TEACHER)))).size).toBe(0);
+    // Without their own id in the query, a teacher is refused.
+    const loose = query(
+      collection(t.as(h.OTHER_TEACHER), 'attendance'),
+      where('studentId', '==', STUDENT.uid),
+      where('courseId', '==', h.COURSE),
+    );
+    await assertFails(getDocs(loose));
+  });
+
   test('denied: a classmate, another teacher or a non-member asking for the same data', async () => {
     await assertFails(getDocs(records(t.as(STUDENT), 'studentId', h.OTHER_STUDENT.uid)));
     await assertFails(getDocs(records(t.as(STUDENT), 'teacherId', TEACHER.uid)));

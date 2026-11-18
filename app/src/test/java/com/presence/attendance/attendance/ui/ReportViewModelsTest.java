@@ -18,6 +18,8 @@ import com.presence.attendance.testutil.FakeAuthRepository;
 import com.presence.attendance.testutil.FakeCourseRepository;
 import com.presence.attendance.testutil.FakeSessionRepository;
 import com.presence.attendance.testutil.Fixtures;
+import java.time.DayOfWeek;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Collections;
 import org.junit.Before;
@@ -62,7 +64,15 @@ public final class ReportViewModelsTest {
     private HistoryViewModel.State history() {
         auth.signedInAs(Fixtures.STUDENT);
         final HistoryViewModel viewModel =
-                new HistoryViewModel(auth, sessions, attendance, "courseA", () -> NOW);
+                new HistoryViewModel(
+                        auth,
+                        sessions,
+                        attendance,
+                        "courseA",
+                        null,
+                        () -> NOW,
+                        ZoneOffset.UTC,
+                        DayOfWeek.MONDAY);
         viewModel.getState().observeForever(state -> {});
         return viewModel.getState().getValue();
     }
@@ -104,7 +114,14 @@ public final class ReportViewModelsTest {
         auth.signedInAs(Fixtures.TEACHER);
         final CourseStudentsViewModel viewModel =
                 new CourseStudentsViewModel(
-                        auth, courses, sessions, attendance, "courseA", threshold, () -> NOW);
+                        auth,
+                        courses,
+                        sessions,
+                        attendance,
+                        "courseA",
+                        threshold,
+                        () -> NOW,
+                        ZoneOffset.UTC);
         viewModel.getState().observeForever(state -> {});
         return viewModel.getState().getValue();
     }

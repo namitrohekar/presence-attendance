@@ -252,8 +252,8 @@ Five stages, each reviewed before the next. Findings and design in
 | 1 | Geofence accuracy 50 m, faster scan, late-delivery rescue, "N of M", 60-student test | built |
 | 2 | One phone, one student per session, enforced by the rules | built |
 | 3 | Headcount, end-of-session summary, revoke and restore, penalty, audit trail | built |
-| 4 | Month calendar against the 75% criterion, per-student view | next |
-| 5 | Low-attendance email from the teacher's mail app, student notification, threshold | |
+| 4 | Month calendar against the 75% criterion, per-student view | built |
+| 5 | Low-attendance email from the teacher's mail app, student notification, threshold | next |
 
 Run-checks for stage 1:
 1. Two students scan the same code within a second of each other: both
@@ -296,4 +296,18 @@ Run-checks for stage 3 (needs the rules deployed):
    before and after.
 9. Two students with a shared fake location (the same coordinates) appear
    under "Review first" as "Same location as …".
+
+Run-checks for stage 4:
+1. Student: Courses > the course. Under the figure and strip, the calendar
+   opens on the month of the latest class. Days with a class carry a mark;
+   the legend names each one.
+2. The line under the month name matches a hand count of that month's
+   classes, and turns red with "below 75%" when it is.
+3. Tap a day: the list shows only that day's classes. Tap it again: the
+   month comes back.
+4. Previous month steps back to the month of the first class and stops; the
+   next arrow is greyed out on the current month.
+5. Faculty: the course > Students > tap "Whole course": the figures switch to
+   this month only, and the "below" count follows. Tap a student: their
+   calendar opens under their name.
 

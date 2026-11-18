@@ -9,7 +9,7 @@ deployed yet, and I cannot sign in as you.
 
 | Area | Automated | On an emulator with stand-in data | Real Firebase, real accounts |
 |------|-----------|-----------------------------------|------------------------------|
-| Security rules | 606 Jest tests, 97 of 97 mutations caught, 60-student concurrency test | n/a | Phase 2 rules only (yours) |
+| Security rules | 607 Jest tests, 97 of 97 mutations caught, 60-student concurrency test | n/a | Phase 2 rules only (yours) |
 | Sign-in, courses | JUnit | yes | yes (yours, before the identity extension) |
 | Roster, CSV import, alerts, registration | JUnit + rules | yes | **no** |
 | Session, rotating QR, end session | JUnit + rules | yes | **no** |
@@ -141,6 +141,13 @@ Start a fresh session on the faculty device first.
 9. Scan after the session ended: "This session has ended."
 10. Scan a QR that is not an attendance code (a URL): nothing happens; the
     scanner keeps looking.
+
+### Month calendar
+
+The stage 4 run-checks at the end of `docs/phases.md`. Checked on an emulator
+with stand-in data: the calendar, day filtering, month steps, the month
+switch on the Students report and opening one student. Not checked against
+real Firestore.
 
 ### Session summary, revoke and penalty
 

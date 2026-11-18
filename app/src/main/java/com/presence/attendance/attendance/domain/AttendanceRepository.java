@@ -88,4 +88,12 @@ public interface AttendanceRepository {
             @NonNull String teacherId,
             @NonNull String courseId,
             @NonNull Callback<List<AttendanceRecord>> callback);
+
+    /** One student's records in one of the teacher's courses, for the teacher. */
+    @MainThread
+    void loadStudentRecordsForTeacher(
+            @NonNull String teacherId,
+            @NonNull String studentId,
+            @NonNull String courseId,
+            @NonNull Callback<List<AttendanceRecord>> callback);
 }

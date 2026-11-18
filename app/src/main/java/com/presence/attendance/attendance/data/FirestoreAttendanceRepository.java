@@ -171,6 +171,22 @@ public final class FirestoreAttendanceRepository implements AttendanceRepository
                 callback);
     }
 
+    @Override
+    public void loadStudentRecordsForTeacher(
+            @NonNull String teacherId,
+            @NonNull String studentId,
+            @NonNull String courseId,
+            @NonNull Callback<List<AttendanceRecord>> callback) {
+        // The teacher's own id is in the query because the rules list only records carrying it.
+        // Equality only, so no composite index is needed.
+        load(
+                attendance()
+                        .whereEqualTo(AttendanceMappers.TEACHER_ID, teacherId)
+                        .whereEqualTo(AttendanceMappers.STUDENT_ID, studentId)
+                        .whereEqualTo(AttendanceMappers.COURSE_ID, courseId),
+                callback);
+    }
+
     private static void load(
             @NonNull Query query, @NonNull Callback<List<AttendanceRecord>> callback) {
         query.get()

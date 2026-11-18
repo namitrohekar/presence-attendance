@@ -203,12 +203,24 @@
         <argument
             android:name="threshold"
             app:argType="integer" />
+        <!-- Set when a teacher opens one student; empty for the student's own screen. -->
+        <argument
+            android:name="studentId"
+            android:defaultValue=""
+            app:argType="string" />
+        <argument
+            android:name="studentName"
+            android:defaultValue=""
+            app:argType="string" />
     </fragment>
 
     <fragment
         android:id="@+id/courseStudentsFragment"
         android:name="com.presence.attendance.attendance.ui.CourseStudentsFragment"
         tools:layout="@layout/fragment_list">
+        <action
+            android:id="@+id/action_students_to_history"
+            app:destination="@id/historyFragment" />
         <argument
             android:name="courseId"
             app:argType="string" />

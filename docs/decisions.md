@@ -680,3 +680,30 @@ Each entry: context, decision, alternatives, consequence. Newest last.
 - Kept: Inter at 400 and 600, the type scale, spacing, radii, elevation 0 and
   every layout's structure and ids. Error and validation messages keep their
   periods (they are sentences); row captions and labels do not.
+
+## D-045 A month at a time
+
+- Decision: the student's course screen shows a calendar under their overall
+  figure and register strip, one month at a time. Each day with a class shows
+  the register mark under its number: an ink tick when every class that day
+  was attended, an amber tick when some were missed, an amber ring when all
+  were missed, a red slash when one was revoked, a dot while a class is
+  running. A drawn legend names every mark, so colour is never the only cue.
+- The month line is the same calculation as the overall figure, over that
+  month's classes only, penalty included ("50% · attended 6 of 12 · below
+  75%"). Months run from the first class to the current month; the screen
+  opens on the month of the latest class. Days and months are the phone's
+  local ones; the week starts where the locale says.
+- Tapping a day lists only that day's classes; tapping it again, or "Show all
+  of November", lists the month. The calendar reads as one summary to TalkBack;
+  the list under it carries the detail.
+- Faculty open the same screen for any student from the Students report. The
+  student's records are read with a query that includes the teacher's own id,
+  which the existing list rule requires; equality only, so no new index. The
+  Students report switches between the whole course and the current month,
+  recomputed from what was already loaded.
+- The course history now loads up to 300 classes (was 50), so a semester of
+  daily classes is counted in full.
+- The calendar logic is pure (`MonthGrid`) and tested for month edges, several
+  classes in a day, a running class, and a class just after midnight local
+  time that is still the previous day in UTC.

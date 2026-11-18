@@ -52,40 +52,6 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
-            <LinearLayout
-                android:id="@+id/list_header"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingTop="@dimen/space_8"
-                android:paddingBottom="@dimen/space_16"
-                android:visibility="gone"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/list_notice">
-
-                <TextView
-                    android:id="@+id/list_figure"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textAppearance="@style/TextAppearance.Presence.Figure" />
-
-                <TextView
-                    android:id="@+id/list_figure_caption"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_4"
-                    android:fontFeatureSettings="tnum"
-                    android:textAppearance="@style/TextAppearance.Presence.Subhead"
-                    android:textColor="@color/text_secondary" />
-
-                <com.presence.attendance.attendance.ui.RegisterStripView
-                    android:id="@+id/list_strip"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_16" />
-            </LinearLayout>
-
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/list_recycler"
                 android:layout_width="0dp"
@@ -97,7 +63,7 @@
                 app:layout_constraintBottom_toTopOf="@id/list_footer"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/list_header" />
+                app:layout_constraintTop_toBottomOf="@id/list_notice" />
 
             <com.google.android.material.progressindicator.CircularProgressIndicator
                 android:id="@+id/list_progress"

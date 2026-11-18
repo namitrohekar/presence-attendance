@@ -3,6 +3,7 @@ package com.presence.attendance.attendance.ui;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.format.DateUtils;
 import android.view.View;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -11,6 +12,8 @@ import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.NavController;
+import androidx.navigation.NavDestination;
 import androidx.navigation.fragment.NavHostFragment;
 import com.presence.attendance.PresenceApp;
 import com.presence.attendance.R;
@@ -27,6 +30,8 @@ import com.presence.attendance.databinding.FragmentListBinding;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,6 +39,7 @@ import java.util.List;
 public final class CourseStudentsFragment extends Fragment {
 
     private static final String TAG = "CourseStudents";
+    private static final String KEY_PERIOD = "period";
 
     private CourseStudentsFragmentArgs args;
     private CourseStudentsViewModel viewModel;
@@ -69,13 +75,14 @@ public final class CourseStudentsFragment extends Fragment {
                                                 c.attendance(),
                                                 args.getCourseId(),
                                                 args.getThreshold(),
-                                                System::currentTimeMillis)))
+                                                System::currentTimeMillis,
+                                                ZoneId.systemDefault())))
                         .get(CourseStudentsViewModel.class);
 
         binding.listToolbar.setTitle(R.string.students_title);
         binding.listToolbar.setNavigationOnClickListener(
                 v -> NavHostFragment.findNavController(this).popBackStack());
-        final LineAdapter adapter = new LineAdapter(null);
+        final LineAdapter adapter = new LineAdapter(this::onRowClicked);
         binding.listRecycler.setAdapter(adapter);
         binding.listPrimary.setText(R.string.students_export);
         binding.listPrimary.setOnClickListener(
@@ -126,6 +133,18 @@ public final class CourseStudentsFragment extends Fragment {
     @NonNull
     private List<Line> lines(@NonNull CourseStudentsViewModel.State state) {
         final List<Line> lines = new ArrayList<>();
+        // What the figures cover; tapping switches between the whole course and this month.
+        final String thisMonth = monthName(YearMonth.now(ZoneId.systemDefault()));
+        lines.add(
+                Line.row(
+                        KEY_PERIOD,
+                        state.month == null
+                                ? getString(R.string.students_period_overall)
+                                : getString(R.string.students_period_month, thisMonth),
+                        state.month == null
+                                ? getString(R.string.students_switch_to_month, thisMonth)
+                                : getString(R.string.students_switch_to_overall)));
+        lines.add(Line.header("h_students", getString(R.string.students_title)));
         for (CourseStudentsViewModel.Row row : state.rows) {
             final String detail =
                     row.stats.getStrikes() > 0
@@ -151,13 +170,51 @@ public final class CourseStudentsFragment extends Fragment {
                                     row.stats.percent());
             lines.add(
                     Line.row(
-                            row.member.getStudentId(),
-                            row.member.getName(),
-                            detail,
-                            badge,
-                            row.atRisk ? Line.Tone.DANGER : Line.Tone.NEUTRAL));
+                                    row.member.getStudentId(),
+                                    row.member.getName(),
+                                    detail,
+                                    badge,
+                                    row.atRisk ? Line.Tone.DANGER : Line.Tone.NEUTRAL)
+                            .navigates());
         }
         return Line.grouped(lines);
+    }
+
+    private void onRowClicked(@NonNull String key) {
+        if (KEY_PERIOD.equals(key)) {
+            viewModel.toggleMonth();
+            return;
+        }
+        final CourseStudentsViewModel.State state = viewModel.getState().getValue();
+        if (state == null) {
+            return;
+        }
+        for (CourseStudentsViewModel.Row row : state.rows) {
+            if (row.member.getStudentId().equals(key)) {
+                final NavController navController = NavHostFragment.findNavController(this);
+                final NavDestination current = navController.getCurrentDestination();
+                if (current != null && current.getId() == R.id.courseStudentsFragment) {
+                    navController.navigate(
+                            CourseStudentsFragmentDirections.actionStudentsToHistory(
+                                            args.getCourseId(), "", args.getThreshold())
+                                    .setStudentId(key)
+                                    .setStudentName(row.member.getName()));
+                }
+                return;
+            }
+        }
+    }
+
+    @NonNull
+    private String monthName(@NonNull YearMonth month) {
+        final long millis =
+                month.atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        return DateUtils.formatDateTime(
+                requireContext(),
+                millis,
+                DateUtils.FORMAT_SHOW_DATE
+                        | DateUtils.FORMAT_NO_MONTH_DAY
+                        | DateUtils.FORMAT_SHOW_YEAR);
     }
 
     @Override

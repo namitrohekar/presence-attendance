@@ -105,4 +105,14 @@ public final class FakeAttendanceRepository implements AttendanceRepository {
         recordLoads.add("teacher:" + teacherId + ":" + courseId);
         callback.onResult(recordsOutcome);
     }
+
+    @Override
+    public void loadStudentRecordsForTeacher(
+            @NonNull String teacherId,
+            @NonNull String studentId,
+            @NonNull String courseId,
+            @NonNull Callback<List<AttendanceRecord>> callback) {
+        recordLoads.add("teacher:" + teacherId + ":student:" + studentId + ":" + courseId);
+        callback.onResult(recordsOutcome);
+    }
 }

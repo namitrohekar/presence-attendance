@@ -331,4 +331,22 @@
     <string name="history_figure">%1$d%%</string>
     <string name="history_caption">Attended: %1$d of %2$d · required: %3$d%%</string>
     <string name="history_caption_below">Attended: %1$d of %2$d · below %3$d%%</string>
+    <string name="calendar_previous">Previous month</string>
+    <string name="calendar_next">Next month</string>
+    <string name="calendar_legend_attended">Attended</string>
+    <string name="calendar_legend_partly">Some missed</string>
+    <string name="calendar_legend_missed">Missed</string>
+    <string name="calendar_legend_revoked">Revoked</string>
+    <string name="calendar_month_line">%1$d%% · attended %2$d of %3$d</string>
+    <string name="calendar_month_below">%1$d%% · attended %2$d of %3$d · below %4$d%%</string>
+    <string name="calendar_month_none">No classes held</string>
+    <string name="calendar_description">%1$s. %2$s</string>
+    <string name="history_sessions_month">Sessions in %1$s</string>
+    <string name="history_sessions_day">Sessions on %1$s</string>
+    <string name="history_no_sessions_month">No classes this month</string>
+    <string name="history_show_month">Show all of %1$s</string>
+    <string name="students_period_overall">Whole course</string>
+    <string name="students_period_month">%1$s only</string>
+    <string name="students_switch_to_month">Tap to show %1$s only</string>
+    <string name="students_switch_to_overall">Tap to show the whole course</string>
 </resources>

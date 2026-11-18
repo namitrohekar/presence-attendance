@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The top of a student's course screen: the figure, their register row, then a month at a time. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="@dimen/space_8"
+    android:paddingBottom="@dimen/space_8">
+
+    <TextView
+        android:id="@+id/history_figure"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="@style/TextAppearance.Presence.Figure" />
+
+    <TextView
+        android:id="@+id/history_caption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_4"
+        android:fontFeatureSettings="tnum"
+        android:textAppearance="@style/TextAppearance.Presence.Subhead"
+        android:textColor="@color/text_secondary" />
+
+    <com.presence.attendance.attendance.ui.RegisterStripView
+        android:id="@+id/history_strip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_16" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_24"
+        android:background="@drawable/bg_row_single"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/space_12"
+        android:paddingBottom="@dimen/space_16">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="@dimen/space_4"
+            android:paddingTop="@dimen/space_8">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/history_month"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:accessibilityHeading="true"
+                    android:accessibilityLiveRegion="polite"
+                    android:textAppearance="@style/TextAppearance.Presence.Headline" />
+
+                <TextView
+                    android:id="@+id/history_month_line"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFeatureSettings="tnum"
+                    android:textAppearance="@style/TextAppearance.Presence.Footnote"
+                    android:textColor="@color/text_secondary" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/history_previous"
+                android:layout_width="@dimen/touch_target"
+                android:layout_height="@dimen/touch_target"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/calendar_previous"
+                android:scaleX="-1"
+                android:src="@drawable/ic_chevron"
+                app:tint="@color/accent" />
+
+            <ImageButton
+                android:id="@+id/history_next"
+                android:layout_width="@dimen/touch_target"
+                android:layout_height="@dimen/touch_target"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/calendar_next"
+                android:src="@drawable/ic_chevron"
+                app:tint="@color/accent" />
+        </LinearLayout>
+
+        <com.presence.attendance.attendance.ui.MonthCalendarView
+            android:id="@+id/history_calendar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8" />
+    </LinearLayout>
+</LinearLayout>

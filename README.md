@@ -23,6 +23,7 @@ the only verifier and the server clock is the only clock.
 | Percentages, student history, at-risk list, CSV export | built |
 | One phone per student per session | built |
 | Session summary, headcount, review flags, revoke as proxy with a penalty, change history | built |
+| Month calendar against the requirement, per-student view for faculty | built |
 | Threshold setting, low-attendance notification | not built |
 | Polish pass, TalkBack pass, seed tool, remaining docs | not built |
 
@@ -69,7 +70,7 @@ interfaces in their constructors and are tested against in-memory fakes.
     cd firebase && npm install && npm test
     cd firebase && npm run test:mutation
 
-Last run: 248 unit tests, 606 rules tests (one of them 60 students marking at
+Last run: 258 unit tests, 607 rules tests (one of them 60 students marking at
 once), 97 of 97 weakened rules caught.
 Lint and javac treat warnings as errors.
 
