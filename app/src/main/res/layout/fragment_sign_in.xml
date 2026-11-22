@@ -35,13 +35,19 @@
                 android:layout_height="wrap_content"
                 android:accessibilityHeading="true"
                 android:text="@string/app_name"
-                android:textAppearance="@style/TextAppearance.Presence.LargeTitle" />
+                android:textAppearance="@style/TextAppearance.Presence.Wordmark" />
+
+            <View
+                android:layout_width="@dimen/gold_rule_width"
+                android:layout_height="@dimen/gold_rule_height"
+                android:layout_marginTop="@dimen/space_12"
+                android:background="@color/gold" />
 
             <TextView
                 android:id="@+id/sign_in_statement"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_8"
+                android:layout_marginTop="@dimen/space_16"
                 android:text="@string/sign_in_statement"
                 android:textAppearance="@style/TextAppearance.Presence.Body"
                 android:textColor="@color/text_secondary" />

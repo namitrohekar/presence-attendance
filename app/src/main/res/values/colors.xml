@@ -1,34 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Paper and blue-black ink: the college register. One cool graphite ramp for every surface,
-    border and text role, one ink accent used rarely, semantic colours toned to sit beside it.
+    Heritage academic: ivory paper, Oxford navy ink, a burnished-gold hairline. Surfaces, borders
+    and text come from one warm-neutral ramp; navy is the one accent; gold is decoration only (never
+    text on a light surface); semantic colours are toned to sit beside them.
 -->
 <resources>
-    <color name="background">#F3F4F6</color>
+    <color name="background">#EEE7D9</color>
     <color name="surface">#FFFFFF</color>
-    <color name="fill">#ECEEF1</color>
-    <color name="text">#15171C</color>
-    <color name="text_secondary">#5C616B</color>
-    <color name="separator">#E1E3E8</color>
+    <color name="fill">#ECE5D6</color>
+    <color name="text">#171A2B</color>
+    <color name="text_secondary">#69634F</color>
+    <color name="separator">#E3DACA</color>
 
-    <!-- Register ink. 7.6:1 on white, so it works as text and as a fill under white text. -->
-    <color name="accent">#2B45C4</color>
-    <color name="on_accent">#FFFFFF</color>
+    <!-- Oxford navy. 13:1 on ivory, so it carries text and fills under ivory text. -->
+    <color name="accent">#1F2A55</color>
+    <color name="on_accent">#F8F4EA</color>
+    <!-- Burnished gold: hairlines and marks only, 3.6:1 against ivory. -->
+    <color name="gold">#9A7840</color>
 
-    <color name="success">#1E8A4F</color>
-    <color name="warning">#B26B00</color>
-    <color name="danger">#D23A2D</color>
+    <color name="success">#2E7D4F</color>
+    <color name="warning">#A6670A</color>
+    <color name="danger">#B3362B</color>
     <!-- Body-size error text: the danger fill colour is below WCAG AA at 13sp (decisions.md D-005). -->
-    <color name="danger_text">#B3241B</color>
+    <color name="danger_text">#A12A20</color>
 
     <!-- Fixed by Google's sign-in branding guidelines, not design tokens. -->
     <color name="google_button_fill">#FFFFFF</color>
     <color name="google_button_stroke">#747775</color>
     <color name="google_button_text">#1F1F1F</color>
     <!-- Tinted fills behind badge text. The text itself uses the primary text colour (D-006). -->
-    <color name="badge_success">#1F1E8A4F</color>
-    <color name="badge_warning">#24B26B00</color>
-    <color name="badge_danger">#21D23A2D</color>
+    <color name="badge_success">#1F2E7D4F</color>
+    <color name="badge_warning">#24A6670A</color>
+    <color name="badge_danger">#21B3362B</color>
 
     <!-- A QR code is black on white in both themes; scanners need the contrast. -->
     <color name="qr_light">#FFFFFF</color>
@@ -38,10 +41,12 @@
     <color name="scan_scrim">#99000000</color>
     <color name="scan_on_scrim">#FFFFFF</color>
 
-    <!-- The app mark: ink and paper, the same in both themes. -->
-    <color name="brand_ink">#2B45C4</color>
-    <color name="brand_paper">#FFFFFF</color>
+    <!-- The app mark: navy and gold, the same in both themes. -->
+    <color name="brand_ink">#1F2A55</color>
+    <color name="brand_paper">#F8F4EA</color>
+    <color name="brand_gold">#C9A66B</color>
 
-    <!-- The ink tick on the result screen sits on a paper disc in both themes. -->
-    <color name="tick_disc">#EAEDF8</color>
+    <!-- The result: a gold tick on a navy seal, in both themes (6:1). -->
+    <color name="tick_disc">#1F2A55</color>
+    <color name="tick">#C9A66B</color>
 </resources>

@@ -707,3 +707,20 @@ Each entry: context, decision, alternatives, consequence. Newest last.
 - The calendar logic is pure (`MonthGrid`) and tested for month edges, several
   classes in a day, a running class, and a class just after midnight local
   time that is still the previous day in UTC.
+
+## D-046 Visual direction: heritage academic
+
+- Replaces D-044's paper-and-ink palette, at the owner's request for a premium
+  finish with a university's prestige.
+- Ivory paper surfaces, Oxford navy (`#1F2A55`, 13:1 on ivory) as the one
+  accent, burnished gold as decoration only (hairlines and marks, never text on
+  a light surface). At night: midnight navy surfaces, ivory text, gold accent
+  with dark text on buttons.
+- Display type is the platform serif (Noto Serif, no bundled file, no new
+  dependency): the wordmark, large titles, toolbar titles, sheet titles and the
+  attendance figure. Interface text stays Inter.
+- Signature details: a short gold rule under the wordmark, a gold hairline on
+  the classroom code card, and the result as a gold tick on a navy seal. The
+  app icon is the same gold tick on navy.
+- No university crest or logo is drawn: the app does not imitate the
+  institution's insignia.

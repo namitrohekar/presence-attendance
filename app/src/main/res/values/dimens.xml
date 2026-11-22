@@ -40,6 +40,12 @@
     <dimen name="radius_qr">24dp</dimen>
 
     <!-- Type scale: size / line height. -->
+    <dimen name="text_wordmark">44sp</dimen>
+    <dimen name="line_wordmark">52sp</dimen>
+    <dimen name="text_toolbar_title">20sp</dimen>
+    <dimen name="line_toolbar_title">26sp</dimen>
+    <dimen name="gold_rule_width">40dp</dimen>
+    <dimen name="gold_rule_height">2dp</dimen>
     <dimen name="text_figure">56sp</dimen>
     <dimen name="line_figure">60sp</dimen>
     <dimen name="text_large_title">34sp</dimen>

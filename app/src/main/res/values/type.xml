@@ -13,12 +13,32 @@
         <item name="fontFamily">@font/inter_semibold</item>
     </style>
 
-    <style name="TextAppearance.Presence.LargeTitle" parent="TextAppearance.Presence.Semibold">
+    <!--
+        Display: the platform serif (Noto Serif), set as a university prints its name and its
+        certificates. Regular weight only; size carries the hierarchy. Interface text stays Inter.
+    -->
+    <style name="TextAppearance.Presence.Serif">
+        <item name="android:fontFamily">serif</item>
+        <item name="fontFamily">serif</item>
+    </style>
+
+    <style name="TextAppearance.Presence.Wordmark" parent="TextAppearance.Presence.Serif">
+        <item name="android:textSize">@dimen/text_wordmark</item>
+        <item name="android:lineHeight">@dimen/line_wordmark</item>
+        <item name="android:letterSpacing">-0.01</item>
+    </style>
+
+    <style name="TextAppearance.Presence.ToolbarTitle" parent="TextAppearance.Presence.Serif">
+        <item name="android:textSize">@dimen/text_toolbar_title</item>
+        <item name="android:lineHeight">@dimen/line_toolbar_title</item>
+    </style>
+
+    <style name="TextAppearance.Presence.LargeTitle" parent="TextAppearance.Presence.Serif">
         <item name="android:textSize">@dimen/text_large_title</item>
         <item name="android:lineHeight">@dimen/line_large_title</item>
     </style>
 
-    <style name="TextAppearance.Presence.Title" parent="TextAppearance.Presence.Semibold">
+    <style name="TextAppearance.Presence.Title" parent="TextAppearance.Presence.Serif">
         <item name="android:textSize">@dimen/text_title</item>
         <item name="android:lineHeight">@dimen/line_title</item>
     </style>
@@ -49,7 +69,7 @@
     </style>
 
     <!-- The one large figure on a screen, like a student's attendance. -->
-    <style name="TextAppearance.Presence.Figure" parent="TextAppearance.Presence.Semibold">
+    <style name="TextAppearance.Presence.Figure" parent="TextAppearance.Presence.Serif">
         <item name="android:textSize">@dimen/text_figure</item>
         <item name="android:lineHeight">@dimen/line_figure</item>
         <item name="android:letterSpacing">-0.02</item>

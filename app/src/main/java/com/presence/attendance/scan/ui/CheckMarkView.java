@@ -44,7 +44,7 @@ public final class CheckMarkView extends View {
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeCap(Paint.Cap.ROUND);
         paint.setStrokeJoin(Paint.Join.ROUND);
-        paint.setColor(context.getColor(R.color.accent));
+        paint.setColor(context.getColor(R.color.tick));
         disc.setColor(context.getColor(R.color.tick_disc));
         paint.setStrokeWidth(getResources().getDimension(R.dimen.check_stroke));
     }
