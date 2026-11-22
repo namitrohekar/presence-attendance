@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Name and promise at the top, a picture of what the product does in the middle, the one action
-    at the bottom: three blocks spread over the screen, so there is no empty band.
+    The name at the top, the university's logo in the middle, the one action at the bottom: three
+    blocks spread over the screen.
 -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -42,18 +42,9 @@
                 android:layout_height="@dimen/gold_rule_height"
                 android:layout_marginTop="@dimen/space_12"
                 android:background="@color/gold" />
-
-            <TextView
-                android:id="@+id/sign_in_statement"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_16"
-                android:text="@string/sign_in_statement"
-                android:textAppearance="@style/TextAppearance.Presence.Body"
-                android:textColor="@color/text_secondary" />
         </LinearLayout>
 
-        <!-- Decorative: the two lines under it say the same thing in words. -->
+        <!-- The centre of the screen: the university's logo. -->
         <LinearLayout
             android:id="@+id/sign_in_picture"
             android:layout_width="0dp"
@@ -67,30 +58,14 @@
             app:layout_constraintTop_toBottomOf="@id/sign_in_header"
             app:layout_constraintWidth_max="@dimen/content_max_width">
 
+            <!-- VJTI's emblem as the institute prints it, its lines in the theme's ink colour. -->
             <ImageView
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="@dimen/logo_height"
                 android:adjustViewBounds="true"
-                android:importantForAccessibility="no"
-                android:maxWidth="200dp"
-                android:src="@drawable/ill_code_in_room" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_16"
-                android:gravity="center_horizontal"
-                android:text="@string/sign_in_fact_code"
-                android:textAppearance="@style/TextAppearance.Presence.Subhead" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_4"
-                android:gravity="center_horizontal"
-                android:text="@string/sign_in_fact_room"
-                android:textAppearance="@style/TextAppearance.Presence.Subhead"
-                android:textColor="@color/text_secondary" />
+                android:contentDescription="@string/sign_in_logo"
+                android:src="@drawable/vjti_logo"
+                app:tint="@color/text" />
         </LinearLayout>
 
         <LinearLayout

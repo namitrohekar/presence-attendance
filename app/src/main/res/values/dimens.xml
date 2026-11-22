@@ -44,6 +44,7 @@
     <dimen name="line_wordmark">52sp</dimen>
     <dimen name="text_toolbar_title">20sp</dimen>
     <dimen name="line_toolbar_title">26sp</dimen>
+    <dimen name="logo_height">220dp</dimen>
     <dimen name="gold_rule_width">40dp</dimen>
     <dimen name="gold_rule_height">2dp</dimen>
     <dimen name="text_figure">56sp</dimen>

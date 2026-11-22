@@ -3,9 +3,7 @@
     <string name="app_name">Presence</string>
 
     <!-- Sign-in -->
-    <string name="sign_in_statement">Attendance from a code on the classroom screen, marked from inside the room</string>
-    <string name="sign_in_fact_code">A new code every 12 seconds</string>
-    <string name="sign_in_fact_room">Scans from outside the room are refused</string>
+    <string name="sign_in_logo">Veermata Jijabai Technological Institute, Mumbai</string>
     <string name="sign_in_continue_google">Continue with Google</string>
     <string name="sign_in_in_progress">Signing in…</string>
 
