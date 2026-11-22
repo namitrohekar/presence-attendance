@@ -21,3 +21,14 @@ local.properties
 /firebase/node_modules/
 /firebase/*.log
 /firebase/.firebase/
+
+# IDE settings: each machine keeps its own.
+/.idea/
+
+# Working notes, kept locally, not part of the build.
+/docs/decisions.md
+/docs/phases.md
+/docs/testing-guide.md
+
+# Source file the app's logo was made from; the app ships its own processed copy.
+/VJTILOGO.png

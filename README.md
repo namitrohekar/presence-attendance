@@ -27,8 +27,7 @@ the only verifier and the server clock is the only clock.
 | Threshold setting, low-attendance notification | not built |
 | Polish pass, TalkBack pass, seed tool, remaining docs | not built |
 
-"Built" means it passes the automated gates below. What has and has not been
-run against the real Firebase project is in `docs/testing-guide.md`, section 0.
+"Built" means it passes the automated gates below.
 
 ## How it stays honest
 
@@ -58,7 +57,7 @@ run against the real Firebase project is in `docs/testing-guide.md`, section 0.
       attendance/             marks, offline queue, reports
     contracts/                constants, document shapes, geofence vectors
     firebase/                 firestore.rules, indexes, rules tests
-    docs/                     phases, decisions, testing guide
+    docs/licenses/            the Inter font's licence
 
 Each feature has `domain` (plain Java, unit-tested), `data` (Firestore or Room
 behind an interface) and `ui` (fragment plus ViewModel). ViewModels take
@@ -76,9 +75,3 @@ Lint and javac treat warnings as errors.
 
 To run the app you need `app/google-services.json` from the Firebase project
 (not in git) and the rules deployed: `cd firebase && npm run deploy`.
-
-## Documents
-
-- `docs/testing-guide.md`: what to do, in order, to test everything by hand.
-- `docs/phases.md`: the delivery plan and where it stands.
-- `docs/decisions.md`: every design decision with its alternatives (D-001 on).
