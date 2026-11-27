@@ -9,7 +9,14 @@
 
 const fs = require('fs');
 const path = require('path');
-const { doc, runTransaction, serverTimestamp, setDoc, Timestamp } = require('firebase/firestore');
+const {
+  deleteField,
+  doc,
+  runTransaction,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
+} = require('firebase/firestore');
 const { CONTRACTS_DIR } = require('./helpers');
 
 const contract = JSON.parse(fs.readFileSync(path.join(CONTRACTS_DIR, 'documents.json'), 'utf8'));
@@ -81,6 +88,15 @@ function writeFacultyProfile(db, user) {
   });
 }
 
+/** The details a roster entry keeps about a student: name, emoji, and a batch if any. */
+function details(who) {
+  return {
+    name: who.name,
+    emoji: who.emoji ?? 'LION',
+    ...(who.batch === undefined ? {} : { batch: who.batch }),
+  };
+}
+
 /**
  * Faculty add one student: roster entry and roll index together.
  * Resolves to ADDED, EMAIL_EXISTS or ROLL_TAKEN. Nothing is overwritten.
@@ -95,16 +111,22 @@ function addStudent(db, teacher, who) {
     if ((await tx.get(index)).exists()) {
       return 'ROLL_TAKEN';
     }
+    const { batch, ...required } = details(who);
     tx.set(
       entry,
-      build('studentRegistry', {
-        email: who.email,
-        rollNo: who.rollNo,
-        cohort: who.cohort,
-        addedBy: teacher.uid,
-        addedAt: serverTimestamp(),
-        revision: 0,
-      }),
+      build(
+        'studentRegistry',
+        {
+          email: who.email,
+          rollNo: who.rollNo,
+          cohort: who.cohort,
+          ...required,
+          addedBy: teacher.uid,
+          addedAt: serverTimestamp(),
+          revision: 0,
+        },
+        batch === undefined ? {} : { batch },
+      ),
     );
     tx.set(index, build('rollIndex', { email: who.email }));
     return 'ADDED';
@@ -227,22 +249,48 @@ function correct(db, teacher, email, action, reason, change = {}) {
       tx.delete(oldIndex);
       return 'DONE';
     }
-    // A full replace: the claim fields are dropped, so the student registers again.
-    tx.set(
-      entry,
-      build('studentRegistry', {
-        email: before.email,
-        rollNo: after.rollNo,
-        cohort: after.cohort,
-        addedBy: before.addedBy,
-        addedAt: before.addedAt,
-        revision: before.revision + 1,
-      }),
-    );
+    // A full replace: the claim fields are dropped, so the student registers
+    // again. The details are kept as they were; an entry added before names
+    // were kept has none, so it is rebuilt field by field rather than with
+    // build(), which needs every contract field.
+    const corrected = {
+      email: before.email,
+      rollNo: after.rollNo,
+      cohort: after.cohort,
+      addedBy: before.addedBy,
+      addedAt: before.addedAt,
+      revision: before.revision + 1,
+    };
+    for (const field of ['name', 'emoji', 'batch']) {
+      if (field in before) {
+        corrected[field] = before[field];
+      }
+    }
+    tx.set(entry, corrected);
     if (action === 'UPDATE') {
       tx.delete(oldIndex);
       tx.set(newIndex, build('rollIndex', { email: before.email }));
     }
+    return 'DONE';
+  });
+}
+
+/**
+ * Faculty change a student's name, batch or emoji. The registration and the
+ * revision are untouched. A batch of null removes it. Resolves to DONE or
+ * NOT_FOUND.
+ */
+function updateDetails(db, email, change) {
+  const entry = entryRef(db, email);
+  return runTransaction(db, async (tx) => {
+    if (!(await tx.get(entry)).exists()) {
+      return 'NOT_FOUND';
+    }
+    const fields = { name: change.name, emoji: change.emoji };
+    if (change.batch !== undefined) {
+      fields.batch = change.batch === null ? deleteField() : change.batch;
+    }
+    tx.update(entry, fields);
     return 'DONE';
   });
 }
@@ -489,5 +537,6 @@ module.exports = {
   register,
   joinCourse,
   correct,
+  updateDetails,
   reportAlert,
 };

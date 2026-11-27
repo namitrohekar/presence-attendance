@@ -71,6 +71,8 @@ public final class LineAdapter extends ListAdapter<Line, RecyclerView.ViewHolder
     }
 
     private void bindRow(@NonNull ItemLineBinding binding, @NonNull Line line) {
+        binding.lineAvatar.setText(line.avatar);
+        binding.lineAvatar.setVisibility(line.avatar == null ? View.GONE : View.VISIBLE);
         binding.lineTitle.setText(line.title);
         binding.lineDetail.setText(line.detail);
         binding.lineDetail.setVisibility(line.detail == null ? View.GONE : View.VISIBLE);

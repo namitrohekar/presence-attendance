@@ -144,6 +144,8 @@ function registryDoc(who, overrides = {}) {
     email: who.email,
     rollNo: who.rollNo,
     cohort: who.cohort,
+    name: who.name,
+    emoji: 'OWL',
     addedBy: TEACHER.uid,
     addedAt: ago(40 * DAY),
     revision: 0,

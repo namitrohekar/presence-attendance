@@ -7,7 +7,9 @@ import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldPath;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.Source;
 import com.presence.attendance.auth.domain.User;
 import com.presence.attendance.core.AppError;
@@ -22,9 +24,15 @@ import com.presence.attendance.course.domain.CourseRepository;
 import com.presence.attendance.course.domain.JoinCodeInfo;
 import com.presence.attendance.course.domain.JoinCodes;
 import com.presence.attendance.course.domain.Member;
+import com.presence.attendance.roster.data.FirestoreRosterRepository;
+import com.presence.attendance.roster.data.RosterMappers;
+import com.presence.attendance.roster.domain.RosterEntry;
+import com.presence.attendance.roster.domain.StudentIdentity;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 /** {@link CourseRepository} backed by Cloud Firestore. */
@@ -37,6 +45,9 @@ public final class FirestoreCourseRepository implements CourseRepository {
 
     // 32^6 codes: a collision is rare, five in a row means something else is wrong.
     private static final int MAX_JOIN_CODE_ATTEMPTS = 5;
+
+    /** The most addresses one roster query may name. */
+    private static final int ROSTER_CHUNK = 30;
 
     private final FirebaseFirestore firestore;
     private final Random random;
@@ -209,7 +220,67 @@ public final class FirestoreCourseRepository implements CourseRepository {
                         }
                     }
                     members.sort(Comparator.comparing(Member::getRollNo));
-                    callback.onResult(Outcome.success(members));
+                    withRosterDetails(members, callback);
+                });
+    }
+
+    /**
+     * Gives each member the name, batch and emoji the roster has for them now, so a corrected name
+     * shows everywhere at once. The roster is read in chunks of {@link #ROSTER_CHUNK} addresses,
+     * the most one query may name. A chunk that cannot be read leaves those members as they joined:
+     * the lists still work, with the names students joined with.
+     */
+    private void withRosterDetails(
+            @NonNull List<Member> members, @NonNull Callback<List<Member>> callback) {
+        if (members.isEmpty()) {
+            callback.onResult(Outcome.success(members));
+            return;
+        }
+        final List<String> emails = new ArrayList<>();
+        for (Member member : members) {
+            final String email = StudentIdentity.normaliseEmail(member.getEmail());
+            if (!emails.contains(email)) {
+                emails.add(email);
+            }
+        }
+        final List<Task<QuerySnapshot>> chunks = new ArrayList<>();
+        for (int i = 0; i < emails.size(); i += ROSTER_CHUNK) {
+            chunks.add(
+                    firestore
+                            .collection(FirestoreRosterRepository.REGISTRY)
+                            .whereIn(
+                                    FieldPath.documentId(),
+                                    emails.subList(i, Math.min(i + ROSTER_CHUNK, emails.size())))
+                            .get());
+        }
+        Tasks.whenAllComplete(chunks)
+                .addOnCompleteListener(done -> {
+                    final Map<String, RosterEntry> byEmail = new HashMap<>();
+                    for (Task<QuerySnapshot> chunk : chunks) {
+                        if (!chunk.isSuccessful()) {
+                            Log.w(TAG, "Roster details unavailable for some members", null);
+                            continue;
+                        }
+                        for (DocumentSnapshot document : chunk.getResult().getDocuments()) {
+                            final RosterEntry entry = RosterMappers.entry(document);
+                            if (entry != null) {
+                                byEmail.put(entry.getEmail(), entry);
+                            }
+                        }
+                    }
+                    final List<Member> merged = new ArrayList<>(members.size());
+                    for (Member member : members) {
+                        final RosterEntry entry =
+                                byEmail.get(StudentIdentity.normaliseEmail(member.getEmail()));
+                        merged.add(
+                                entry == null
+                                        ? member
+                                        : member.withRoster(
+                                                entry.getName(),
+                                                entry.getBatch(),
+                                                entry.getEmoji()));
+                    }
+                    callback.onResult(Outcome.success(merged));
                 });
     }
 

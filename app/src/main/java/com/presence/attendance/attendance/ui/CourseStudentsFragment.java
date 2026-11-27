@@ -175,6 +175,7 @@ public final class CourseStudentsFragment extends Fragment {
                                     detail,
                                     badge,
                                     row.atRisk ? Line.Tone.DANGER : Line.Tone.NEUTRAL)
+                            .withAvatar(row.member.shownEmoji().glyph())
                             .navigates());
         }
         return Line.grouped(lines);
@@ -236,6 +237,7 @@ public final class CourseStudentsFragment extends Fragment {
                             row.member.getRollNo(),
                             row.member.getName(),
                             row.member.getEmail(),
+                            row.member.getBatch(),
                             row.stats.getPresent(),
                             row.stats.getTotal(),
                             row.stats.percent(),

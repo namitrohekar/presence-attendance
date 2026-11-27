@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/add_scroll"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -63,6 +64,25 @@
 
             <TextView
                 style="@style/Widget.Presence.FieldLabel"
+                android:labelFor="@id/add_name"
+                android:text="@string/add_name_label" />
+
+            <EditText
+                android:id="@+id/add_name"
+                style="@style/Widget.Presence.TextField"
+                android:autofillHints=""
+                android:importantForAutofill="no"
+                android:imeOptions="actionNext"
+                android:inputType="textPersonName|textCapWords"
+                android:maxLength="@integer/name_max" />
+
+            <TextView
+                android:id="@+id/add_name_error"
+                style="@style/Widget.Presence.InlineError"
+                android:text="@string/add_name_invalid" />
+
+            <TextView
+                style="@style/Widget.Presence.FieldLabel"
                 android:labelFor="@id/add_cohort"
                 android:text="@string/add_cohort_label" />
 
@@ -71,7 +91,7 @@
                 style="@style/Widget.Presence.TextField"
                 android:autofillHints=""
                 android:importantForAutofill="no"
-                android:imeOptions="actionDone"
+                android:imeOptions="actionNext"
                 android:inputType="textCapCharacters|textNoSuggestions"
                 android:maxLength="@integer/cohort_max" />
 
@@ -79,6 +99,40 @@
                 android:id="@+id/add_cohort_error"
                 style="@style/Widget.Presence.InlineError"
                 android:text="@string/add_cohort_invalid" />
+
+            <TextView
+                style="@style/Widget.Presence.FieldLabel"
+                android:labelFor="@id/add_batch"
+                android:text="@string/add_batch_label" />
+
+            <EditText
+                android:id="@+id/add_batch"
+                style="@style/Widget.Presence.TextField"
+                android:autofillHints=""
+                android:importantForAutofill="no"
+                android:fontFeatureSettings="tnum"
+                android:imeOptions="actionDone"
+                android:inputType="number"
+                android:maxLength="2" />
+
+            <TextView
+                android:id="@+id/add_batch_error"
+                style="@style/Widget.Presence.InlineError"
+                android:text="@string/add_batch_invalid" />
+
+            <TextView
+                style="@style/Widget.Presence.FieldLabel"
+                android:text="@string/add_emoji_label" />
+
+            <!-- The sheet carries the choice across a rotation itself; the chips get new ids. -->
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/add_emoji"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
+                android:saveEnabled="false"
+                app:selectionRequired="false"
+                app:singleSelection="true" />
 
             <TextView
                 android:id="@+id/add_status"

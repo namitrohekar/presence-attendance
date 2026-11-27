@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- One row of an inset-grouped section. The background is set per row: first, middle, last or single. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/line_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -14,6 +15,20 @@
         android:orientation="horizontal"
         android:paddingHorizontal="@dimen/space_16"
         android:paddingVertical="@dimen/space_12">
+
+        <!-- A student's emoji. Decoration only: the title names the student. -->
+        <TextView
+            android:id="@+id/line_avatar"
+            android:layout_width="@dimen/avatar"
+            android:layout_height="@dimen/avatar"
+            android:layout_marginEnd="@dimen/space_12"
+            android:background="@drawable/bg_avatar"
+            android:gravity="center"
+            android:importantForAccessibility="no"
+            android:includeFontPadding="false"
+            android:textSize="@dimen/avatar_text"
+            android:visibility="gone"
+            tools:ignore="SpUsage" />
 
         <LinearLayout
             android:layout_width="0dp"

@@ -7,6 +7,7 @@
 const {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -37,6 +38,8 @@ const newEntry = (overrides = {}) => ({
   email: NEW.email,
   rollNo: NEW.rollNo,
   cohort: NEW.cohort,
+  name: NEW.name,
+  emoji: 'LION',
   addedBy: TEACHER.uid,
   addedAt: serverTimestamp(),
   revision: 0,
@@ -114,6 +117,21 @@ describe('roster: adding a student', () => {
     ['an extra field', { verified: true }],
     ['a missing field', { cohort: DROP }],
     ['a claim already filled in', { registeredUid: NEW.uid, registeredAt: serverTimestamp() }],
+    ['no name', { name: DROP }],
+    ['no emoji', { emoji: DROP }],
+    ['an empty name', { name: '' }],
+    ['a name of spaces only', { name: '   ' }],
+    ['a name with a leading space', { name: ' Aditi Pawar' }],
+    ['a name with a trailing space', { name: 'Aditi Pawar ' }],
+    ['a name of 81 characters', { name: 'a'.repeat(81) }],
+    ['a name stored as a number', { name: 42 }],
+    ['batch 0', { batch: 0 }],
+    ['batch 21', { batch: 21 }],
+    ['a batch stored as text', { batch: '2' }],
+    ['a fractional batch', { batch: 1.5 }],
+    ['an emoji outside the ten', { emoji: 'CAT' }],
+    ['a lower-case emoji name', { emoji: 'lion' }],
+    ['the emoji character instead of its name', { emoji: '\u{1F981}' }],
   ])('denied: %s', async (_, change) => {
     const entry = h.patch(newEntry(), change);
     const index = { email: typeof entry.email === 'string' ? entry.email : NEW.email };
@@ -324,6 +342,10 @@ describe('roster: audited corrections', () => {
     ['the entry changes when it was added', { entry: { addedAt: h.ago(DAY) } }],
     ['the new roll number is malformed', { entry: { rollNo: '12345' }, record: { afterRollNo: '12345' } }],
     ['the entry is given a claim', { entry: { registeredUid: 'someone', registeredAt: h.ago(DAY) } }],
+    ['the entry is given batch 0', { entry: { batch: 0 } }],
+    ['the entry is given an emoji outside the ten', { entry: { emoji: 'CAT' } }],
+    ['the entry is given an empty name', { entry: { name: '' } }],
+    ['the entry is given an unknown field', { entry: { nickname: 'KD' } }],
   ])('denied: an UPDATE where %s', async (_, options) => {
     await assertFails(rawUpdate(t.as(TEACHER), options));
   });
@@ -517,5 +539,121 @@ describe('roster: who can read it', () => {
 
   test('denied: nobody lists the roll index, faculty included', async () => {
     await assertFails(getDocs(collection(t.as(TEACHER), 'rollIndex')));
+  });
+});
+
+describe('roster: name, batch and emoji on a new entry', () => {
+  test('a name of 80 characters, any script, batch 1 or 20', async () => {
+    const db = t.as(TEACHER);
+    await assertSucceeds(addPair(db, newEntry({ name: 'a'.repeat(80), batch: 1 })));
+    const other = { email: 'bkale_mc26@mc.vjti.ac.in', rollNo: '262011006' };
+    await assertSucceeds(
+      addPair(db, newEntry({ ...other, name: '\u0906\u0926\u093f\u0924\u0940', batch: 20 }), {
+        email: other.email,
+      }),
+    );
+  });
+
+  test.each(['LION', 'TIGER', 'ELEPHANT', 'PANDA', 'FOX', 'OWL', 'DOLPHIN', 'TURTLE', 'BUTTERFLY', 'PEACOCK'])(
+    'the emoji %s is accepted',
+    async (emoji) => {
+      await assertSucceeds(addPair(t.as(TEACHER), newEntry({ emoji })));
+    },
+  );
+
+  test('the add flow writes the details it is given', async () => {
+    const db = t.as(TEACHER);
+    const who = { ...NEW, emoji: 'FOX', batch: 3 };
+    expect(await assertSucceeds(flows.addStudent(db, TEACHER, who))).toBe('ADDED');
+    expect((await getDoc(entryRef(db, NEW))).data()).toMatchObject({
+      name: NEW.name,
+      emoji: 'FOX',
+      batch: 3,
+    });
+  });
+});
+
+describe('roster: editing name, batch and emoji', () => {
+  const CHANGE = { name: 'Meera S. Joshi', emoji: 'PEACOCK', batch: 2 };
+
+  test('faculty edit the details of a registered student, who stays registered', async () => {
+    const db = t.as(TEACHER);
+    expect(await assertSucceeds(flows.updateDetails(db, STUDENT.email, CHANGE))).toBe('DONE');
+    const after = (await getDoc(entryRef(db, STUDENT))).data();
+    expect(after).toMatchObject({ ...CHANGE, registeredUid: STUDENT.uid, revision: 0 });
+    // Nothing for the audit trail: identity did not change.
+    expect((await getDocs(collection(db, 'registryCorrections'))).size).toBe(0);
+  });
+
+  test('a batch can be cleared again', async () => {
+    const db = t.as(TEACHER);
+    await assertSucceeds(flows.updateDetails(db, STUDENT.email, CHANGE));
+    await assertSucceeds(flows.updateDetails(db, STUDENT.email, { ...CHANGE, batch: null }));
+    expect((await getDoc(entryRef(db, STUDENT))).data().batch).toBeUndefined();
+  });
+
+  test('any allowlisted teacher may edit details on the shared roster', async () => {
+    await assertSucceeds(flows.updateDetails(t.as(OTHER_TEACHER), LISTED.email, CHANGE));
+  });
+
+  test('an entry added before names were kept gets its details', async () => {
+    await t.seed({
+      [`studentRegistry/${LISTED.email}`]: h.patch(h.registryDoc(LISTED), { name: DROP, emoji: DROP }),
+    });
+    await assertSucceeds(flows.updateDetails(t.as(TEACHER), LISTED.email, CHANGE));
+  });
+
+  test('an entry added before names were kept can still be corrected', async () => {
+    await t.seed({
+      [`studentRegistry/${LISTED.email}`]: h.patch(h.registryDoc(LISTED), { name: DROP, emoji: DROP }),
+    });
+    const outcome = flows.correct(t.as(TEACHER), TEACHER, LISTED.email, 'UPDATE', 'Typo', {
+      rollNo: '262010044',
+    });
+    expect(await assertSucceeds(outcome)).toBe('DONE');
+  });
+
+  test('a correction keeps the details', async () => {
+    const db = t.as(TEACHER);
+    await assertSucceeds(flows.updateDetails(db, STUDENT.email, CHANGE));
+    await assertSucceeds(flows.correct(db, TEACHER, STUDENT.email, 'RELEASE', 'New Google account'));
+    expect((await getDoc(entryRef(db, STUDENT))).data()).toMatchObject(CHANGE);
+  });
+
+  test('the flow reports an entry that is gone', async () => {
+    expect(await flows.updateDetails(t.as(TEACHER), NEW.email, CHANGE)).toBe('NOT_FOUND');
+  });
+
+  test.each([
+    ['the student themself', STUDENT],
+    ['another student', OTHER_STUDENT],
+    ['a VJTI student not on the roster', UNLISTED],
+  ])('denied: %s edits a student\'s details', async (_, user) => {
+    await assertFails(updateDoc(entryRef(t.as(user), STUDENT), { name: 'Someone Else' }));
+  });
+
+  test.each([
+    ['an empty name', { name: '' }],
+    ['a name of 81 characters', { name: 'a'.repeat(81) }],
+    ['batch 21', { batch: 21 }],
+    ['a batch stored as text', { batch: '1' }],
+    ['an emoji outside the ten', { emoji: 'CAT' }],
+    ['the name removed', { name: deleteField() }],
+    ['the emoji removed', { emoji: deleteField() }],
+    ['the roll number changed too', { name: 'Meera J', rollNo: '262019001' }],
+    ['the cohort changed too', { name: 'Meera J', cohort: 'MC25' }],
+    ['the revision changed too', { name: 'Meera J', revision: 1 }],
+    ['who added it changed too', { name: 'Meera J', addedBy: OTHER_TEACHER.uid }],
+    ['the registration cleared too', { name: 'Meera J', registeredUid: deleteField() }],
+    ['an unknown field', { nickname: 'MJ' }],
+  ])('denied: a details edit with %s', async (_, change) => {
+    await assertFails(updateDoc(entryRef(t.as(TEACHER), STUDENT), change));
+  });
+
+  test('denied: a details edit leaves a legacy entry without a name', async () => {
+    await t.seed({
+      [`studentRegistry/${LISTED.email}`]: h.patch(h.registryDoc(LISTED), { name: DROP, emoji: DROP }),
+    });
+    await assertFails(updateDoc(entryRef(t.as(TEACHER), LISTED), { emoji: 'FOX' }));
   });
 });

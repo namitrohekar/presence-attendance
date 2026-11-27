@@ -9,6 +9,8 @@ import com.presence.attendance.core.data.Snapshots;
 import com.presence.attendance.roster.domain.IdentityAlert;
 import com.presence.attendance.roster.domain.RosterEntry;
 import com.presence.attendance.roster.domain.RosterRepository.CorrectionAction;
+import com.presence.attendance.roster.domain.StudentDetails;
+import com.presence.attendance.roster.domain.StudentEmoji;
 import com.presence.attendance.roster.domain.StudentIdentity;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,6 +29,9 @@ public final class RosterMappers {
     public static final String REVISION = "revision";
     public static final String REGISTERED_UID = "registeredUid";
     public static final String REGISTERED_AT = "registeredAt";
+    public static final String NAME = "name";
+    public static final String BATCH = "batch";
+    public static final String EMOJI = "emoji";
     public static final String AUDIENCE = "audience";
     public static final String CREATED_AT = "createdAt";
     private static final String TYPE = "type";
@@ -57,13 +62,21 @@ public final class RosterMappers {
         if (!valid) {
             return null;
         }
+        // A detail that is missing or malformed is shown as missing; the identity still counts.
+        final String name = Snapshots.string(snapshot, NAME);
+        final Long batch = Snapshots.integer(snapshot, BATCH);
         return new RosterEntry(
                 email,
                 rollNo,
                 cohort,
                 addedBy,
                 revision.intValue(),
-                Snapshots.string(snapshot, REGISTERED_UID));
+                Snapshots.string(snapshot, REGISTERED_UID),
+                name != null && StudentIdentity.isName(name) ? name : null,
+                batch != null && StudentIdentity.isBatch(batch.intValue())
+                        ? batch.intValue()
+                        : null,
+                StudentEmoji.fromName(Snapshots.string(snapshot, EMOJI)));
     }
 
     @NonNull
@@ -71,11 +84,13 @@ public final class RosterMappers {
             @NonNull String email,
             @NonNull String rollNo,
             @NonNull String cohort,
+            @NonNull StudentDetails details,
             @NonNull String teacherUid) {
         final Map<String, Object> document = new HashMap<>();
         document.put(EMAIL, email);
         document.put(ROLL_NO, rollNo);
         document.put(COHORT, cohort);
+        putDetails(document, details);
         document.put(ADDED_BY, teacherUid);
         document.put(ADDED_AT, FieldValue.serverTimestamp());
         document.put(REVISION, 0);
@@ -83,8 +98,31 @@ public final class RosterMappers {
     }
 
     /**
+     * The details as an update: the name and emoji are set and the batch is set or removed. The
+     * rules allow this alone on an entry, without an audit record, and the registration stays.
+     */
+    @NonNull
+    static Map<String, Object> detailsUpdate(@NonNull StudentDetails details) {
+        final Map<String, Object> fields = new HashMap<>();
+        fields.put(NAME, details.getName());
+        fields.put(EMOJI, details.getEmoji().name());
+        fields.put(BATCH, details.getBatch() != null ? details.getBatch() : FieldValue.delete());
+        return fields;
+    }
+
+    private static void putDetails(
+            @NonNull Map<String, Object> document, @NonNull StudentDetails details) {
+        document.put(NAME, details.getName());
+        document.put(EMOJI, details.getEmoji().name());
+        if (details.getBatch() != null) {
+            document.put(BATCH, details.getBatch());
+        }
+    }
+
+    /**
      * The whole entry after a correction. Written as a full replace, so the registration fields are
-     * dropped and the student must register again.
+     * dropped and the student must register again. The details are kept as they were; an entry
+     * added before names were kept stays without them.
      */
     @NonNull
     static Map<String, Object> correctedEntry(
@@ -99,6 +137,15 @@ public final class RosterMappers {
         document.put(ADDED_BY, before.getAddedBy());
         document.put(ADDED_AT, addedAt);
         document.put(REVISION, before.getRevision() + 1);
+        if (before.getName() != null) {
+            document.put(NAME, before.getName());
+        }
+        if (before.getEmoji() != null) {
+            document.put(EMOJI, before.getEmoji().name());
+        }
+        if (before.getBatch() != null) {
+            document.put(BATCH, before.getBatch());
+        }
         return document;
     }
 

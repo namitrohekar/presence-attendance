@@ -16,6 +16,7 @@ import com.presence.attendance.core.data.Snapshots;
 import com.presence.attendance.core.data.Transactions;
 import com.presence.attendance.roster.domain.RosterEntry;
 import com.presence.attendance.roster.domain.RosterRepository;
+import com.presence.attendance.roster.domain.StudentDetails;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -68,6 +69,7 @@ public final class FirestoreRosterRepository implements RosterRepository {
             @NonNull String email,
             @NonNull String rollNo,
             @NonNull String cohort,
+            @NonNull StudentDetails details,
             @NonNull Callback<AddOutcome> callback) {
         final DocumentReference entry = registry().document(email);
         final DocumentReference index = index(cohort, rollNo);
@@ -85,10 +87,34 @@ public final class FirestoreRosterRepository implements RosterRepository {
                             transaction.set(
                                     entry,
                                     RosterMappers.newEntry(
-                                            email, rollNo, cohort, teacher.getUid()));
+                                            email, rollNo, cohort, details, teacher.getUid()));
                             transaction.set(index, RosterMappers.index(email));
                             return AddOutcome.ADDED;
                         })
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        callback.onResult(Outcome.success(task.getResult()));
+                    } else {
+                        fail(callback, task.getException());
+                    }
+                });
+    }
+
+    @Override
+    public void updateDetails(
+            @NonNull String email,
+            @NonNull StudentDetails details,
+            @NonNull Callback<CorrectOutcome> callback) {
+        final DocumentReference entry = registry().document(email);
+        firestore
+                .runTransaction(transaction -> {
+                    // Read first so an entry removed meanwhile is reported, not recreated.
+                    if (!transaction.get(entry).exists()) {
+                        return CorrectOutcome.NOT_FOUND;
+                    }
+                    transaction.update(entry, RosterMappers.detailsUpdate(details));
+                    return CorrectOutcome.DONE;
+                })
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         callback.onResult(Outcome.success(task.getResult()));

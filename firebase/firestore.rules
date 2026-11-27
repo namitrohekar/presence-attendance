@@ -31,6 +31,9 @@ service cloud.firestore {
     function ALERT_RETENTION_DAYS() { return 90; }
     function CORRECTION_RETENTION_DAYS() { return 365; }
     function HEADCOUNT_MAX() { return 1000; }
+    function NAME_MAX_LEN() { return 80; }
+    function BATCH_MIN() { return 1; }
+    function BATCH_MAX() { return 20; }
 
     // Students must sign in with an address in exactly this domain. Faculty
     // are identified by the allowlist and may use any domain.
@@ -95,6 +98,22 @@ service cloud.firestore {
       return v is string && v.matches('^[A-Z0-9]{2,8}$');
     }
 
+    // A student's official name as on the class list: trimmed and not empty.
+    function isName(v) {
+      return isText(v, 1, NAME_MAX_LEN()) && v.trim() == v;
+    }
+
+    // A lab batch, such as 1 to 4 in the timetable.
+    function isBatch(v) {
+      return v is int && v >= BATCH_MIN() && v <= BATCH_MAX();
+    }
+
+    // One of the ten emojis a student is shown with, stored by its name.
+    function isEmoji(v) {
+      return v is string
+        && v.matches('^(LION|TIGER|ELEPHANT|PANDA|FOX|OWL|DOLPHIN|TURTLE|BUTTERFLY|PEACOCK)$');
+    }
+
     // A roster address: lower case, one '@', exactly the student domain.
     function isStudentEmail(v) {
       return v is string
@@ -123,6 +142,22 @@ service cloud.firestore {
     // studentRegistry/{email} is the authoritative email -> roll number map.
     // rollIndex/{cohort}_{rollNo} makes a roll number unique in its cohort.
     // The two are only ever written together.
+    function rosterBase() {
+      return ['email', 'rollNo', 'cohort', 'addedBy', 'addedAt', 'revision'];
+    }
+
+    // What describes the student rather than identifies them. Entries added
+    // before names were kept have none; any that is present must be valid.
+    function rosterDetails() {
+      return ['name', 'batch', 'emoji'];
+    }
+
+    function validDetails(data) {
+      return (!('name' in data) || isName(data.name))
+        && (!('batch' in data) || isBatch(data.batch))
+        && (!('emoji' in data) || isEmoji(data.emoji));
+    }
+
     function rosterEntry(studentEmail) {
       return get(/databases/$(database)/documents/studentRegistry/$(studentEmail)).data;
     }
@@ -230,11 +265,13 @@ service cloud.firestore {
 
       // Lookups: 2 (allowlist, roll index after this write). The index must be
       // created in the same batch. A second write to an existing address is
-      // an update, so nothing is ever silently overwritten.
+      // an update, so nothing is ever silently overwritten. A new entry always
+      // has the student's name and emoji; the batch is optional.
       allow create: if signedIn()
         && isAllowlisted()
-        && hasExactly(request.resource.data,
-            ['email', 'rollNo', 'cohort', 'addedBy', 'addedAt', 'revision'])
+        && request.resource.data.keys().hasOnly(rosterBase().concat(rosterDetails()))
+        && request.resource.data.keys().hasAll(rosterBase().concat(['name', 'emoji']))
+        && validDetails(request.resource.data)
         && isStudentEmail(request.resource.data.email)
         && entryEmail == request.resource.data.email
         && isRollNo(request.resource.data.rollNo)
@@ -268,7 +305,9 @@ service cloud.firestore {
         let record = correctionAfter(entryEmail, before);
         let changed = after.rollNo != before.rollNo || after.cohort != before.cohort;
         return isAllowlisted()
-          && hasExactly(after, ['email', 'rollNo', 'cohort', 'addedBy', 'addedAt', 'revision'])
+          && after.keys().hasOnly(rosterBase().concat(rosterDetails()))
+          && after.keys().hasAll(rosterBase())
+          && validDetails(after)
           && after.email == before.email
           && after.addedBy == before.addedBy
           && after.addedAt == before.addedAt
@@ -286,7 +325,18 @@ service cloud.firestore {
                 && 'registeredUid' in before));
       }
 
-      allow update: if signedIn() && (isClaim() || isCorrection());
+      // Faculty fix a student's name, batch or emoji. These describe the
+      // student, not their identity, so the registration stays and no audit
+      // record is needed. Name and emoji stay present once set. Lookups: 1
+      // (allowlist).
+      function isDetailsEdit() {
+        return isAllowlisted()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(rosterDetails())
+          && request.resource.data.keys().hasAll(['name', 'emoji'])
+          && validDetails(request.resource.data);
+      }
+
+      allow update: if signedIn() && (isClaim() || isCorrection() || isDetailsEdit());
 
       // Lookups: 3 (allowlist, audit record, old index).
       allow delete: if signedIn()

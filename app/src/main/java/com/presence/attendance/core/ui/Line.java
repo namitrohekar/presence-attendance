@@ -8,9 +8,9 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * One item of an inset-grouped list: a section header, or a row with a title, an optional detail
- * line, an optional badge and an optional chevron. Screens map their own data to lines and share
- * one adapter. Immutable.
+ * One item of an inset-grouped list: a section header, or a row with an optional leading avatar (a
+ * student's emoji), a title, an optional detail line, an optional badge and an optional chevron.
+ * Screens map their own data to lines and share one adapter. Immutable.
  */
 public final class Line {
 
@@ -38,6 +38,7 @@ public final class Line {
     @NonNull final Tone tone;
     @NonNull final Place place;
     final boolean chevron;
+    @Nullable final String avatar;
 
     private Line(
             @NonNull String key,
@@ -47,7 +48,8 @@ public final class Line {
             @Nullable String badge,
             @NonNull Tone tone,
             @NonNull Place place,
-            boolean chevron) {
+            boolean chevron,
+            @Nullable String avatar) {
         this.key = key;
         this.header = header;
         this.title = title;
@@ -56,11 +58,12 @@ public final class Line {
         this.tone = tone;
         this.place = place;
         this.chevron = chevron;
+        this.avatar = avatar;
     }
 
     @NonNull
     public static Line header(@NonNull String key, @NonNull String title) {
-        return new Line(key, true, title, null, null, Tone.NEUTRAL, Place.SINGLE, false);
+        return new Line(key, true, title, null, null, Tone.NEUTRAL, Place.SINGLE, false, null);
     }
 
     @NonNull
@@ -75,13 +78,22 @@ public final class Line {
             @Nullable String detail,
             @Nullable String badge,
             @NonNull Tone tone) {
-        return new Line(key, false, title, detail, badge, tone, Place.SINGLE, false);
+        return new Line(key, false, title, detail, badge, tone, Place.SINGLE, false, null);
     }
 
     /** This row with a trailing chevron, for rows that open another screen. */
     @NonNull
     public Line navigates() {
-        return new Line(key, header, title, detail, badge, tone, place, true);
+        return new Line(key, header, title, detail, badge, tone, place, true, avatar);
+    }
+
+    /**
+     * This row with a short text, such as an emoji, in a round avatar before the title. It is
+     * decoration: the title still says who the row is about.
+     */
+    @NonNull
+    public Line withAvatar(@Nullable String text) {
+        return new Line(key, header, title, detail, badge, tone, place, chevron, text);
     }
 
     /**
@@ -112,7 +124,8 @@ public final class Line {
                             line.badge,
                             line.tone,
                             place,
-                            line.chevron));
+                            line.chevron,
+                            line.avatar));
         }
         return Collections.unmodifiableList(out);
     }
@@ -130,11 +143,12 @@ public final class Line {
                 && Objects.equals(detail, line.detail)
                 && Objects.equals(badge, line.badge)
                 && tone == line.tone
-                && place == line.place;
+                && place == line.place
+                && Objects.equals(avatar, line.avatar);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(key, header, title, detail, badge, tone, place, chevron);
+        return Objects.hash(key, header, title, detail, badge, tone, place, chevron, avatar);
     }
 }

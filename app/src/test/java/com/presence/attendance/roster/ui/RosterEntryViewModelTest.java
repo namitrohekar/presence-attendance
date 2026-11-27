@@ -10,6 +10,8 @@ import androidx.lifecycle.MutableLiveData;
 import com.presence.attendance.core.AppError;
 import com.presence.attendance.core.Outcome;
 import com.presence.attendance.roster.domain.RosterRepository.CorrectOutcome;
+import com.presence.attendance.roster.domain.StudentDetails;
+import com.presence.attendance.roster.domain.StudentEmoji;
 import com.presence.attendance.roster.ui.RosterEntryViewModel.Problem;
 import com.presence.attendance.roster.ui.RosterEntryViewModel.State;
 import com.presence.attendance.testutil.FakeAuthRepository;
@@ -34,12 +36,71 @@ public final class RosterEntryViewModelTest {
     @Before
     public void setUp() {
         auth.signedInAs(Fixtures.TEACHER);
-        viewModel = new RosterEntryViewModel(auth, roster, online, EMAIL, "262011001", "MC26");
+        viewModel =
+                new RosterEntryViewModel(
+                        auth,
+                        roster,
+                        online,
+                        EMAIL,
+                        "262011001",
+                        "MC26",
+                        new StudentDetails("Meera Joshi", null, StudentEmoji.OWL));
         viewModel.getState().observeForever(state -> {});
     }
 
     private State state() {
         return viewModel.getState().getValue();
+    }
+
+    @Test
+    public void detailsAreSavedWithoutAReasonAndNormalised() {
+        viewModel.saveDetails("  Meera   S. Joshi ", " 2 ", StudentEmoji.PEACOCK);
+        assertEquals(
+                Collections.singletonList("details:" + EMAIL + ":Meera S. Joshi/2/PEACOCK"),
+                roster.calls);
+        assertTrue(state().done);
+    }
+
+    @Test
+    public void detailsWithoutAPickTakeTheRollNumbersEmoji() {
+        viewModel.saveDetails("Meera Joshi", "", null);
+        // 262011001 ends in 1: the second emoji.
+        assertEquals(
+                Collections.singletonList("details:" + EMAIL + ":Meera Joshi/-/TIGER"),
+                roster.calls);
+    }
+
+    @Test
+    public void unchangedDetailsCloseTheSheetWithoutAWrite() {
+        viewModel.saveDetails(" Meera Joshi ", "", StudentEmoji.OWL);
+        assertTrue(state().done);
+        assertTrue(roster.calls.isEmpty());
+    }
+
+    @Test
+    public void invalidDetailsAreFlagged() {
+        viewModel.saveDetails("   ", "", null);
+        assertEquals(Problem.NAME_INVALID, state().problem);
+        viewModel.saveDetails("Meera Joshi", "0", null);
+        assertEquals(Problem.BATCH_INVALID, state().problem);
+        viewModel.saveDetails("Meera Joshi", "21", null);
+        assertEquals(Problem.BATCH_INVALID, state().problem);
+        assertTrue(roster.calls.isEmpty());
+    }
+
+    @Test
+    public void detailsOfAStudentRemovedMeanwhileAreReported() {
+        roster.detailsOutcome = Outcome.success(CorrectOutcome.NOT_FOUND);
+        viewModel.saveDetails("Meera S. Joshi", "", null);
+        assertEquals(Problem.GONE, state().problem);
+    }
+
+    @Test
+    public void detailsNeedAConnection() {
+        online.setValue(false);
+        viewModel.saveDetails("Meera S. Joshi", "", null);
+        assertEquals(AppError.OFFLINE, state().error);
+        assertTrue(roster.calls.isEmpty());
     }
 
     @Test

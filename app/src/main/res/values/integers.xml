@@ -5,6 +5,7 @@
     <integer name="course_code_max">20</integer>
     <integer name="roll_no_length">9</integer>
     <integer name="cohort_max">8</integer>
+    <integer name="name_max">80</integer>
     <integer name="email_max">80</integer>
     <integer name="note_max">140</integer>
     <integer name="join_code_length">6</integer>

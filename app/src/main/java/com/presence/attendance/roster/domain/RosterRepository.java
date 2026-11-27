@@ -49,7 +49,18 @@ public interface RosterRepository {
             @NonNull String email,
             @NonNull String rollNo,
             @NonNull String cohort,
+            @NonNull StudentDetails details,
             @NonNull Callback<AddOutcome> callback);
+
+    /**
+     * Changes a student's name, batch and emoji. No reason is needed and the registration stays:
+     * these describe the student, they do not identify them. Resolves to DONE or NOT_FOUND.
+     */
+    @MainThread
+    void updateDetails(
+            @NonNull String email,
+            @NonNull StudentDetails details,
+            @NonNull Callback<CorrectOutcome> callback);
 
     /**
      * Changes an existing entry together with its immutable audit record.

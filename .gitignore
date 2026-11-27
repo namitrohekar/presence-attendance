@@ -32,3 +32,8 @@ local.properties
 
 # Source file the app's logo was made from; the app ships its own processed copy.
 /VJTILOGO.png
+/docs/viva-prep.md
+/docs/Presence-Architecture-Guide.pdf
+/docs/Presence-Guide-*.pdf
+/docs/review-feedback.md
+/docs/*.csv

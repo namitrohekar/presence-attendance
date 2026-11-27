@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One choice in the emoji picker. Text and description are set in code. The emoji is sized in dp so the chip keeps its shape at any font scale. -->
+<com.google.android.material.chip.Chip xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.Material3.Chip.Filter"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:checkable="true"
+    android:textSize="@dimen/avatar_text"
+    app:checkedIconVisible="false"
+    tools:ignore="SpUsage" />

@@ -134,10 +134,16 @@ public final class RosterFragment extends Fragment {
             @NonNull FragmentListBinding binding, @NonNull RosterImportViewModel.State state) {
         if (state.fileError != null) {
             binding.listNotice.setText(AppErrorMessages.of(state.fileError));
-        } else if (state.invalidFile) {
-            binding.listNotice.setText(R.string.import_invalid_file);
+        } else if (state.fileProblem != null) {
+            binding.listNotice.setText(
+                    switch (state.fileProblem) {
+                        case NO_HEADER -> R.string.import_no_header;
+                        case EMPTY -> R.string.import_empty;
+                        case TOO_LARGE -> R.string.import_too_large;
+                    });
         }
-        binding.listNotice.setVisibility(visibleIf(state.fileError != null || state.invalidFile));
+        binding.listNotice.setVisibility(
+                visibleIf(state.fileError != null || state.fileProblem != null));
         if (state.openPreview) {
             importViewModel.onPreviewOpened();
             final NavController navController = NavHostFragment.findNavController(this);
@@ -148,7 +154,10 @@ public final class RosterFragment extends Fragment {
         }
     }
 
-    /** One section per cohort; each row is a roll number with its address. */
+    /**
+     * One section per cohort; each row is a student by name with their emoji, roll number, batch
+     * and address. An entry added before names were kept is titled by its address.
+     */
     @NonNull
     private List<Line> lines(@NonNull List<RosterEntry> entries) {
         final List<Line> lines = new ArrayList<>();
@@ -158,13 +167,24 @@ public final class RosterFragment extends Fragment {
                 cohort = entry.getCohort();
                 lines.add(Line.header(cohort, getString(R.string.roster_cohort_header, cohort)));
             }
+            final String name = entry.getName();
+            final String identity =
+                    entry.getBatch() == null
+                            ? entry.getRollNo()
+                            : getString(
+                                    R.string.import_row_detail,
+                                    entry.getRollNo(),
+                                    getString(R.string.roster_batch, entry.getBatch()));
             lines.add(
                     Line.row(
-                            entry.getEmail(),
-                            entry.getRollNo(),
-                            entry.getEmail(),
-                            entry.isRegistered() ? getString(R.string.roster_registered) : null,
-                            Line.Tone.NEUTRAL));
+                                    entry.getEmail(),
+                                    name != null ? name : entry.getEmail(),
+                                    name != null ? identity + "\n" + entry.getEmail() : identity,
+                                    entry.isRegistered()
+                                            ? getString(R.string.roster_registered)
+                                            : null,
+                                    Line.Tone.NEUTRAL)
+                            .withAvatar(entry.shownEmoji().glyph()));
         }
         return Line.grouped(lines);
     }

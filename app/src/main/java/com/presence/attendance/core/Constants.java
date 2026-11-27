@@ -72,5 +72,17 @@ public final class Constants {
     /** Attended sessions taken off a student's figure for each mark revoked as a proxy. */
     public static final int PROXY_PENALTY_SESSIONS = 1;
 
+    /** Longest official name on the roster. */
+    public static final int NAME_MAX_LEN = 80;
+
+    /** Lab batches are numbered from BATCH_MIN to BATCH_MAX. */
+    public static final int BATCH_MIN = 1;
+
+    public static final int BATCH_MAX = 20;
+
+    /** The ten emojis a student can be shown with, by stored name, in their fixed order. */
+    public static final String STUDENT_EMOJIS =
+            "LION,TIGER,ELEPHANT,PANDA,FOX,OWL,DOLPHIN,TURTLE,BUTTERFLY,PEACOCK";
+
     private Constants() {}
 }

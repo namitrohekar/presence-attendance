@@ -1,6 +1,7 @@
 package com.presence.attendance.roster.ui;
 
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.View;
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
@@ -17,6 +18,7 @@ import com.presence.attendance.core.ui.ViewModels;
 import com.presence.attendance.core.ui.WindowInsetsPadding;
 import com.presence.attendance.databinding.FragmentListBinding;
 import com.presence.attendance.roster.domain.RosterCsv;
+import com.presence.attendance.roster.domain.StudentEmoji;
 import com.presence.attendance.roster.ui.RosterImportViewModel.Phase;
 import com.presence.attendance.roster.ui.RosterImportViewModel.Result;
 import java.util.ArrayList;
@@ -91,12 +93,18 @@ public final class ImportFragment extends Fragment {
         }
         adapter.submitList(lines(state));
         final int ready = state.total;
+        final int updates = state.count(RosterCsv.Check.DETAILS_CHANGED);
         final int skipped = state.count(RosterCsv.Check.ALREADY_ON_ROSTER);
         final int rejected = state.rows.size() - ready - skipped;
         switch (state.phase) {
             case PREVIEW -> {
                 binding.listSummary.setText(
-                        getString(R.string.import_summary, ready, rejected, skipped));
+                        getString(
+                                R.string.import_summary,
+                                ready - updates,
+                                updates,
+                                rejected,
+                                skipped));
                 binding.listPrimary.setText(
                         ready == 0
                                 ? getString(R.string.import_nothing)
@@ -115,8 +123,13 @@ public final class ImportFragment extends Fragment {
             }
             default -> {
                 final int imported = state.count(Result.IMPORTED);
+                final int updated = state.count(Result.UPDATED);
                 binding.listSummary.setText(
-                        getString(R.string.import_done_summary, imported, ready - imported));
+                        getString(
+                                R.string.import_done_summary,
+                                imported,
+                                updated,
+                                ready - imported - updated));
                 binding.listPrimary.setText(R.string.action_done);
                 binding.listPrimary.setEnabled(true);
             }
@@ -130,38 +143,70 @@ public final class ImportFragment extends Fragment {
         final List<Line> others = new ArrayList<>();
         for (RosterCsv.Row row : state.rows) {
             final Result result = state.results.get(row.line);
-            // A malformed row has no trustworthy address, so it is named by its position.
-            final boolean unnamed = row.email.isEmpty() || row.check == RosterCsv.Check.MALFORMED;
-            final String title =
-                    unnamed ? getString(R.string.import_row_line, row.line) : row.email;
-            final String status = getString(result != null ? label(result) : label(row.check));
-            final String detail =
-                    row.rollNo.isEmpty()
-                            ? status
-                            : getString(R.string.import_row_detail, row.rollNo, row.cohort)
-                                    + "\n"
-                                    + status;
-            final boolean ok =
-                    result == Result.IMPORTED
-                            || (result == null && row.check == RosterCsv.Check.READY);
-            final boolean skipped =
-                    result == null && row.check == RosterCsv.Check.ALREADY_ON_ROSTER;
+            // A malformed row has no trustworthy cells, so it is named by its position.
+            final boolean malformed = row.check == RosterCsv.Check.MALFORMED;
+            final String title;
+            if (malformed || (row.name.isEmpty() && row.email.isEmpty())) {
+                title = getString(R.string.import_row_line, row.line);
+            } else {
+                title = row.name.isEmpty() ? row.email : row.name;
+            }
+            final List<String> parts = new ArrayList<>();
+            if (!malformed && !title.equals(row.email) && !row.email.isEmpty()) {
+                parts.add(row.email);
+            }
+            if (!malformed && !row.rollNo.isEmpty()) {
+                parts.add(identity(row));
+            }
+            parts.add(getString(result != null ? label(result) : label(row.check)));
+            final boolean rejected = isRejected(row.check, result);
+            final String badge;
+            if (rejected) {
+                badge = getString(R.string.badge_rejected);
+            } else if (result == null && row.check == RosterCsv.Check.ALREADY_ON_ROSTER) {
+                badge = getString(R.string.badge_skipped);
+            } else if (result == null && row.check == RosterCsv.Check.DETAILS_CHANGED) {
+                badge = getString(R.string.badge_update);
+            } else {
+                badge = null;
+            }
+            final StudentEmoji emoji = malformed ? null : row.shownEmoji();
             final Line line =
                     Line.row(
-                            String.valueOf(row.line),
-                            title,
-                            detail,
-                            ok
-                                    ? null
-                                    : getString(
-                                            skipped
-                                                    ? R.string.badge_skipped
-                                                    : R.string.badge_rejected),
-                            skipped ? Line.Tone.NEUTRAL : Line.Tone.DANGER);
-            (ok ? others : problems).add(line);
+                                    String.valueOf(row.line),
+                                    title,
+                                    TextUtils.join("\n", parts),
+                                    badge,
+                                    rejected ? Line.Tone.DANGER : Line.Tone.NEUTRAL)
+                            .withAvatar(emoji != null ? emoji.glyph() : null);
+            (rejected ? problems : others).add(line);
         }
         problems.addAll(others);
         return Line.grouped(problems);
+    }
+
+    /** "262011005 · MC26", with " · Batch 2" when the row gives one. */
+    @NonNull
+    private String identity(@NonNull RosterCsv.Row row) {
+        final String identity = getString(R.string.import_row_detail, row.rollNo, row.cohort);
+        final Integer batch = row.details != null ? row.details.getBatch() : row.batch;
+        return batch == null
+                ? identity
+                : getString(R.string.import_row_detail, identity, batch(batch));
+    }
+
+    @NonNull
+    private String batch(int batch) {
+        return getString(R.string.roster_batch, batch);
+    }
+
+    private static boolean isRejected(@NonNull RosterCsv.Check check, @Nullable Result result) {
+        if (result != null) {
+            return result != Result.IMPORTED && result != Result.UPDATED;
+        }
+        return check != RosterCsv.Check.READY
+                && check != RosterCsv.Check.DETAILS_CHANGED
+                && check != RosterCsv.Check.ALREADY_ON_ROSTER;
     }
 
     @StringRes
@@ -171,10 +216,14 @@ public final class ImportFragment extends Fragment {
             case MALFORMED -> R.string.check_malformed;
             case INVALID_EMAIL -> R.string.check_invalid_email;
             case INVALID_ROLL_NO -> R.string.check_invalid_roll;
+            case INVALID_NAME -> R.string.check_invalid_name;
             case INVALID_COHORT -> R.string.check_invalid_cohort;
+            case INVALID_BATCH -> R.string.check_invalid_batch;
+            case INVALID_EMOJI -> R.string.check_invalid_emoji;
             case DUPLICATE_EMAIL -> R.string.check_duplicate_email;
             case DUPLICATE_ROLL_NO -> R.string.check_duplicate_roll;
             case ALREADY_ON_ROSTER -> R.string.check_already;
+            case DETAILS_CHANGED -> R.string.check_details_changed;
             case EMAIL_ON_ROSTER -> R.string.check_email_on_roster;
             case ROLL_TAKEN -> R.string.check_roll_taken;
         };
@@ -184,6 +233,7 @@ public final class ImportFragment extends Fragment {
     private static int label(@NonNull Result result) {
         return switch (result) {
             case IMPORTED -> R.string.outcome_imported;
+            case UPDATED -> R.string.outcome_updated;
             case EMAIL_EXISTS -> R.string.add_email_exists;
             case ROLL_TAKEN -> R.string.check_roll_taken;
             case FAILED -> R.string.outcome_failed;

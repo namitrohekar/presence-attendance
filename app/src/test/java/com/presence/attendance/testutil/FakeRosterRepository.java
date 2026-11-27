@@ -8,6 +8,7 @@ import com.presence.attendance.core.Callback;
 import com.presence.attendance.core.Outcome;
 import com.presence.attendance.roster.domain.RosterEntry;
 import com.presence.attendance.roster.domain.RosterRepository;
+import com.presence.attendance.roster.domain.StudentDetails;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +24,7 @@ public final class FakeRosterRepository implements RosterRepository {
     public Outcome<AddOutcome> addOutcome = Outcome.success(AddOutcome.ADDED);
     public final Map<String, Outcome<AddOutcome>> addOutcomeByEmail = new HashMap<>();
     public Outcome<CorrectOutcome> correctOutcome = Outcome.success(CorrectOutcome.DONE);
+    public Outcome<CorrectOutcome> detailsOutcome = Outcome.success(CorrectOutcome.DONE);
 
     public final List<String> calls = new ArrayList<>();
     public int loads;
@@ -43,10 +45,30 @@ public final class FakeRosterRepository implements RosterRepository {
             @NonNull String email,
             @NonNull String rollNo,
             @NonNull String cohort,
+            @NonNull StudentDetails details,
             @NonNull Callback<AddOutcome> callback) {
-        calls.add("add:" + email + ":" + rollNo + ":" + cohort);
+        calls.add("add:" + email + ":" + rollNo + ":" + cohort + ":" + describe(details));
         final Outcome<AddOutcome> specific = addOutcomeByEmail.get(email);
         callback.onResult(specific != null ? specific : addOutcome);
+    }
+
+    @Override
+    public void updateDetails(
+            @NonNull String email,
+            @NonNull StudentDetails details,
+            @NonNull Callback<CorrectOutcome> callback) {
+        calls.add("details:" + email + ":" + describe(details));
+        callback.onResult(detailsOutcome);
+    }
+
+    /** "Name/batch/EMOJI", with batch "-" for none. */
+    @NonNull
+    public static String describe(@NonNull StudentDetails details) {
+        return details.getName()
+                + "/"
+                + (details.getBatch() == null ? "-" : details.getBatch())
+                + "/"
+                + details.getEmoji().name();
     }
 
     @Override

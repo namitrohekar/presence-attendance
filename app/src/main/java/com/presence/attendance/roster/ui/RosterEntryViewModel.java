@@ -11,16 +11,21 @@ import com.presence.attendance.core.Outcome;
 import com.presence.attendance.roster.domain.RosterRepository;
 import com.presence.attendance.roster.domain.RosterRepository.CorrectOutcome;
 import com.presence.attendance.roster.domain.RosterRepository.CorrectionAction;
+import com.presence.attendance.roster.domain.StudentDetails;
+import com.presence.attendance.roster.domain.StudentEmoji;
 import com.presence.attendance.roster.domain.StudentIdentity;
 
 /**
- * Correction sheet for one roster entry. Each action is one audited, atomic change and needs a
+ * Sheet for one roster entry. The name, batch and emoji are saved as they are, with no reason, and
+ * the student stays registered. Every other action is one audited, atomic change and needs a
  * reason, which is kept in the audit log.
  */
 public final class RosterEntryViewModel extends ViewModel {
 
     /** What is wrong with the form, if anything. */
     public enum Problem {
+        NAME_INVALID,
+        BATCH_INVALID,
         ROLL_NO_INVALID,
         COHORT_INVALID,
         REASON_MISSING,
@@ -57,6 +62,7 @@ public final class RosterEntryViewModel extends ViewModel {
     private final String email;
     private final String rollNo;
     private final String cohort;
+    @Nullable private final StudentDetails details;
     private final MediatorLiveData<State> state =
             new MediatorLiveData<>(new State(false, false, null, null, false));
 
@@ -66,12 +72,14 @@ public final class RosterEntryViewModel extends ViewModel {
             @NonNull LiveData<Boolean> online,
             @NonNull String email,
             @NonNull String rollNo,
-            @NonNull String cohort) {
+            @NonNull String cohort,
+            @Nullable StudentDetails details) {
         this.auth = auth;
         this.roster = roster;
         this.email = email;
         this.rollNo = rollNo;
         this.cohort = cohort;
+        this.details = details;
         state.addSource(
                 online,
                 isOnline -> {
@@ -89,6 +97,45 @@ public final class RosterEntryViewModel extends ViewModel {
     @NonNull
     public LiveData<State> getState() {
         return state;
+    }
+
+    /**
+     * Saves the name, batch and emoji. Saving them unchanged closes the sheet without a write.
+     *
+     * @param typedBatch the batch as typed; blank for none
+     * @param picked the emoji picked, or null to use the one for the roll number
+     */
+    public void saveDetails(
+            @NonNull String typedName, @NonNull String typedBatch, @Nullable StudentEmoji picked) {
+        final State s = current();
+        if (s.busy || s.done) {
+            return;
+        }
+        final String name = StudentIdentity.normaliseName(typedName);
+        final int batch = StudentIdentity.parseBatch(typedBatch);
+        if (!StudentIdentity.isName(name)) {
+            set(false, Problem.NAME_INVALID, null, false);
+            return;
+        }
+        if (batch == StudentIdentity.INVALID_BATCH) {
+            set(false, Problem.BATCH_INVALID, null, false);
+            return;
+        }
+        final StudentDetails changed =
+                new StudentDetails(
+                        name,
+                        batch == StudentIdentity.NO_BATCH ? null : batch,
+                        picked != null ? picked : StudentEmoji.forRollNo(rollNo));
+        if (changed.equals(details)) {
+            set(false, null, null, true);
+            return;
+        }
+        if (!s.online) {
+            set(false, null, AppError.OFFLINE, false);
+            return;
+        }
+        set(true, null, null, false);
+        roster.updateDetails(email, changed, this::onOutcome);
     }
 
     /** Changes the roll number and/or cohort. */

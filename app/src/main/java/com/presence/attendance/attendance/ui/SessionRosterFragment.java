@@ -214,6 +214,7 @@ public final class SessionRosterFragment extends Fragment {
                         detail,
                         getString(AttendanceLabels.label(record)),
                         AttendanceLabels.tone(record))
+                .withAvatar(member.shownEmoji().glyph())
                 .navigates();
     }
 

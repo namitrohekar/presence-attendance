@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/entry_scroll"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -21,6 +22,85 @@
                 android:layout_marginTop="@dimen/space_16"
                 android:accessibilityHeading="true"
                 android:textAppearance="@style/TextAppearance.Presence.Title" />
+
+            <!-- Name, batch and emoji: saved as they are, no reason, registration kept. -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_20"
+                android:accessibilityHeading="true"
+                android:text="@string/entry_details_heading"
+                android:textAppearance="@style/TextAppearance.Presence.Headline" />
+
+            <TextView
+                style="@style/Widget.Presence.FieldLabel"
+                android:layout_marginTop="@dimen/space_12"
+                android:labelFor="@id/entry_name"
+                android:text="@string/add_name_label" />
+
+            <EditText
+                android:id="@+id/entry_name"
+                style="@style/Widget.Presence.TextField"
+                android:autofillHints=""
+                android:importantForAutofill="no"
+                android:imeOptions="actionNext"
+                android:inputType="textPersonName|textCapWords"
+                android:maxLength="@integer/name_max" />
+
+            <TextView
+                android:id="@+id/entry_name_error"
+                style="@style/Widget.Presence.InlineError"
+                android:text="@string/add_name_invalid" />
+
+            <TextView
+                style="@style/Widget.Presence.FieldLabel"
+                android:labelFor="@id/entry_batch"
+                android:text="@string/add_batch_label" />
+
+            <EditText
+                android:id="@+id/entry_batch"
+                style="@style/Widget.Presence.TextField"
+                android:autofillHints=""
+                android:importantForAutofill="no"
+                android:fontFeatureSettings="tnum"
+                android:imeOptions="actionDone"
+                android:inputType="number"
+                android:maxLength="2" />
+
+            <TextView
+                android:id="@+id/entry_batch_error"
+                style="@style/Widget.Presence.InlineError"
+                android:text="@string/add_batch_invalid" />
+
+            <TextView
+                style="@style/Widget.Presence.FieldLabel"
+                android:text="@string/add_emoji_label" />
+
+            <!-- The sheet carries the choice across a rotation itself; the chips get new ids. -->
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/entry_emoji"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
+                android:saveEnabled="false"
+                app:selectionRequired="false"
+                app:singleSelection="true" />
+
+            <com.presence.attendance.core.ui.SpringButton
+                android:id="@+id/entry_save_details"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_20"
+                android:text="@string/entry_save_details" />
+
+            <!-- Identity: every change is audited and needs a reason. -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_32"
+                android:accessibilityHeading="true"
+                android:text="@string/entry_identity_heading"
+                android:textAppearance="@style/TextAppearance.Presence.Headline" />
 
             <TextView
                 android:id="@+id/entry_note"

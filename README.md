@@ -14,6 +14,7 @@ the only verifier and the server clock is the only clock.
 |------|-------|
 | Sign-in, faculty allowlist, official student domain only | built |
 | Class roster (add, CSV import, audited corrections), student registration by roll number | built |
+| Roster names, lab batches and emojis; CSV import by column names; names and emojis in faculty lists | built |
 | Identity alerts to faculty for rejected attempts | built |
 | Courses and join codes | built |
 | Session with rotating QR, live roster, end session | built |
@@ -69,8 +70,8 @@ interfaces in their constructors and are tested against in-memory fakes.
     cd firebase && npm install && npm test
     cd firebase && npm run test:mutation
 
-Last run: 258 unit tests, 607 rules tests (one of them 60 students marking at
-once), 97 of 97 weakened rules caught.
+Last run: 289 unit tests, 666 rules tests (one of them 60 students marking at
+once), 107 of 107 weakened rules caught.
 Lint and javac treat warnings as errors.
 
 To run the app you need `app/google-services.json` from the Firebase project

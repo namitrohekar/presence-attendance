@@ -87,18 +87,24 @@
     <string name="roster_title">Roster</string>
     <string name="roster_import">Import CSV</string>
     <string name="roster_empty_title">No students yet</string>
-    <string name="roster_empty_body">Add students one at a time, or import a class list as CSV with the columns email, rollNo, cohort.</string>
+    <string name="roster_empty_body">Add students one at a time, or import a class list as CSV. Its first line names the columns: email, roll no, name and cohort, and if you like batch and emoji.</string>
     <string name="roster_error_title">Couldn\'t load the roster</string>
     <string name="roster_registered">Registered</string>
     <string name="roster_cohort_header">Cohort %1$s</string>
+    <string name="roster_batch">Batch %1$d</string>
     <string name="roster_offline">You\'re offline. Connect to the internet to change the roster.</string>
     <string name="add_title">Add student</string>
     <string name="add_email_label">Official email, ending in @mc.vjti.ac.in</string>
     <string name="add_roll_label">Roll number</string>
     <string name="add_cohort_label">Cohort, for example MC26</string>
+    <string name="add_name_label">Name, as on the class list</string>
+    <string name="add_batch_label">Lab batch (optional)</string>
+    <string name="add_emoji_label">Emoji. If none is picked, the roll number chooses one.</string>
     <string name="add_email_invalid">Enter an address ending in @mc.vjti.ac.in.</string>
     <string name="add_roll_invalid">Enter the 9-digit roll number.</string>
     <string name="add_cohort_invalid">Use 2 to 8 capital letters and digits.</string>
+    <string name="add_name_invalid">Enter the student\'s name, up to 80 characters.</string>
+    <string name="add_batch_invalid">Enter a batch from 1 to 20, or leave it empty.</string>
     <string name="add_email_exists">This address is already on the roster.</string>
     <string name="add_roll_taken">This roll number belongs to another student in this cohort.</string>
     <string name="add_submit">Add student</string>
@@ -109,6 +115,9 @@
     <string name="entry_reason_missing">Enter a reason.</string>
     <string name="entry_unchanged">Change the roll number or cohort first.</string>
     <string name="entry_gone">This student is no longer on the roster.</string>
+    <string name="entry_details_heading">Name, batch and emoji</string>
+    <string name="entry_identity_heading">Roll number and cohort</string>
+    <string name="entry_save_details">Save name, batch and emoji</string>
     <string name="entry_save">Save correction</string>
     <string name="entry_saving">Saving…</string>
     <string name="entry_release">Release registration</string>
@@ -116,32 +125,51 @@
 
     <!-- CSV import -->
     <string name="import_title">Import class list</string>
-    <string name="import_invalid_file">That file has no rows, or more than 500. Expected the columns email, rollNo, cohort.</string>
-    <string name="import_summary">Ready: %1$d · Rejected: %2$d · Already on the roster: %3$d</string>
+    <string name="import_no_header">The first line must name the columns: email, roll no, name and cohort. Batch and emoji are optional, and other columns are ignored.</string>
+    <string name="import_empty">That file has no students under its first line.</string>
+    <string name="import_too_large">That file has more than 500 students. Split it and import each part.</string>
+    <string name="import_summary">New: %1$d · Updates: %2$d · Rejected: %3$d · Already on the roster: %4$d</string>
     <plurals name="import_button">
         <item quantity="one">Import %1$d student</item>
         <item quantity="other">Import %1$d students</item>
     </plurals>
     <string name="import_nothing">Nothing to import</string>
     <string name="import_progress">Importing %1$d of %2$d…</string>
-    <string name="import_done_summary">Imported: %1$d · Not imported: %2$d</string>
+    <string name="import_done_summary">Added: %1$d · Updated: %2$d · Not imported: %3$d</string>
     <!-- Roll number, then cohort. -->
     <string name="import_row_detail">%1$s · %2$s</string>
     <string name="import_row_line">Row %1$d</string>
     <string name="check_ready">Ready</string>
-    <string name="check_malformed">Expected three columns: email, roll number, cohort</string>
+    <string name="check_malformed">This row has fewer cells than the first line</string>
     <string name="check_invalid_email">Not an @mc.vjti.ac.in address</string>
     <string name="check_invalid_roll">Roll number is not 9 digits</string>
     <string name="check_invalid_cohort">Cohort is not 2 to 8 capital letters and digits</string>
+    <string name="check_invalid_name">Name is empty or longer than 80 characters</string>
+    <string name="check_invalid_batch">Batch is not a number from 1 to 20</string>
+    <string name="check_invalid_emoji">Emoji is not one of the ten: give the picture, its name or a number from 1 to 10</string>
     <string name="check_duplicate_email">Address appears earlier in this file</string>
     <string name="check_duplicate_roll">Roll number appears earlier in this file</string>
     <string name="check_already">Already on the roster</string>
+    <string name="check_details_changed">On the roster: name, batch or emoji will be updated</string>
     <string name="check_email_on_roster">On the roster with a different roll number or cohort</string>
     <string name="check_roll_taken">Roll number belongs to another student</string>
     <string name="outcome_imported">Imported</string>
+    <string name="outcome_updated">Updated</string>
     <string name="outcome_failed">Not imported</string>
     <string name="badge_rejected">Rejected</string>
     <string name="badge_skipped">Skipped</string>
+    <string name="badge_update">Update</string>
+    <!-- The ten student emojis, read out by TalkBack in the picker. -->
+    <string name="emoji_lion">Lion</string>
+    <string name="emoji_tiger">Tiger</string>
+    <string name="emoji_elephant">Elephant</string>
+    <string name="emoji_panda">Panda</string>
+    <string name="emoji_fox">Fox</string>
+    <string name="emoji_owl">Owl</string>
+    <string name="emoji_dolphin">Dolphin</string>
+    <string name="emoji_turtle">Turtle</string>
+    <string name="emoji_butterfly">Butterfly</string>
+    <string name="emoji_peacock">Peacock</string>
 
     <!-- Identity alerts (faculty) -->
     <string name="alerts_title">Alerts</string>

@@ -36,6 +36,9 @@ const ENFORCED_BY_RULES = [
   'ALERT_RETENTION_DAYS',
   'CORRECTION_RETENTION_DAYS',
   'HEADCOUNT_MAX',
+  'NAME_MAX_LEN',
+  'BATCH_MIN',
+  'BATCH_MAX',
 ];
 
 describe('constants parity (rules)', () => {
@@ -71,6 +74,12 @@ describe('constants parity (rules)', () => {
     expect(rules).toContain(
       `'^[A-Z0-9]{${constants.COHORT_MIN_LEN},${constants.COHORT_MAX_LEN}}$'`,
     );
+  });
+
+  test('the emoji pattern lists exactly the contract emojis', () => {
+    const names = constants.STUDENT_EMOJIS.split(',');
+    expect(new Set(names).size).toBe(10);
+    expect(rules).toContain(`v.matches('^(${names.join('|')})$')`);
   });
 
   test('the join code alphabet excludes look-alike characters', () => {

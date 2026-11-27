@@ -5,13 +5,21 @@ import com.presence.attendance.core.Constants;
 import java.util.Locale;
 
 /**
- * Strict validation of the three things that identify a student: official address, roll number and
- * cohort. The security rules apply the same tests; these exist to give precise messages.
+ * Strict validation of the three things that identify a student (official address, roll number and
+ * cohort) and of the details kept about them (name and batch). The security rules apply the same
+ * tests; these exist to give precise messages.
  */
 public final class StudentIdentity {
 
+    /** {@link #parseBatch} of blank text: the student is in no batch. */
+    public static final int NO_BATCH = 0;
+
+    /** {@link #parseBatch} of text that is not a batch number. */
+    public static final int INVALID_BATCH = -1;
+
     private static final int LOCAL_PART_MAX = 64;
     private static final String LOCAL_PART_EXTRA = "._-";
+    private static final int MAX_BATCH_DIGITS = 2;
 
     private StudentIdentity() {}
 
@@ -82,5 +90,39 @@ public final class StudentIdentity {
             }
         }
         return true;
+    }
+
+    /** Trimmed, with every run of spaces, tabs or line breaks made one space. */
+    @NonNull
+    public static String normaliseName(@NonNull String input) {
+        return input.trim().replaceAll("\\s+", " ");
+    }
+
+    /** A normalised name of 1 to {@link Constants#NAME_MAX_LEN} characters. */
+    public static boolean isName(@NonNull String name) {
+        return !name.isEmpty()
+                && name.length() <= Constants.NAME_MAX_LEN
+                && name.equals(name.trim());
+    }
+
+    public static boolean isBatch(int batch) {
+        return batch >= Constants.BATCH_MIN && batch <= Constants.BATCH_MAX;
+    }
+
+    /**
+     * A batch as a teacher typed it.
+     *
+     * @return the batch number, {@link #NO_BATCH} for blank text, or {@link #INVALID_BATCH}
+     */
+    public static int parseBatch(@NonNull String input) {
+        final String text = input.trim();
+        if (text.isEmpty()) {
+            return NO_BATCH;
+        }
+        if (text.length() > MAX_BATCH_DIGITS || !text.chars().allMatch(c -> c >= '0' && c <= '9')) {
+            return INVALID_BATCH;
+        }
+        final int batch = Integer.parseInt(text);
+        return isBatch(batch) ? batch : INVALID_BATCH;
     }
 }

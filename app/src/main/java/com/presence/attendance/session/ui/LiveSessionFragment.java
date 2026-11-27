@@ -259,15 +259,16 @@ public final class LiveSessionFragment extends Fragment {
                             : time;
             lines.add(
                     Line.row(
-                            record.getStudentId(),
-                            member != null
-                                    ? member.getName()
-                                    : getString(R.string.live_unknown_student),
-                            detail,
-                            badge(record.getStatus()),
-                            record.getStatus() == AttendanceRecord.Status.LATE_SYNC
-                                    ? Line.Tone.WARNING
-                                    : Line.Tone.NEUTRAL));
+                                    record.getStudentId(),
+                                    member != null
+                                            ? member.getName()
+                                            : getString(R.string.live_unknown_student),
+                                    detail,
+                                    badge(record.getStatus()),
+                                    record.getStatus() == AttendanceRecord.Status.LATE_SYNC
+                                            ? Line.Tone.WARNING
+                                            : Line.Tone.NEUTRAL)
+                            .withAvatar(member != null ? member.shownEmoji().glyph() : null));
         }
         return Line.grouped(lines);
     }

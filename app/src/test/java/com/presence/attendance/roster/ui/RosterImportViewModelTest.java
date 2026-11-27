@@ -12,6 +12,8 @@ import com.presence.attendance.core.Outcome;
 import com.presence.attendance.roster.domain.RosterCsv;
 import com.presence.attendance.roster.domain.RosterEntry;
 import com.presence.attendance.roster.domain.RosterRepository.AddOutcome;
+import com.presence.attendance.roster.domain.RosterRepository.CorrectOutcome;
+import com.presence.attendance.roster.domain.StudentEmoji;
 import com.presence.attendance.roster.ui.RosterImportViewModel.Phase;
 import com.presence.attendance.roster.ui.RosterImportViewModel.Result;
 import com.presence.attendance.roster.ui.RosterImportViewModel.State;
@@ -36,19 +38,19 @@ public final class RosterImportViewModelTest {
 
     /** Three good rows, one already there, and four that must be rejected. */
     private static final String FILE =
-            "email,rollNo,cohort\n"
+            "email,roll no,name,cohort,batch,emoji\n"
                     + A
-                    + ",262011005,MC26\n"
+                    + ",262011005,Aditi Pawar,MC26,1,fox\n"
                     + B
-                    + ",262010006,MC26\n"
+                    + ",262010006,Bhavesh Kale,MC26,,\n"
                     + C
-                    + ",262010007,MC26\n"
+                    + ",262010007,Chirag More,MC26,2,\n"
                     + Fixtures.ENTRY.getEmail()
-                    + ",262011001,MC26\n"
-                    + "someone@gmail.com,262010008,MC26\n"
+                    + ",262011001,Meera Joshi,MC26,,\n"
+                    + "someone@gmail.com,262010008,Some One,MC26,,\n"
                     + A
-                    + ",262010009,MC26\n"
-                    + "dnaik_mc26@mc.vjti.ac.in,262010002,MC26\n"
+                    + ",262010009,Aditi Pawar,MC26,,\n"
+                    + "dnaik_mc26@mc.vjti.ac.in,262010002,Dev Naik,MC26,,\n"
                     + "not,enough";
 
     private final FakeAuthRepository auth = new FakeAuthRepository();
@@ -88,9 +90,9 @@ public final class RosterImportViewModelTest {
         viewModel.startImport();
         assertEquals(
                 Arrays.asList(
-                        "add:" + A + ":262011005:MC26",
-                        "add:" + B + ":262010006:MC26",
-                        "add:" + C + ":262010007:MC26"),
+                        "add:" + A + ":262011005:MC26:Aditi Pawar/1/FOX",
+                        "add:" + B + ":262010006:MC26:Bhavesh Kale/-/DOLPHIN",
+                        "add:" + C + ":262010007:MC26:Chirag More/2/TURTLE"),
                 roster.calls);
         assertEquals(Phase.DONE, state().phase);
         assertEquals(3, state().count(Result.IMPORTED));
@@ -127,14 +129,55 @@ public final class RosterImportViewModelTest {
 
     @Test
     public void anEmptyFileIsRefused() {
-        viewModel.onFile("email,rollNo,cohort\n\n", ROSTER);
+        viewModel.onFile("email,roll no,name,cohort\n\n", ROSTER);
         assertEquals(Phase.IDLE, state().phase);
-        assertTrue(state().invalidFile);
+        assertEquals(RosterCsv.FileProblem.EMPTY, state().fileProblem);
+    }
+
+    @Test
+    public void aFileWithoutTheColumnNamesIsRefused() {
+        viewModel.onFile("email,rollNo,cohort\n" + A + ",262011005,MC26", ROSTER);
+        assertEquals(Phase.IDLE, state().phase);
+        assertEquals(RosterCsv.FileProblem.NO_HEADER, state().fileProblem);
+    }
+
+    @Test
+    public void studentsAlreadyThereGetNewDetailsInsteadOfBeingAdded() {
+        viewModel.onFile(
+                "email,roll no,name,cohort,batch\n"
+                        + Fixtures.ENTRY.getEmail()
+                        + ",262011001,Meera S. Joshi,MC26,2\n"
+                        + A
+                        + ",262011005,Aditi Pawar,MC26,\n",
+                ROSTER);
+        assertEquals(2, state().total);
+        assertEquals(1, state().count(RosterCsv.Check.DETAILS_CHANGED));
+        viewModel.startImport();
+        assertEquals(
+                Arrays.asList(
+                        "details:" + Fixtures.ENTRY.getEmail() + ":Meera S. Joshi/2/OWL",
+                        "add:" + A + ":262011005:MC26:Aditi Pawar/-/OWL"),
+                roster.calls);
+        assertEquals(Result.UPDATED, state().results.get(1));
+        assertEquals(Result.IMPORTED, state().results.get(2));
+    }
+
+    @Test
+    public void aStudentRemovedSinceThePreviewIsNotRecreatedByAnUpdate() {
+        roster.detailsOutcome = Outcome.success(CorrectOutcome.NOT_FOUND);
+        viewModel.onFile(
+                "email,roll no,name,cohort\n"
+                        + Fixtures.ENTRY.getEmail()
+                        + ",262011001,Meera S. Joshi,MC26\n",
+                ROSTER);
+        viewModel.startImport();
+        assertEquals(Result.FAILED, state().results.get(1));
     }
 
     @Test
     public void aFileWithNothingToImportCannotBeStarted() {
-        viewModel.onFile("someone@gmail.com,262010008,MC26", ROSTER);
+        viewModel.onFile(
+                "email,roll no,name,cohort\nsomeone@gmail.com,262010008,Some One,MC26", ROSTER);
         assertEquals(0, state().total);
         viewModel.startImport();
         assertEquals(Phase.PREVIEW, state().phase);
@@ -178,9 +221,36 @@ public final class RosterImportViewModelTest {
                 Arrays.asList(
                         Fixtures.ENTRY,
                         Fixtures.OTHER_ENTRY,
-                        new RosterEntry(A, "262011005", "MC26", "teacherA", 0, null),
-                        new RosterEntry(B, "262010006", "MC26", "teacherA", 0, null),
-                        new RosterEntry(C, "262010007", "MC26", "teacherA", 0, null));
+                        new RosterEntry(
+                                A,
+                                "262011005",
+                                "MC26",
+                                "teacherA",
+                                0,
+                                null,
+                                "Aditi Pawar",
+                                1,
+                                StudentEmoji.FOX),
+                        new RosterEntry(
+                                B,
+                                "262010006",
+                                "MC26",
+                                "teacherA",
+                                0,
+                                null,
+                                "Bhavesh Kale",
+                                null,
+                                StudentEmoji.DOLPHIN),
+                        new RosterEntry(
+                                C,
+                                "262010007",
+                                "MC26",
+                                "teacherA",
+                                0,
+                                null,
+                                "Chirag More",
+                                2,
+                                StudentEmoji.TURTLE));
         viewModel.onFile(FILE, afterFirstImport);
         assertEquals(0, state().total);
         assertEquals(4, state().count(RosterCsv.Check.ALREADY_ON_ROSTER));

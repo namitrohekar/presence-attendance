@@ -6,6 +6,7 @@ import android.view.inputmethod.EditorInfo;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.ViewModelProvider;
+import com.google.android.material.chip.ChipGroup;
 import com.presence.attendance.R;
 import com.presence.attendance.core.ui.AppErrorMessages;
 import com.presence.attendance.core.ui.SheetFragment;
@@ -16,8 +17,24 @@ import com.presence.attendance.roster.domain.RosterRepository.AddOutcome;
 /** Faculty: add one student to the roster. */
 public final class AddStudentSheet extends SheetFragment {
 
+    @Nullable private ChipGroup emojiGroup;
+
     public AddStudentSheet() {
         super(R.layout.sheet_add_student);
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (emojiGroup != null) {
+            EmojiPicker.save(emojiGroup, outState);
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        emojiGroup = null;
+        super.onDestroyView();
     }
 
     @Override
@@ -31,14 +48,19 @@ public final class AddStudentSheet extends SheetFragment {
                                         new AddStudentViewModel(c.auth(), c.roster(), c.online())))
                         .get(AddStudentViewModel.class);
 
+        emojiGroup = binding.addEmoji;
+        EmojiPicker.fill(binding.addEmoji, EmojiPicker.restore(savedInstanceState));
         final Runnable submit =
                 () ->
                         viewModel.submit(
                                 binding.addEmail.getText().toString(),
                                 binding.addRoll.getText().toString(),
-                                binding.addCohort.getText().toString());
+                                binding.addName.getText().toString(),
+                                binding.addCohort.getText().toString(),
+                                binding.addBatch.getText().toString(),
+                                EmojiPicker.selected(binding.addEmoji));
         binding.addSubmit.setOnClickListener(v -> submit.run());
-        binding.addCohort.setOnEditorActionListener((v, actionId, event) -> {
+        binding.addBatch.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE) {
                 submit.run();
             }
@@ -61,11 +83,13 @@ public final class AddStudentSheet extends SheetFragment {
         final boolean rollTaken = state.conflict == AddOutcome.ROLL_TAKEN;
         binding.addEmailError.setText(
                 emailExists ? R.string.add_email_exists : R.string.add_email_invalid);
-        binding.addEmailError.setVisibility(visibleIf(state.emailInvalid || emailExists));
+        binding.addEmailError.setVisibility(visibleIf(state.invalid.email || emailExists));
         binding.addRollError.setText(
                 rollTaken ? R.string.add_roll_taken : R.string.add_roll_invalid);
-        binding.addRollError.setVisibility(visibleIf(state.rollNoInvalid || rollTaken));
-        binding.addCohortError.setVisibility(visibleIf(state.cohortInvalid));
+        binding.addRollError.setVisibility(visibleIf(state.invalid.rollNo || rollTaken));
+        binding.addNameError.setVisibility(visibleIf(state.invalid.name));
+        binding.addCohortError.setVisibility(visibleIf(state.invalid.cohort));
+        binding.addBatchError.setVisibility(visibleIf(state.invalid.batch));
 
         if (!state.online) {
             binding.addStatus.setText(R.string.roster_offline);

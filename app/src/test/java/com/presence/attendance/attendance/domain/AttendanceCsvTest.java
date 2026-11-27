@@ -19,6 +19,7 @@ public final class AttendanceCsvTest {
                                         "262010016",
                                         "Meera Joshi",
                                         "m@mc.vjti.ac.in",
+                                        2,
                                         3,
                                         4,
                                         75,
@@ -27,8 +28,8 @@ public final class AttendanceCsvTest {
         assertTrue(csv.startsWith(AttendanceCsv.BOM + "Roll number,Name,Email,"));
         final String[] lines = csv.split("\r\n", -1);
         assertEquals("header, one row, and the empty end after the last CRLF", 3, lines.length);
-        assertEquals("262010016,Meera Joshi,m@mc.vjti.ac.in,3,4,75,0,No", lines[1]);
-        assertEquals(8, lines[0].split(",").length);
+        assertEquals("262010016,Meera Joshi,m@mc.vjti.ac.in,2,3,4,75,0,No", lines[1]);
+        assertEquals(9, lines[0].split(",").length);
     }
 
     @Test
@@ -62,9 +63,10 @@ public final class AttendanceCsvTest {
         final String csv =
                 AttendanceCsv.build(
                         Arrays.asList(
-                                new Row("1", "A", "a@x", 1, 4, 25, 0, true),
-                                new Row("2", "B", "b@x", 4, 4, 100, 0, false)));
-        assertTrue(csv.contains("1,A,a@x,1,4,25,0,Yes\r\n"));
-        assertTrue(csv.contains("2,B,b@x,4,4,100,0,No\r\n"));
+                                new Row("1", "A", "a@x", null, 1, 4, 25, 0, true),
+                                new Row("2", "B", "b@x", 3, 4, 4, 100, 0, false)));
+        // No batch is an empty cell, not a zero.
+        assertTrue(csv.contains("1,A,a@x,,1,4,25,0,Yes\r\n"));
+        assertTrue(csv.contains("2,B,b@x,3,4,4,100,0,No\r\n"));
     }
 }

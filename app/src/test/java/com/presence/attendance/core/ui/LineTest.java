@@ -1,6 +1,8 @@
 package com.presence.attendance.core.ui;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
@@ -36,5 +38,17 @@ public final class LineTest {
                 Line.grouped(Arrays.asList(Line.row("a", "A", null), Line.row("b", "B", null)));
         assertEquals(Line.Place.FIRST, grouped.get(0).place);
         assertEquals(Line.Place.LAST, grouped.get(1).place);
+    }
+
+    @Test
+    public void anAvatarSurvivesGroupingAndTheChevronAndCountsAsContent() {
+        final Line row = Line.row("a", "Aditi Pawar", null).withAvatar("x").navigates();
+        final Line grouped = Line.grouped(Arrays.asList(row)).get(0);
+        assertEquals("x", grouped.avatar);
+        assertTrue(grouped.chevron);
+        assertNotEquals(
+                "a changed emoji redraws the row",
+                Line.row("a", "Aditi Pawar", null).withAvatar("x"),
+                Line.row("a", "Aditi Pawar", null).withAvatar("y"));
     }
 }

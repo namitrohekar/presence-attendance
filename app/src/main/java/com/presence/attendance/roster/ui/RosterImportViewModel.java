@@ -13,19 +13,24 @@ import com.presence.attendance.roster.domain.RosterCsv;
 import com.presence.attendance.roster.domain.RosterEntry;
 import com.presence.attendance.roster.domain.RosterRepository;
 import com.presence.attendance.roster.domain.RosterRepository.AddOutcome;
+import com.presence.attendance.roster.domain.RosterRepository.CorrectOutcome;
+import com.presence.attendance.roster.domain.StudentDetails;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * CSV import state machine: IDLE -> PREVIEW -> IMPORTING -> DONE.
  *
  * <p>The whole file is validated before anything is written. Each accepted row is then written in
  * its own transaction, one after another: the transaction re-checks for conflicts, so nothing is
- * overwritten, and one row per write keeps far inside Firestore's batch and rule lookup limits. If
- * the import is interrupted, importing the same file again skips the rows that are already there.
+ * overwritten, and one row per write keeps far inside Firestore's batch and rule lookup limits. A
+ * new student is added; a student already on the roster with a different name, batch or emoji gets
+ * those updated and stays registered. If the import is interrupted, importing the same file again
+ * skips the rows that are already there.
  */
 public final class RosterImportViewModel extends ViewModel {
 
@@ -36,9 +41,11 @@ public final class RosterImportViewModel extends ViewModel {
         DONE
     }
 
-    /** What happened to one READY row when it was written. */
+    /** What happened to one written row. */
     public enum Result {
         IMPORTED,
+        /** An existing student's name, batch or emoji was changed. */
+        UPDATED,
         EMAIL_EXISTS,
         ROLL_TAKEN,
         FAILED
@@ -52,10 +59,11 @@ public final class RosterImportViewModel extends ViewModel {
         @NonNull public final Map<Integer, Result> results;
         public final int total;
 
-        /** Set when the chosen file could not be used at all. */
+        /** Set when the chosen file could not be read. */
         @Nullable public final AppError fileError;
 
-        public final boolean invalidFile;
+        /** Set when the file was read but cannot be used: no header, no rows, or too many. */
+        @Nullable public final RosterCsv.FileProblem fileProblem;
 
         /** One-shot: the roster screen should open the preview. */
         public final boolean openPreview;
@@ -67,7 +75,7 @@ public final class RosterImportViewModel extends ViewModel {
                 @NonNull Map<Integer, Result> results,
                 int total,
                 @Nullable AppError fileError,
-                boolean invalidFile,
+                @Nullable RosterCsv.FileProblem fileProblem,
                 boolean openPreview) {
             this.phase = phase;
             this.online = online;
@@ -75,11 +83,11 @@ public final class RosterImportViewModel extends ViewModel {
             this.results = Collections.unmodifiableMap(results);
             this.total = total;
             this.fileError = fileError;
-            this.invalidFile = invalidFile;
+            this.fileProblem = fileProblem;
             this.openPreview = openPreview;
         }
 
-        /** Rows that will be, or were, written. */
+        /** Rows with this check. */
         public int count(@NonNull RosterCsv.Check check) {
             int count = 0;
             for (RosterCsv.Row row : rows) {
@@ -103,7 +111,7 @@ public final class RosterImportViewModel extends ViewModel {
 
     private final AuthRepository auth;
     private final RosterRepository roster;
-    private final MediatorLiveData<State> state = new MediatorLiveData<>(idle(false, null, false));
+    private final MediatorLiveData<State> state = new MediatorLiveData<>(idle(false, null, null));
 
     public RosterImportViewModel(
             @NonNull AuthRepository auth,
@@ -123,7 +131,7 @@ public final class RosterImportViewModel extends ViewModel {
                                     s.results,
                                     s.total,
                                     s.fileError,
-                                    s.invalidFile,
+                                    s.fileProblem,
                                     s.openPreview));
                 });
     }
@@ -144,31 +152,31 @@ public final class RosterImportViewModel extends ViewModel {
         }
         final boolean online = current().online;
         if (text == null) {
-            state.setValue(idle(online, AppError.FILE_UNREADABLE, false));
+            state.setValue(idle(online, AppError.FILE_UNREADABLE, null));
             return;
         }
         final List<RosterCsv.Row> rows;
         try {
             rows = RosterCsv.checkAgainst(RosterCsv.parse(text), currentRoster);
-        } catch (IllegalArgumentException emptyOrTooLarge) {
-            state.setValue(idle(online, null, true));
+        } catch (RosterCsv.FileException unusable) {
+            state.setValue(idle(online, null, unusable.problem));
             return;
         }
-        final int ready =
-                new State(Phase.PREVIEW, online, rows, new HashMap<>(), 0, null, false, false)
-                        .count(RosterCsv.Check.READY);
+        int writes = 0;
+        for (RosterCsv.Row row : rows) {
+            writes += row.writes() ? 1 : 0;
+        }
         state.setValue(
-                new State(Phase.PREVIEW, online, rows, new HashMap<>(), ready, null, false, true));
+                new State(Phase.PREVIEW, online, rows, new HashMap<>(), writes, null, null, true));
     }
 
     /** The roster screen has navigated to the preview. */
     public void onPreviewOpened() {
         final State s = current();
-        state.setValue(
-                new State(s.phase, s.online, s.rows, s.results, s.total, null, false, false));
+        state.setValue(new State(s.phase, s.online, s.rows, s.results, s.total, null, null, false));
     }
 
-    /** Writes every READY row, one transaction at a time. */
+    /** Writes every new student and every changed set of details, one transaction at a time. */
     public void startImport() {
         final State s = current();
         if (s.phase != Phase.PREVIEW || s.total == 0 || !s.online) {
@@ -176,7 +184,7 @@ public final class RosterImportViewModel extends ViewModel {
         }
         final List<RosterCsv.Row> ready = new ArrayList<>();
         for (RosterCsv.Row row : s.rows) {
-            if (row.check == RosterCsv.Check.READY) {
+            if (row.writes()) {
                 ready.add(row);
             }
         }
@@ -201,21 +209,32 @@ public final class RosterImportViewModel extends ViewModel {
             return;
         }
         final RosterCsv.Row row = ready.get(index);
-        roster.addStudent(
-                teacher,
-                row.email,
-                row.rollNo,
-                row.cohort,
-                outcome -> {
+        final StudentDetails details = row.details;
+        if (details == null) {
+            throw new IllegalStateException("A row that writes has its details");
+        }
+        final Consumer<Result> next =
+                result -> {
                     final Map<Integer, Result> results = new HashMap<>(current().results);
-                    results.put(row.line, result(outcome));
+                    results.put(row.line, result);
                     set(Phase.IMPORTING, results);
                     importNext(teacher, ready, index + 1);
-                });
+                };
+        if (row.check == RosterCsv.Check.DETAILS_CHANGED) {
+            roster.updateDetails(row.email, details, outcome -> next.accept(updated(outcome)));
+        } else {
+            roster.addStudent(
+                    teacher,
+                    row.email,
+                    row.rollNo,
+                    row.cohort,
+                    details,
+                    outcome -> next.accept(added(outcome)));
+        }
     }
 
     @NonNull
-    private static Result result(@NonNull Outcome<AddOutcome> outcome) {
+    private static Result added(@NonNull Outcome<AddOutcome> outcome) {
         if (!outcome.isSuccess()) {
             return Result.FAILED;
         }
@@ -226,20 +245,31 @@ public final class RosterImportViewModel extends ViewModel {
         };
     }
 
+    /** A student removed meanwhile cannot be updated; that row is reported as not imported. */
+    @NonNull
+    private static Result updated(@NonNull Outcome<CorrectOutcome> outcome) {
+        return outcome.isSuccess() && outcome.getValue() == CorrectOutcome.DONE
+                ? Result.UPDATED
+                : Result.FAILED;
+    }
+
     /** Leaves the import screen: forgets the file. */
     public void reset() {
         if (current().phase != Phase.IMPORTING) {
-            state.setValue(idle(current().online, null, false));
+            state.setValue(idle(current().online, null, null));
         }
     }
 
     private void set(@NonNull Phase phase, @NonNull Map<Integer, Result> results) {
         final State s = current();
-        state.setValue(new State(phase, s.online, s.rows, results, s.total, null, false, false));
+        state.setValue(new State(phase, s.online, s.rows, results, s.total, null, null, false));
     }
 
     @NonNull
-    private static State idle(boolean online, @Nullable AppError fileError, boolean invalidFile) {
+    private static State idle(
+            boolean online,
+            @Nullable AppError fileError,
+            @Nullable RosterCsv.FileProblem fileProblem) {
         return new State(
                 Phase.IDLE,
                 online,
@@ -247,7 +277,7 @@ public final class RosterImportViewModel extends ViewModel {
                 new HashMap<>(),
                 0,
                 fileError,
-                invalidFile,
+                fileProblem,
                 false);
     }
 

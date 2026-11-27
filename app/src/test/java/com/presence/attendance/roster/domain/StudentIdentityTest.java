@@ -75,4 +75,28 @@ public final class StudentIdentityTest {
         assertFalse(StudentIdentity.isCohort("MC 26"));
         assertEquals("MC26", StudentIdentity.normaliseCohort(" mc26 "));
     }
+
+    @Test
+    public void aNameIsTrimmedWithSpacesCollapsed() {
+        assertEquals("Aditi Pawar", StudentIdentity.normaliseName("  Aditi \t\n  Pawar "));
+        assertTrue(StudentIdentity.isName("Aditi Pawar"));
+        assertTrue(StudentIdentity.isName("\u0906\u0926\u093f\u0924\u0940"));
+        assertTrue(StudentIdentity.isName("a".repeat(80)));
+        assertFalse(StudentIdentity.isName("a".repeat(81)));
+        assertFalse(StudentIdentity.isName(""));
+        assertFalse("not normalised", StudentIdentity.isName(" Aditi"));
+    }
+
+    @Test
+    public void aBatchIsANumberFromOneToTwentyOrNothing() {
+        assertEquals(StudentIdentity.NO_BATCH, StudentIdentity.parseBatch("  "));
+        assertEquals(1, StudentIdentity.parseBatch("1"));
+        assertEquals(20, StudentIdentity.parseBatch(" 20 "));
+        assertEquals(4, StudentIdentity.parseBatch("04"));
+        assertEquals(StudentIdentity.INVALID_BATCH, StudentIdentity.parseBatch("0"));
+        assertEquals(StudentIdentity.INVALID_BATCH, StudentIdentity.parseBatch("21"));
+        assertEquals(StudentIdentity.INVALID_BATCH, StudentIdentity.parseBatch("B2"));
+        assertEquals(StudentIdentity.INVALID_BATCH, StudentIdentity.parseBatch("-1"));
+        assertEquals(StudentIdentity.INVALID_BATCH, StudentIdentity.parseBatch("100"));
+    }
 }
