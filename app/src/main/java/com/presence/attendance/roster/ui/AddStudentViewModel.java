@@ -11,10 +11,9 @@ import com.presence.attendance.core.Outcome;
 import com.presence.attendance.roster.domain.RosterRepository;
 import com.presence.attendance.roster.domain.RosterRepository.AddOutcome;
 import com.presence.attendance.roster.domain.StudentDetails;
-import com.presence.attendance.roster.domain.StudentEmoji;
 import com.presence.attendance.roster.domain.StudentIdentity;
 
-/** Add-student sheet: strict validation, a connection, then one atomic write. */
+/** Add-student sheet for one batch: strict validation, a connection, then one atomic write. */
 public final class AddStudentViewModel extends ViewModel {
 
     /** What is wrong with each field; all false when the form is valid. Immutable. */
@@ -22,22 +21,20 @@ public final class AddStudentViewModel extends ViewModel {
         public final boolean email;
         public final boolean rollNo;
         public final boolean name;
-        public final boolean cohort;
-        public final boolean batch;
+        public final boolean labGroup;
 
-        Invalid(boolean email, boolean rollNo, boolean name, boolean cohort, boolean batch) {
+        Invalid(boolean email, boolean rollNo, boolean name, boolean labGroup) {
             this.email = email;
             this.rollNo = rollNo;
             this.name = name;
-            this.cohort = cohort;
-            this.batch = batch;
+            this.labGroup = labGroup;
         }
 
         boolean any() {
-            return email || rollNo || name || cohort || batch;
+            return email || rollNo || name || labGroup;
         }
 
-        static final Invalid NONE = new Invalid(false, false, false, false, false);
+        static final Invalid NONE = new Invalid(false, false, false, false);
     }
 
     /** Immutable sheet state. {@code conflict} is EMAIL_EXISTS or ROLL_TAKEN, never ADDED. */
@@ -67,15 +64,21 @@ public final class AddStudentViewModel extends ViewModel {
 
     private final AuthRepository auth;
     private final RosterRepository roster;
+    private final String batchId;
+    private final int labGroups;
     private final MediatorLiveData<State> state =
             new MediatorLiveData<>(new State(false, Invalid.NONE, false, null, null, false));
 
     public AddStudentViewModel(
             @NonNull AuthRepository auth,
             @NonNull RosterRepository roster,
-            @NonNull LiveData<Boolean> online) {
+            @NonNull LiveData<Boolean> online,
+            @NonNull String batchId,
+            int labGroups) {
         this.auth = auth;
         this.roster = roster;
+        this.batchId = batchId;
+        this.labGroups = labGroups;
         state.addSource(
                 online,
                 isOnline -> {
@@ -97,16 +100,13 @@ public final class AddStudentViewModel extends ViewModel {
     }
 
     /**
-     * @param typedBatch the batch as typed; blank for none
-     * @param emoji the emoji picked, or null to use the one for the roll number
+     * @param typedLabGroup the lab group as typed; blank for none yet
      */
     public void submit(
             @NonNull String typedEmail,
             @NonNull String typedRollNo,
             @NonNull String typedName,
-            @NonNull String typedCohort,
-            @NonNull String typedBatch,
-            @Nullable StudentEmoji emoji) {
+            @NonNull String typedLabGroup) {
         final State s = current();
         if (s.busy || s.added) {
             return;
@@ -114,15 +114,13 @@ public final class AddStudentViewModel extends ViewModel {
         final String email = StudentIdentity.normaliseEmail(typedEmail);
         final String rollNo = typedRollNo.trim();
         final String name = StudentIdentity.normaliseName(typedName);
-        final String cohort = StudentIdentity.normaliseCohort(typedCohort);
-        final int batch = StudentIdentity.parseBatch(typedBatch);
+        final int labGroup = StudentIdentity.parseLabGroup(typedLabGroup, labGroups);
         final Invalid invalid =
                 new Invalid(
                         !StudentIdentity.isStudentEmail(email),
                         !StudentIdentity.isRollNo(rollNo),
                         !StudentIdentity.isName(name),
-                        !StudentIdentity.isCohort(cohort),
-                        batch == StudentIdentity.INVALID_BATCH);
+                        labGroup == StudentIdentity.INVALID_GROUP);
         if (invalid.any()) {
             state.setValue(new State(s.online, invalid, false, null, null, false));
             return;
@@ -132,14 +130,12 @@ public final class AddStudentViewModel extends ViewModel {
             return;
         }
         final StudentDetails details =
-                new StudentDetails(
-                        name,
-                        batch == StudentIdentity.NO_BATCH ? null : batch,
-                        emoji != null ? emoji : StudentEmoji.forRollNo(rollNo));
+                new StudentDetails(name, labGroup == StudentIdentity.NO_GROUP ? null : labGroup);
         set(true, null, null, false);
         auth.loadUser(user -> {
             if (user.isSuccess()) {
-                roster.addStudent(user.getValue(), email, rollNo, cohort, details, this::onOutcome);
+                roster.addStudent(
+                        user.getValue(), email, rollNo, batchId, details, this::onOutcome);
             } else {
                 set(false, null, user.getError(), false);
             }

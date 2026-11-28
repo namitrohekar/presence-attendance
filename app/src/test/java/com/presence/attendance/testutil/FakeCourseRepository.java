@@ -78,4 +78,61 @@ public final class FakeCourseRepository implements CourseRepository {
         calls.add("loadMembers:" + teacherId + ":" + courseId);
         callback.onResult(membersOutcome);
     }
+
+    /** What a sync resolves to; it records the call either way. */
+    public Outcome<Integer> syncOutcome = Outcome.success(0);
+
+    /** The subjects as stored. saveSubject changes it, as the real one would. */
+    public final List<Course> subjects = new ArrayList<>();
+
+    public AppError subjectFailure;
+
+    @Override
+    public void syncSubjects(@NonNull User user, @NonNull Callback<Integer> callback) {
+        calls.add("syncSubjects:" + user.getUid());
+        callback.onResult(syncOutcome);
+    }
+
+    @Override
+    public void loadSubjects(
+            @NonNull String batchId, int semester, @NonNull Callback<List<Course>> callback) {
+        calls.add("loadSubjects:" + batchId + ":" + semester);
+        if (subjectFailure != null) {
+            callback.onResult(Outcome.failure(subjectFailure));
+            return;
+        }
+        final List<Course> found = new ArrayList<>();
+        for (Course subject : subjects) {
+            if (batchId.equals(subject.getBatchId()) && subject.getSemester() == semester) {
+                found.add(subject);
+            }
+        }
+        callback.onResult(Outcome.success(found));
+    }
+
+    @Override
+    public void saveSubject(
+            @NonNull User hod, @NonNull Course subject, @NonNull Callback<SaveOutcome> callback) {
+        calls.add("saveSubject:" + subject.getId() + ":" + subject.getTeacherEmail());
+        if (subjectFailure != null) {
+            callback.onResult(Outcome.failure(subjectFailure));
+            return;
+        }
+        for (int i = 0; i < subjects.size(); i++) {
+            final Course was = subjects.get(i);
+            if (was.getId().equals(subject.getId())) {
+                final boolean sameTeacher = was.getTeacherEmail().equals(subject.getTeacherEmail());
+                if (sameTeacher && was.getName().equals(subject.getName())) {
+                    callback.onResult(Outcome.success(SaveOutcome.UNCHANGED));
+                    return;
+                }
+                subjects.set(
+                        i, sameTeacher ? subject : subject.withTeacher(subject.getTeacherEmail()));
+                callback.onResult(Outcome.success(SaveOutcome.UPDATED));
+                return;
+            }
+        }
+        subjects.add(subject);
+        callback.onResult(Outcome.success(SaveOutcome.CREATED));
+    }
 }

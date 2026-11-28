@@ -4,8 +4,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 /**
- * One student on the faculty-managed roster: the authoritative link between an official address and
- * a roll number within a cohort. Immutable.
+ * One student on the roster the HOD keeps: the authoritative link between an official address and a
+ * roll number within a batch (the cohort is the batch's id), with the student's official name and
+ * lab group. Immutable.
  */
 public final class RosterEntry {
 
@@ -16,10 +17,9 @@ public final class RosterEntry {
     private final int revision;
     @Nullable private final String registeredUid;
     @Nullable private final String name;
-    @Nullable private final Integer batch;
-    @Nullable private final StudentEmoji emoji;
+    @Nullable private final Integer labGroup;
 
-    /** An entry added before names, batches and emojis were kept. */
+    /** An entry added before names were kept. */
     public RosterEntry(
             @NonNull String email,
             @NonNull String rollNo,
@@ -27,7 +27,7 @@ public final class RosterEntry {
             @NonNull String addedBy,
             int revision,
             @Nullable String registeredUid) {
-        this(email, rollNo, cohort, addedBy, revision, registeredUid, null, null, null);
+        this(email, rollNo, cohort, addedBy, revision, registeredUid, null, null);
     }
 
     public RosterEntry(
@@ -38,8 +38,7 @@ public final class RosterEntry {
             int revision,
             @Nullable String registeredUid,
             @Nullable String name,
-            @Nullable Integer batch,
-            @Nullable StudentEmoji emoji) {
+            @Nullable Integer labGroup) {
         this.email = email;
         this.rollNo = rollNo;
         this.cohort = cohort;
@@ -47,8 +46,7 @@ public final class RosterEntry {
         this.revision = revision;
         this.registeredUid = registeredUid;
         this.name = name;
-        this.batch = batch;
-        this.emoji = emoji;
+        this.labGroup = labGroup;
     }
 
     @NonNull
@@ -93,26 +91,35 @@ public final class RosterEntry {
         return name;
     }
 
+    /** The lab group, or null before the HOD has split the batch. */
     @Nullable
-    public Integer getBatch() {
-        return batch;
+    public Integer getLabGroup() {
+        return labGroup;
     }
 
-    /** The stored emoji, or null for an entry added before emojis were kept. */
-    @Nullable
-    public StudentEmoji getEmoji() {
-        return emoji;
-    }
-
-    /** The emoji to show: the stored one, or the roll number's. */
+    /** The name to show: the official one, or the address for an entry added before names. */
     @NonNull
-    public StudentEmoji shownEmoji() {
-        return StudentEmoji.orForRollNo(emoji, rollNo);
+    public String displayName() {
+        return name != null ? name : email;
     }
 
     /** The details as they are, or null if the entry has no name yet. */
     @Nullable
     public StudentDetails details() {
-        return name == null ? null : new StudentDetails(name, batch, shownEmoji());
+        return name == null ? null : new StudentDetails(name, labGroup);
+    }
+
+    /** This entry with other details, as it is after an update. */
+    @NonNull
+    public RosterEntry withDetails(@NonNull StudentDetails details) {
+        return new RosterEntry(
+                email,
+                rollNo,
+                cohort,
+                addedBy,
+                revision,
+                registeredUid,
+                details.getName(),
+                details.getLabGroup());
     }
 }

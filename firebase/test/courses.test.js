@@ -195,8 +195,12 @@ describe('INV-2 course and join code reads', () => {
     expect(snap.size).toBe(1);
   });
 
+  test('the HOD may list every course in the department', async () => {
+    await assertSucceeds(getDocs(collection(t.as(TEACHER), 'courses')));
+  });
+
   test('denied: listing courses without the owner constraint', async () => {
-    await assertFails(getDocs(collection(t.as(TEACHER), 'courses')));
+    await assertFails(getDocs(collection(t.as(OTHER_TEACHER), 'courses')));
     const db = t.as(STUDENT);
     const theirs = query(collection(db, 'courses'), where('teacherId', '==', TEACHER.uid));
     await assertFails(getDocs(theirs));

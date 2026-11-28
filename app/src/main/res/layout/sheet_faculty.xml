@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- HOD: add someone to the faculty list, or correct or remove them. The address is the entry's id, so it is set only when adding. -->
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/faculty_scroll"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clipToPadding="false">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/screen_margin"
+        android:paddingBottom="@dimen/space_24">
+
+        <include layout="@layout/view_sheet_handle" />
+
+        <TextView
+            android:id="@+id/faculty_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_16"
+            android:accessibilityHeading="true"
+            android:text="@string/faculty_add"
+            android:textAppearance="@style/TextAppearance.Presence.Title" />
+
+        <TextView
+            android:id="@+id/faculty_note"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_4"
+            android:text="@string/faculty_add_note"
+            android:textAppearance="@style/TextAppearance.Presence.Subhead"
+            android:textColor="@color/text_secondary" />
+
+        <TextView
+            style="@style/Widget.Presence.FieldLabel"
+            android:labelFor="@id/faculty_name"
+            android:text="@string/faculty_name_label" />
+
+        <EditText
+            android:id="@+id/faculty_name"
+            style="@style/Widget.Presence.TextField"
+            android:autofillHints=""
+            android:importantForAutofill="no"
+            android:imeOptions="actionNext"
+            android:inputType="textPersonName|textCapWords"
+            android:maxLength="@integer/name_max" />
+
+        <TextView
+            android:id="@+id/faculty_name_error"
+            style="@style/Widget.Presence.InlineError"
+            android:text="@string/add_name_invalid" />
+
+        <TextView
+            style="@style/Widget.Presence.FieldLabel"
+            android:labelFor="@id/faculty_initials"
+            android:text="@string/faculty_initials_label" />
+
+        <EditText
+            android:id="@+id/faculty_initials"
+            style="@style/Widget.Presence.TextField"
+            android:autofillHints=""
+            android:importantForAutofill="no"
+            android:imeOptions="actionNext"
+            android:inputType="textCapCharacters|textNoSuggestions"
+            android:maxLength="@integer/initials_max" />
+
+        <TextView
+            android:id="@+id/faculty_initials_error"
+            style="@style/Widget.Presence.InlineError"
+            android:text="@string/faculty_initials_invalid" />
+
+        <LinearLayout
+            android:id="@+id/faculty_email_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.Presence.FieldLabel"
+                android:labelFor="@id/faculty_email"
+                android:text="@string/faculty_email_label" />
+
+            <EditText
+                android:id="@+id/faculty_email"
+                style="@style/Widget.Presence.TextField"
+                android:autofillHints=""
+                android:importantForAutofill="no"
+                android:imeOptions="actionDone"
+                android:inputType="textEmailAddress"
+                android:maxLength="@integer/email_max" />
+
+            <TextView
+                android:id="@+id/faculty_email_error"
+                style="@style/Widget.Presence.InlineError"
+                android:text="@string/faculty_email_invalid" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/faculty_status"
+            style="@style/Widget.Presence.InlineError"
+            android:layout_marginTop="@dimen/space_20" />
+
+        <com.presence.attendance.core.ui.SpringButton
+            android:id="@+id/faculty_save"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_24"
+            android:text="@string/faculty_add" />
+
+        <com.presence.attendance.core.ui.SpringButton
+            android:id="@+id/faculty_remove"
+            style="@style/Widget.Presence.Button.Text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_4"
+            android:text="@string/faculty_remove"
+            android:visibility="gone" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

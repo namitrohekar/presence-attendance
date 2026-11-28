@@ -18,7 +18,7 @@ public final class AttendanceCsv {
         @NonNull final String rollNo;
         @NonNull final String name;
         @NonNull final String email;
-        @Nullable final Integer batch;
+        @Nullable final Integer labGroup;
         final int attended;
         final int held;
         final int percent;
@@ -29,7 +29,7 @@ public final class AttendanceCsv {
                 @NonNull String rollNo,
                 @NonNull String name,
                 @NonNull String email,
-                @Nullable Integer batch,
+                @Nullable Integer labGroup,
                 int attended,
                 int held,
                 int percent,
@@ -38,7 +38,7 @@ public final class AttendanceCsv {
             this.rollNo = rollNo;
             this.name = name;
             this.email = email;
-            this.batch = batch;
+            this.labGroup = labGroup;
             this.attended = attended;
             this.held = held;
             this.percent = percent;
@@ -52,7 +52,7 @@ public final class AttendanceCsv {
 
     private static final String NEW_LINE = "\r\n";
     private static final String HEADER =
-            "Roll number,Name,Email,Batch,Sessions attended,Sessions held,Percent,Proxy strikes,"
+            "Roll number,Name,Email,Lab group,Sessions attended,Sessions held,Percent,Proxy strikes,"
                     + "Below requirement";
 
     private AttendanceCsv() {}
@@ -67,7 +67,7 @@ public final class AttendanceCsv {
                     .append(',')
                     .append(text(row.email))
                     .append(',')
-                    .append(row.batch != null ? String.valueOf(row.batch) : "")
+                    .append(row.labGroup != null ? String.valueOf(row.labGroup) : "")
                     .append(',')
                     .append(row.attended)
                     .append(',')

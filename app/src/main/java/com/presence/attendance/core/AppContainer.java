@@ -25,6 +25,10 @@ import com.presence.attendance.core.location.LocationSource;
 import com.presence.attendance.core.net.Connectivity;
 import com.presence.attendance.course.data.FirestoreCourseRepository;
 import com.presence.attendance.course.domain.CourseRepository;
+import com.presence.attendance.department.data.FirestoreBatchRepository;
+import com.presence.attendance.department.data.FirestoreFacultyRepository;
+import com.presence.attendance.department.domain.BatchRepository;
+import com.presence.attendance.department.domain.FacultyRepository;
 import com.presence.attendance.roster.data.FirestoreAlertRepository;
 import com.presence.attendance.roster.data.FirestoreRosterRepository;
 import com.presence.attendance.roster.domain.AlertRepository;
@@ -54,6 +58,8 @@ public final class AppContainer {
     @Nullable private CourseRepository courses;
     @Nullable private RosterRepository roster;
     @Nullable private AlertRepository alerts;
+    @Nullable private BatchRepository batches;
+    @Nullable private FacultyRepository faculty;
     @Nullable private SessionRepository sessions;
     @Nullable private AttendanceRepository attendance;
     @Nullable private LocationSource location;
@@ -100,6 +106,24 @@ public final class AppContainer {
             roster = new FirestoreRosterRepository(FirebaseFirestore.getInstance());
         }
         return roster;
+    }
+
+    @MainThread
+    @NonNull
+    public BatchRepository batches() {
+        if (batches == null) {
+            batches = new FirestoreBatchRepository(FirebaseFirestore.getInstance());
+        }
+        return batches;
+    }
+
+    @MainThread
+    @NonNull
+    public FacultyRepository faculty() {
+        if (faculty == null) {
+            faculty = new FirestoreFacultyRepository(FirebaseFirestore.getInstance());
+        }
+        return faculty;
     }
 
     @MainThread

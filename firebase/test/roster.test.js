@@ -1,6 +1,6 @@
 // Student roster: studentRegistry/{email} is the authoritative email -> roll
 // number map and rollIndex/{cohort}_{rollNo} keeps a roll number unique in its
-// cohort. Only allowlisted faculty write them, always as a pair, and any
+// cohort. Only the HOD writes them, always as a pair, and any
 // change to an existing entry needs an immutable audit record in the same
 // write. Students can read their own entry and nothing else.
 
@@ -19,7 +19,7 @@ const {
 const h = require('./helpers');
 const flows = require('./flows');
 
-const { TEACHER, OTHER_TEACHER, STUDENT, OTHER_STUDENT, LISTED, UNLISTED, DROP, DAY } = h;
+const { TEACHER, OTHER_TEACHER, DEPUTY, STUDENT, OTHER_STUDENT, LISTED, UNLISTED, DROP, DAY } = h;
 const { assertFails, assertSucceeds } = h;
 const t = h.setup();
 
@@ -39,7 +39,6 @@ const newEntry = (overrides = {}) => ({
   rollNo: NEW.rollNo,
   cohort: NEW.cohort,
   name: NEW.name,
-  emoji: 'LION',
   addedBy: TEACHER.uid,
   addedAt: serverTimestamp(),
   revision: 0,
@@ -66,8 +65,17 @@ describe('roster: adding a student', () => {
     expect((await getDoc(entryRef(db, NEW))).data().revision).toBe(0);
   });
 
-  test('any allowlisted teacher can add to the shared roster', async () => {
-    await assertSucceeds(addPair(t.as(OTHER_TEACHER), newEntry({ addedBy: OTHER_TEACHER.uid })));
+  test('a second HOD can add to the roster', async () => {
+    await assertSucceeds(addPair(t.as(DEPUTY), newEntry({ addedBy: DEPUTY.uid })));
+  });
+
+  test('denied: a teacher who is not the HOD adds a student', async () => {
+    await assertFails(addPair(t.as(OTHER_TEACHER), newEntry({ addedBy: OTHER_TEACHER.uid })));
+  });
+
+  test('denied: a student for a batch that does not exist', async () => {
+    const entry = newEntry({ cohort: 'MC24' });
+    await assertFails(addPair(t.as(TEACHER), entry));
   });
 
   test('the same roll number is allowed in a different cohort', async () => {
@@ -118,20 +126,17 @@ describe('roster: adding a student', () => {
     ['a missing field', { cohort: DROP }],
     ['a claim already filled in', { registeredUid: NEW.uid, registeredAt: serverTimestamp() }],
     ['no name', { name: DROP }],
-    ['no emoji', { emoji: DROP }],
     ['an empty name', { name: '' }],
     ['a name of spaces only', { name: '   ' }],
     ['a name with a leading space', { name: ' Aditi Pawar' }],
     ['a name with a trailing space', { name: 'Aditi Pawar ' }],
     ['a name of 81 characters', { name: 'a'.repeat(81) }],
     ['a name stored as a number', { name: 42 }],
-    ['batch 0', { batch: 0 }],
-    ['batch 21', { batch: 21 }],
-    ['a batch stored as text', { batch: '2' }],
-    ['a fractional batch', { batch: 1.5 }],
-    ['an emoji outside the ten', { emoji: 'CAT' }],
-    ['a lower-case emoji name', { emoji: 'lion' }],
-    ['the emoji character instead of its name', { emoji: '\u{1F981}' }],
+    ['lab group 0', { labGroup: 0 }],
+    ['lab group 5 in a batch of four groups', { labGroup: 5 }],
+    ['a lab group stored as text', { labGroup: '2' }],
+    ['a fractional lab group', { labGroup: 1.5 }],
+    ['a field from an earlier design', { emoji: 'LION' }],
   ])('denied: %s', async (_, change) => {
     const entry = h.patch(newEntry(), change);
     const index = { email: typeof entry.email === 'string' ? entry.email : NEW.email };
@@ -158,7 +163,7 @@ describe('roster: adding a student', () => {
     const other = { ...NEW, uid: 'studentM', email: 'bkale_mc26@mc.vjti.ac.in' };
     const results = await Promise.allSettled([
       flows.addStudent(t.as(TEACHER), TEACHER, NEW),
-      flows.addStudent(t.as(OTHER_TEACHER), OTHER_TEACHER, other),
+      flows.addStudent(t.as(DEPUTY), DEPUTY, other),
     ]);
     const outcomes = results.map((r) => r.value).sort();
     expect(outcomes).toEqual(['ADDED', 'ROLL_TAKEN']);
@@ -255,6 +260,16 @@ describe('roster: audited corrections', () => {
     expect(record.afterRollNo).toBeUndefined();
   });
 
+  test('denied: a teacher who is not the HOD corrects, releases or removes a student', async () => {
+    const db = t.as(OTHER_TEACHER);
+    const update = flows.correct(db, OTHER_TEACHER, LISTED.email, 'UPDATE', REASON, {
+      rollNo: NEW_ROLL,
+    });
+    await assertFails(update);
+    await assertFails(flows.correct(db, OTHER_TEACHER, STUDENT.email, 'RELEASE', REASON));
+    await assertFails(flows.correct(db, OTHER_TEACHER, STUDENT.email, 'REMOVE', REASON));
+  });
+
   test('a second correction of the same entry gets its own record', async () => {
     const db = t.as(TEACHER);
     await assertSucceeds(flows.correct(db, TEACHER, LISTED.email, 'UPDATE', REASON, { rollNo: NEW_ROLL }));
@@ -319,6 +334,12 @@ describe('roster: audited corrections', () => {
     await assertSucceeds(rawUpdate(t.as(TEACHER)));
   });
 
+  test('the unchecked UPDATE may move the student to another batch that exists', async () => {
+    await assertSucceeds(
+      rawUpdate(t.as(TEACHER), { entry: { cohort: 'MC25' }, record: { afterCohort: 'MC25' } }),
+    );
+  });
+
   test.each([
     ['there is no audit record', { skipRecord: true }],
     ['the audit record has an arbitrary id', { recordId: 'whatever' }],
@@ -342,8 +363,12 @@ describe('roster: audited corrections', () => {
     ['the entry changes when it was added', { entry: { addedAt: h.ago(DAY) } }],
     ['the new roll number is malformed', { entry: { rollNo: '12345' }, record: { afterRollNo: '12345' } }],
     ['the entry is given a claim', { entry: { registeredUid: 'someone', registeredAt: h.ago(DAY) } }],
-    ['the entry is given batch 0', { entry: { batch: 0 } }],
-    ['the entry is given an emoji outside the ten', { entry: { emoji: 'CAT' } }],
+    ['the entry is given lab group 0', { entry: { labGroup: 0 } }],
+    ['the entry is given lab group 5 in a batch of four', { entry: { labGroup: 5 } }],
+    [
+      'the entry moves to a batch that does not exist',
+      { entry: { cohort: 'MC24' }, record: { afterCohort: 'MC24' } },
+    ],
     ['the entry is given an empty name', { entry: { name: '' } }],
     ['the entry is given an unknown field', { entry: { nickname: 'KD' } }],
   ])('denied: an UPDATE where %s', async (_, options) => {
@@ -542,41 +567,37 @@ describe('roster: who can read it', () => {
   });
 });
 
-describe('roster: name, batch and emoji on a new entry', () => {
-  test('a name of 80 characters, any script, batch 1 or 20', async () => {
+describe('roster: name and lab group on a new entry', () => {
+  test('a name of 80 characters in any script, lab group 1 or the last', async () => {
     const db = t.as(TEACHER);
-    await assertSucceeds(addPair(db, newEntry({ name: 'a'.repeat(80), batch: 1 })));
+    await assertSucceeds(addPair(db, newEntry({ name: 'a'.repeat(80), labGroup: 1 })));
     const other = { email: 'bkale_mc26@mc.vjti.ac.in', rollNo: '262011006' };
     await assertSucceeds(
-      addPair(db, newEntry({ ...other, name: '\u0906\u0926\u093f\u0924\u0940', batch: 20 }), {
+      addPair(db, newEntry({ ...other, name: '\u0906\u0926\u093f\u0924\u0940', labGroup: 4 }), {
         email: other.email,
       }),
     );
   });
 
-  test.each(['LION', 'TIGER', 'ELEPHANT', 'PANDA', 'FOX', 'OWL', 'DOLPHIN', 'TURTLE', 'BUTTERFLY', 'PEACOCK'])(
-    'the emoji %s is accepted',
-    async (emoji) => {
-      await assertSucceeds(addPair(t.as(TEACHER), newEntry({ emoji })));
-    },
-  );
+  test('a batch with more lab groups allows more', async () => {
+    await t.seed({ 'batches/MC26': h.batchDoc({ labGroups: 6 }) });
+    await assertSucceeds(addPair(t.as(TEACHER), newEntry({ labGroup: 6 })));
+  });
 
   test('the add flow writes the details it is given', async () => {
     const db = t.as(TEACHER);
-    const who = { ...NEW, emoji: 'FOX', batch: 3 };
+    const who = { ...NEW, labGroup: 3 };
     expect(await assertSucceeds(flows.addStudent(db, TEACHER, who))).toBe('ADDED');
-    expect((await getDoc(entryRef(db, NEW))).data()).toMatchObject({
-      name: NEW.name,
-      emoji: 'FOX',
-      batch: 3,
-    });
+    expect((await getDoc(entryRef(db, NEW))).data()).toMatchObject({ name: NEW.name, labGroup: 3 });
   });
 });
 
-describe('roster: editing name, batch and emoji', () => {
-  const CHANGE = { name: 'Meera S. Joshi', emoji: 'PEACOCK', batch: 2 };
+describe('roster: editing the name and lab group', () => {
+  const CHANGE = { name: 'Meera S. Joshi', labGroup: 2 };
+  const legacy = () =>
+    t.seed({ [`studentRegistry/${LISTED.email}`]: h.patch(h.registryDoc(LISTED), { name: DROP }) });
 
-  test('faculty edit the details of a registered student, who stays registered', async () => {
+  test('the HOD edits a registered student, who stays registered', async () => {
     const db = t.as(TEACHER);
     expect(await assertSucceeds(flows.updateDetails(db, STUDENT.email, CHANGE))).toBe('DONE');
     const after = (await getDoc(entryRef(db, STUDENT))).data();
@@ -585,28 +606,28 @@ describe('roster: editing name, batch and emoji', () => {
     expect((await getDocs(collection(db, 'registryCorrections'))).size).toBe(0);
   });
 
-  test('a batch can be cleared again', async () => {
+  test('a lab group can be cleared again', async () => {
     const db = t.as(TEACHER);
     await assertSucceeds(flows.updateDetails(db, STUDENT.email, CHANGE));
-    await assertSucceeds(flows.updateDetails(db, STUDENT.email, { ...CHANGE, batch: null }));
-    expect((await getDoc(entryRef(db, STUDENT))).data().batch).toBeUndefined();
+    await assertSucceeds(flows.updateDetails(db, STUDENT.email, { ...CHANGE, labGroup: null }));
+    expect((await getDoc(entryRef(db, STUDENT))).data().labGroup).toBeUndefined();
   });
 
-  test('any allowlisted teacher may edit details on the shared roster', async () => {
-    await assertSucceeds(flows.updateDetails(t.as(OTHER_TEACHER), LISTED.email, CHANGE));
+  test('a second HOD may edit details', async () => {
+    await assertSucceeds(flows.updateDetails(t.as(DEPUTY), LISTED.email, CHANGE));
   });
 
-  test('an entry added before names were kept gets its details', async () => {
-    await t.seed({
-      [`studentRegistry/${LISTED.email}`]: h.patch(h.registryDoc(LISTED), { name: DROP, emoji: DROP }),
-    });
+  test('denied: a teacher who is not the HOD edits details', async () => {
+    await assertFails(flows.updateDetails(t.as(OTHER_TEACHER), LISTED.email, CHANGE));
+  });
+
+  test('an entry added before names were kept gets its name', async () => {
+    await legacy();
     await assertSucceeds(flows.updateDetails(t.as(TEACHER), LISTED.email, CHANGE));
   });
 
   test('an entry added before names were kept can still be corrected', async () => {
-    await t.seed({
-      [`studentRegistry/${LISTED.email}`]: h.patch(h.registryDoc(LISTED), { name: DROP, emoji: DROP }),
-    });
+    await legacy();
     const outcome = flows.correct(t.as(TEACHER), TEACHER, LISTED.email, 'UPDATE', 'Typo', {
       rollNo: '262010044',
     });
@@ -635,11 +656,9 @@ describe('roster: editing name, batch and emoji', () => {
   test.each([
     ['an empty name', { name: '' }],
     ['a name of 81 characters', { name: 'a'.repeat(81) }],
-    ['batch 21', { batch: 21 }],
-    ['a batch stored as text', { batch: '1' }],
-    ['an emoji outside the ten', { emoji: 'CAT' }],
+    ['lab group 5 in a batch of four', { labGroup: 5 }],
+    ['a lab group stored as text', { labGroup: '1' }],
     ['the name removed', { name: deleteField() }],
-    ['the emoji removed', { emoji: deleteField() }],
     ['the roll number changed too', { name: 'Meera J', rollNo: '262019001' }],
     ['the cohort changed too', { name: 'Meera J', cohort: 'MC25' }],
     ['the revision changed too', { name: 'Meera J', revision: 1 }],
@@ -650,10 +669,8 @@ describe('roster: editing name, batch and emoji', () => {
     await assertFails(updateDoc(entryRef(t.as(TEACHER), STUDENT), change));
   });
 
-  test('denied: a details edit leaves a legacy entry without a name', async () => {
-    await t.seed({
-      [`studentRegistry/${LISTED.email}`]: h.patch(h.registryDoc(LISTED), { name: DROP, emoji: DROP }),
-    });
-    await assertFails(updateDoc(entryRef(t.as(TEACHER), LISTED), { emoji: 'FOX' }));
+  test('denied: a details edit leaves an entry without a name', async () => {
+    await legacy();
+    await assertFails(updateDoc(entryRef(t.as(TEACHER), LISTED), { labGroup: 2 }));
   });
 });

@@ -19,9 +19,9 @@
     <dimen name="ring_stroke">4dp</dimen>
     <dimen name="hairline_stroke">1dp</dimen>
     <dimen name="icon">24dp</dimen>
-    <!-- A student's emoji disc in list rows. The emoji is sized in dp so it stays inside the disc at any font scale. -->
+    <!-- A person's monogram disc in list rows. The initials are sized in dp so they stay inside the disc at any font scale. -->
     <dimen name="avatar">36dp</dimen>
-    <dimen name="avatar_text">18dp</dimen>
+    <dimen name="avatar_text">14dp</dimen>
     <dimen name="ring_size">24dp</dimen>
     <dimen name="viewfinder_stroke">4dp</dimen>
     <dimen name="viewfinder_corner">28dp</dimen>

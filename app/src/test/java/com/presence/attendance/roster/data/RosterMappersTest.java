@@ -9,7 +9,6 @@ import com.google.firebase.firestore.FieldValue;
 import com.presence.attendance.roster.domain.IdentityAlert;
 import com.presence.attendance.roster.domain.RosterRepository.CorrectionAction;
 import com.presence.attendance.roster.domain.StudentDetails;
-import com.presence.attendance.roster.domain.StudentEmoji;
 import com.presence.attendance.testutil.DocumentContract;
 import com.presence.attendance.testutil.Fixtures;
 import java.io.IOException;
@@ -35,38 +34,36 @@ public final class RosterMappersTest {
                         "a@mc.vjti.ac.in",
                         "262011005",
                         "MC26",
-                        new StudentDetails("Aditi Pawar", null, StudentEmoji.FOX),
+                        new StudentDetails("Aditi Pawar", null),
                         "teacherA");
         assertEquals(DocumentContract.fields("studentRegistry", false), keys(entry));
         assertEquals(0, entry.get("revision"));
         assertEquals("teacherA", entry.get("addedBy"));
         assertEquals("Aditi Pawar", entry.get("name"));
-        assertEquals("the emoji is stored by name", "FOX", entry.get("emoji"));
     }
 
     @Test
-    public void aNewEntryInABatchAlsoHasTheBatch() throws IOException {
+    public void aNewEntryInALabGroupAlsoHasTheGroup() throws IOException {
         final Map<String, Object> entry =
                 RosterMappers.newEntry(
                         "a@mc.vjti.ac.in",
                         "262011005",
                         "MC26",
-                        new StudentDetails("Aditi Pawar", 3, StudentEmoji.FOX),
+                        new StudentDetails("Aditi Pawar", 3),
                         "teacherA");
         assertEquals(DocumentContract.fields("studentRegistry", true), keys(entry));
-        assertEquals(3, entry.get("batch"));
+        assertEquals(3, entry.get("labGroup"));
     }
 
     @Test
-    public void aDetailsUpdateSetsNameAndEmojiAndSetsOrRemovesTheBatch() {
-        final Map<String, Object> inBatch =
-                RosterMappers.detailsUpdate(new StudentDetails("M J", 2, StudentEmoji.PEACOCK));
-        assertEquals(new TreeSet<>(Arrays.asList("batch", "emoji", "name")), keys(inBatch));
-        assertEquals(2, inBatch.get("batch"));
-        assertEquals("PEACOCK", inBatch.get("emoji"));
-        final Map<String, Object> noBatch =
-                RosterMappers.detailsUpdate(new StudentDetails("M J", null, StudentEmoji.OWL));
-        assertTrue("a cleared batch is deleted", noBatch.get("batch") instanceof FieldValue);
+    public void aDetailsUpdateSetsTheNameAndSetsOrRemovesTheLabGroup() {
+        final Map<String, Object> inGroup =
+                RosterMappers.detailsUpdate(new StudentDetails("M J", 2));
+        assertEquals(new TreeSet<>(Arrays.asList("labGroup", "name")), keys(inGroup));
+        assertEquals(2, inGroup.get("labGroup"));
+        final Map<String, Object> noGroup =
+                RosterMappers.detailsUpdate(new StudentDetails("M J", null));
+        assertTrue("a cleared group is deleted", noGroup.get("labGroup") instanceof FieldValue);
     }
 
     @Test
@@ -74,7 +71,7 @@ public final class RosterMappersTest {
         final Map<String, Object> after =
                 RosterMappers.correctedEntry(Fixtures.LEGACY_ENTRY, ADDED_AT, "262010044", "MC26");
         final Set<String> base = DocumentContract.fields("studentRegistry", false);
-        base.removeAll(Arrays.asList("name", "emoji"));
+        base.remove("name");
         assertEquals(base, keys(after));
     }
 
@@ -89,11 +86,10 @@ public final class RosterMappersTest {
     public void aCorrectedEntryDropsTheClaimAndAdvancesTheRevision() throws IOException {
         final Map<String, Object> after =
                 RosterMappers.correctedEntry(Fixtures.ENTRY, ADDED_AT, "262011099", "MC25");
-        // ENTRY is in a batch, so the optional batch field is there too.
+        // ENTRY is in a lab group, so the optional field is there too.
         assertEquals(DocumentContract.fields("studentRegistry", true), keys(after));
         assertEquals("the details are kept", "Meera Joshi", after.get("name"));
-        assertEquals("OWL", after.get("emoji"));
-        assertEquals(1, after.get("batch"));
+        assertEquals(1, after.get("labGroup"));
         assertFalse(after.containsKey("registeredUid"));
         assertEquals(1, after.get("revision"));
         assertEquals("the original add time is kept", ADDED_AT, after.get("addedAt"));

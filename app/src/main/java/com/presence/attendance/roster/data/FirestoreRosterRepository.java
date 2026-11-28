@@ -7,6 +7,7 @@ import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 import com.presence.attendance.auth.domain.User;
 import com.presence.attendance.core.Callback;
 import com.presence.attendance.core.Log;
@@ -40,8 +41,17 @@ public final class FirestoreRosterRepository implements RosterRepository {
 
     @Override
     public void loadRoster(@NonNull Callback<List<RosterEntry>> callback) {
-        registry()
-                .get()
+        load(registry(), callback);
+    }
+
+    @Override
+    public void loadBatchRoster(
+            @NonNull String batchId, @NonNull Callback<List<RosterEntry>> callback) {
+        load(registry().whereEqualTo(RosterMappers.COHORT, batchId), callback);
+    }
+
+    private static void load(@NonNull Query query, @NonNull Callback<List<RosterEntry>> callback) {
+        query.get()
                 .addOnCompleteListener(task -> {
                     if (!task.isSuccessful()) {
                         fail(callback, task.getException());

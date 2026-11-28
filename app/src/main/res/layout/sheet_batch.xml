@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- HOD: create a batch, or edit one. The programme and start year make the batch's id, so they are set only when it is created. -->
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/batch_scroll"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clipToPadding="false">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/screen_margin"
+        android:paddingBottom="@dimen/space_24">
+
+        <include layout="@layout/view_sheet_handle" />
+
+        <TextView
+            android:id="@+id/batch_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_16"
+            android:accessibilityHeading="true"
+            android:text="@string/batch_new"
+            android:textAppearance="@style/TextAppearance.Presence.Title" />
+
+        <LinearLayout
+            android:id="@+id/batch_identity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.Presence.FieldLabel"
+                android:labelFor="@id/batch_programme"
+                android:text="@string/batch_programme_label" />
+
+            <EditText
+                android:id="@+id/batch_programme"
+                style="@style/Widget.Presence.TextField"
+                android:autofillHints=""
+                android:importantForAutofill="no"
+                android:imeOptions="actionNext"
+                android:inputType="textCapCharacters|textNoSuggestions"
+                android:maxLength="@integer/programme_max" />
+
+            <TextView
+                android:id="@+id/batch_programme_error"
+                style="@style/Widget.Presence.InlineError"
+                android:text="@string/batch_programme_invalid" />
+
+            <TextView
+                style="@style/Widget.Presence.FieldLabel"
+                android:labelFor="@id/batch_start"
+                android:text="@string/batch_start_label" />
+
+            <EditText
+                android:id="@+id/batch_start"
+                style="@style/Widget.Presence.TextField"
+                android:autofillHints=""
+                android:importantForAutofill="no"
+                android:fontFeatureSettings="tnum"
+                android:imeOptions="actionNext"
+                android:inputType="number"
+                android:maxLength="4" />
+
+            <TextView
+                android:id="@+id/batch_start_error"
+                style="@style/Widget.Presence.InlineError"
+                android:text="@string/batch_start_invalid" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/Widget.Presence.FieldLabel"
+            android:labelFor="@id/batch_years"
+            android:text="@string/batch_years_label" />
+
+        <EditText
+            android:id="@+id/batch_years"
+            style="@style/Widget.Presence.TextField"
+            android:autofillHints=""
+            android:importantForAutofill="no"
+            android:fontFeatureSettings="tnum"
+            android:imeOptions="actionNext"
+            android:inputType="number"
+            android:maxLength="1" />
+
+        <TextView
+            android:id="@+id/batch_years_error"
+            style="@style/Widget.Presence.InlineError"
+            android:text="@string/batch_years_invalid" />
+
+        <LinearLayout
+            android:id="@+id/batch_semester_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.Presence.FieldLabel"
+                android:labelFor="@id/batch_semester"
+                android:text="@string/batch_semester_label" />
+
+            <EditText
+                android:id="@+id/batch_semester"
+                style="@style/Widget.Presence.TextField"
+                android:autofillHints=""
+                android:importantForAutofill="no"
+                android:fontFeatureSettings="tnum"
+                android:imeOptions="actionNext"
+                android:inputType="number"
+                android:maxLength="2" />
+
+            <TextView
+                android:id="@+id/batch_semester_error"
+                style="@style/Widget.Presence.InlineError"
+                android:text="@string/batch_semester_invalid" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/Widget.Presence.FieldLabel"
+            android:labelFor="@id/batch_intake"
+            android:text="@string/batch_intake_label" />
+
+        <EditText
+            android:id="@+id/batch_intake"
+            style="@style/Widget.Presence.TextField"
+            android:autofillHints=""
+            android:importantForAutofill="no"
+            android:fontFeatureSettings="tnum"
+            android:imeOptions="actionNext"
+            android:inputType="number"
+            android:maxLength="3" />
+
+        <TextView
+            android:id="@+id/batch_intake_error"
+            style="@style/Widget.Presence.InlineError"
+            android:text="@string/batch_intake_invalid" />
+
+        <TextView
+            style="@style/Widget.Presence.FieldLabel"
+            android:labelFor="@id/batch_groups"
+            android:text="@string/batch_groups_label" />
+
+        <EditText
+            android:id="@+id/batch_groups"
+            style="@style/Widget.Presence.TextField"
+            android:autofillHints=""
+            android:importantForAutofill="no"
+            android:fontFeatureSettings="tnum"
+            android:imeOptions="actionDone"
+            android:inputType="number"
+            android:maxLength="2" />
+
+        <TextView
+            android:id="@+id/batch_groups_error"
+            style="@style/Widget.Presence.InlineError"
+            android:text="@string/batch_groups_invalid" />
+
+        <TextView
+            android:id="@+id/batch_status"
+            style="@style/Widget.Presence.InlineError"
+            android:layout_marginTop="@dimen/space_20" />
+
+        <com.presence.attendance.core.ui.SpringButton
+            android:id="@+id/batch_submit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_24"
+            android:text="@string/batch_create" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

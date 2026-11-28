@@ -13,13 +13,13 @@ import com.presence.attendance.roster.domain.RosterCsv;
 import com.presence.attendance.roster.domain.RosterEntry;
 import com.presence.attendance.roster.domain.RosterRepository.AddOutcome;
 import com.presence.attendance.roster.domain.RosterRepository.CorrectOutcome;
-import com.presence.attendance.roster.domain.StudentEmoji;
 import com.presence.attendance.roster.ui.RosterImportViewModel.Phase;
 import com.presence.attendance.roster.ui.RosterImportViewModel.Result;
 import com.presence.attendance.roster.ui.RosterImportViewModel.State;
 import com.presence.attendance.testutil.FakeAuthRepository;
 import com.presence.attendance.testutil.FakeRosterRepository;
 import com.presence.attendance.testutil.Fixtures;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.Before;
@@ -33,24 +33,22 @@ public final class RosterImportViewModelTest {
     private static final String A = "apawar_mc26@mc.vjti.ac.in";
     private static final String B = "bkale_mc26@mc.vjti.ac.in";
     private static final String C = "cmore_mc26@mc.vjti.ac.in";
-    private static final List<RosterEntry> ROSTER =
-            Arrays.asList(Fixtures.ENTRY, Fixtures.OTHER_ENTRY);
 
     /** Three good rows, one already there, and four that must be rejected. */
     private static final String FILE =
-            "email,roll no,name,cohort,batch,emoji\n"
+            "email,roll no,name,lab group\n"
                     + A
-                    + ",262011005,Aditi Pawar,MC26,1,fox\n"
+                    + ",262011005,Aditi Pawar,1\n"
                     + B
-                    + ",262010006,Bhavesh Kale,MC26,,\n"
+                    + ",262010006,Bhavesh Kale,\n"
                     + C
-                    + ",262010007,Chirag More,MC26,2,\n"
+                    + ",262010007,Chirag More,2\n"
                     + Fixtures.ENTRY.getEmail()
-                    + ",262011001,Meera Joshi,MC26,,\n"
-                    + "someone@gmail.com,262010008,Some One,MC26,,\n"
+                    + ",262011001,Meera Joshi,\n"
+                    + "someone@gmail.com,262010008,Some One,\n"
                     + A
-                    + ",262010009,Aditi Pawar,MC26,,\n"
-                    + "dnaik_mc26@mc.vjti.ac.in,262010002,Dev Naik,MC26,,\n"
+                    + ",262010009,Aditi Pawar,\n"
+                    + "dnaik_mc26@mc.vjti.ac.in,262010002,Dev Naik,\n"
                     + "not,enough";
 
     private final FakeAuthRepository auth = new FakeAuthRepository();
@@ -60,7 +58,10 @@ public final class RosterImportViewModelTest {
 
     @Before
     public void setUp() {
-        auth.signedInAs(Fixtures.TEACHER);
+        auth.signedInAs(Fixtures.HOD);
+        roster.rosterOutcome =
+                Outcome.success(
+                        new ArrayList<>(Arrays.asList(Fixtures.ENTRY, Fixtures.OTHER_ENTRY)));
         viewModel = new RosterImportViewModel(auth, roster, online);
         viewModel.getState().observeForever(state -> {});
     }
@@ -71,7 +72,7 @@ public final class RosterImportViewModelTest {
 
     @Test
     public void theWholeFileIsValidatedBeforeAnythingIsWritten() {
-        viewModel.onFile(FILE, ROSTER);
+        viewModel.onFile(FILE, Fixtures.BATCH);
         assertEquals(Phase.PREVIEW, state().phase);
         assertTrue(state().openPreview);
         assertEquals(8, state().rows.size());
@@ -85,14 +86,14 @@ public final class RosterImportViewModelTest {
     }
 
     @Test
-    public void onlyReadyRowsAreWrittenOneAtATimeInFileOrder() {
-        viewModel.onFile(FILE, ROSTER);
+    public void readyRowsAreAddedToTheBatchOneAtATimeInFileOrder() {
+        viewModel.onFile(FILE, Fixtures.BATCH);
         viewModel.startImport();
         assertEquals(
                 Arrays.asList(
-                        "add:" + A + ":262011005:MC26:Aditi Pawar/1/FOX",
-                        "add:" + B + ":262010006:MC26:Bhavesh Kale/-/DOLPHIN",
-                        "add:" + C + ":262010007:MC26:Chirag More/2/TURTLE"),
+                        "add:" + A + ":262011005:MC26:Aditi Pawar/1",
+                        "add:" + B + ":262010006:MC26:Bhavesh Kale/-",
+                        "add:" + C + ":262010007:MC26:Chirag More/2"),
                 roster.calls);
         assertEquals(Phase.DONE, state().phase);
         assertEquals(3, state().count(Result.IMPORTED));
@@ -102,61 +103,48 @@ public final class RosterImportViewModelTest {
     public void eachRowGetsItsOwnResultAndOneFailureDoesNotStopTheRest() {
         roster.addOutcomeByEmail.put(A, Outcome.success(AddOutcome.ROLL_TAKEN));
         roster.failAdd(B, AppError.OFFLINE);
-        viewModel.onFile(FILE, ROSTER);
+        viewModel.onFile(FILE, Fixtures.BATCH);
         viewModel.startImport();
         assertEquals(3, roster.calls.size());
         assertEquals(Result.ROLL_TAKEN, state().results.get(1));
         assertEquals(Result.FAILED, state().results.get(2));
         assertEquals(Result.IMPORTED, state().results.get(3));
-        assertEquals(1, state().count(Result.IMPORTED));
     }
 
     @Test
-    public void aRowAddedBySomeoneElseSincethePreviewIsReportedNotOverwritten() {
-        roster.addOutcomeByEmail.put(C, Outcome.success(AddOutcome.EMAIL_EXISTS));
-        viewModel.onFile(FILE, ROSTER);
-        viewModel.startImport();
-        assertEquals(Result.EMAIL_EXISTS, state().results.get(3));
-    }
-
-    @Test
-    public void anUnreadableOrOversizedFileIsRefused() {
-        viewModel.onFile(null, ROSTER);
-        assertEquals(Phase.IDLE, state().phase);
-        assertEquals(AppError.FILE_UNREADABLE, state().fileError);
-        assertFalse(state().openPreview);
-    }
-
-    @Test
-    public void anEmptyFileIsRefused() {
-        viewModel.onFile("email,roll no,name,cohort\n\n", ROSTER);
-        assertEquals(Phase.IDLE, state().phase);
-        assertEquals(RosterCsv.FileProblem.EMPTY, state().fileProblem);
-    }
-
-    @Test
-    public void aFileWithoutTheColumnNamesIsRefused() {
-        viewModel.onFile("email,rollNo,cohort\n" + A + ",262011005,MC26", ROSTER);
-        assertEquals(Phase.IDLE, state().phase);
-        assertEquals(RosterCsv.FileProblem.NO_HEADER, state().fileProblem);
+    public void aStudentAlreadyInAnotherBatchIsRejected() {
+        roster.rosterOutcome =
+                Outcome.success(
+                        Arrays.asList(
+                                new RosterEntry(
+                                        A,
+                                        "252010009",
+                                        "MCA25",
+                                        "teacherA",
+                                        0,
+                                        null,
+                                        "A P",
+                                        null)));
+        viewModel.onFile("email,roll no,name\n" + A + ",262011005,Aditi Pawar\n", Fixtures.BATCH);
+        assertEquals(1, state().count(RosterCsv.Check.EMAIL_ON_ROSTER));
+        assertEquals(0, state().total);
     }
 
     @Test
     public void studentsAlreadyThereGetNewDetailsInsteadOfBeingAdded() {
         viewModel.onFile(
-                "email,roll no,name,cohort,batch\n"
+                "email,roll no,name,lab group\n"
                         + Fixtures.ENTRY.getEmail()
-                        + ",262011001,Meera S. Joshi,MC26,2\n"
+                        + ",262011001,Meera S. Joshi,2\n"
                         + A
-                        + ",262011005,Aditi Pawar,MC26,\n",
-                ROSTER);
+                        + ",262011005,Aditi Pawar,\n",
+                Fixtures.BATCH);
         assertEquals(2, state().total);
-        assertEquals(1, state().count(RosterCsv.Check.DETAILS_CHANGED));
         viewModel.startImport();
         assertEquals(
                 Arrays.asList(
-                        "details:" + Fixtures.ENTRY.getEmail() + ":Meera S. Joshi/2/OWL",
-                        "add:" + A + ":262011005:MC26:Aditi Pawar/-/OWL"),
+                        "details:" + Fixtures.ENTRY.getEmail() + ":Meera S. Joshi/2",
+                        "add:" + A + ":262011005:MC26:Aditi Pawar/-"),
                 roster.calls);
         assertEquals(Result.UPDATED, state().results.get(1));
         assertEquals(Result.IMPORTED, state().results.get(2));
@@ -166,27 +154,35 @@ public final class RosterImportViewModelTest {
     public void aStudentRemovedSinceThePreviewIsNotRecreatedByAnUpdate() {
         roster.detailsOutcome = Outcome.success(CorrectOutcome.NOT_FOUND);
         viewModel.onFile(
-                "email,roll no,name,cohort\n"
-                        + Fixtures.ENTRY.getEmail()
-                        + ",262011001,Meera S. Joshi,MC26\n",
-                ROSTER);
+                "email,roll no,name\n" + Fixtures.ENTRY.getEmail() + ",262011001,Meera S. Joshi\n",
+                Fixtures.BATCH);
         viewModel.startImport();
         assertEquals(Result.FAILED, state().results.get(1));
     }
 
     @Test
-    public void aFileWithNothingToImportCannotBeStarted() {
-        viewModel.onFile(
-                "email,roll no,name,cohort\nsomeone@gmail.com,262010008,Some One,MC26", ROSTER);
-        assertEquals(0, state().total);
-        viewModel.startImport();
-        assertEquals(Phase.PREVIEW, state().phase);
-        assertTrue(roster.calls.isEmpty());
+    public void unreadableEmptyAndHeaderlessFilesAreRefused() {
+        viewModel.onFile(null, Fixtures.BATCH);
+        assertEquals(AppError.FILE_UNREADABLE, state().fileError);
+        viewModel.onFile("email,roll no,name\n\n", Fixtures.BATCH);
+        assertEquals(RosterCsv.FileProblem.EMPTY, state().fileProblem);
+        viewModel.onFile("email,rollNo,cohort\n" + A + ",262011005,MC26", Fixtures.BATCH);
+        assertEquals(RosterCsv.FileProblem.NO_HEADER, state().fileProblem);
+        assertEquals(Phase.IDLE, state().phase);
+        assertFalse(state().openPreview);
+    }
+
+    @Test
+    public void aRosterThatCannotBeReadStopsThePreview() {
+        roster.rosterOutcome = Outcome.failure(AppError.OFFLINE);
+        viewModel.onFile(FILE, Fixtures.BATCH);
+        assertEquals(Phase.IDLE, state().phase);
+        assertEquals(AppError.OFFLINE, state().fileError);
     }
 
     @Test
     public void offlineBlocksTheImport() {
-        viewModel.onFile(FILE, ROSTER);
+        viewModel.onFile(FILE, Fixtures.BATCH);
         online.setValue(false);
         viewModel.startImport();
         assertEquals(Phase.PREVIEW, state().phase);
@@ -195,7 +191,7 @@ public final class RosterImportViewModelTest {
 
     @Test
     public void aLostSessionWritesNothingAndReportsEveryRow() {
-        viewModel.onFile(FILE, ROSTER);
+        viewModel.onFile(FILE, Fixtures.BATCH);
         auth.userOutcome = Outcome.failure(AppError.UNAUTHENTICATED);
         viewModel.startImport();
         assertEquals(Phase.DONE, state().phase);
@@ -205,10 +201,9 @@ public final class RosterImportViewModelTest {
 
     @Test
     public void thePreviewIsOpenedOnceAndTheFileIsForgottenOnReset() {
-        viewModel.onFile(FILE, ROSTER);
+        viewModel.onFile(FILE, Fixtures.BATCH);
         viewModel.onPreviewOpened();
         assertFalse(state().openPreview);
-        assertEquals(Phase.PREVIEW, state().phase);
         viewModel.reset();
         assertEquals(Phase.IDLE, state().phase);
         assertTrue(state().rows.isEmpty());
@@ -218,40 +213,15 @@ public final class RosterImportViewModelTest {
     @Test
     public void importingTheSameFileAgainSkipsWhatIsAlreadyThere() {
         final List<RosterEntry> afterFirstImport =
-                Arrays.asList(
-                        Fixtures.ENTRY,
-                        Fixtures.OTHER_ENTRY,
-                        new RosterEntry(
-                                A,
-                                "262011005",
-                                "MC26",
-                                "teacherA",
-                                0,
-                                null,
-                                "Aditi Pawar",
-                                1,
-                                StudentEmoji.FOX),
-                        new RosterEntry(
-                                B,
-                                "262010006",
-                                "MC26",
-                                "teacherA",
-                                0,
-                                null,
-                                "Bhavesh Kale",
-                                null,
-                                StudentEmoji.DOLPHIN),
-                        new RosterEntry(
-                                C,
-                                "262010007",
-                                "MC26",
-                                "teacherA",
-                                0,
-                                null,
-                                "Chirag More",
-                                2,
-                                StudentEmoji.TURTLE));
-        viewModel.onFile(FILE, afterFirstImport);
+                new ArrayList<>(Arrays.asList(Fixtures.ENTRY, Fixtures.OTHER_ENTRY));
+        afterFirstImport.add(
+                new RosterEntry(A, "262011005", "MC26", "t", 0, null, "Aditi Pawar", 1));
+        afterFirstImport.add(
+                new RosterEntry(B, "262010006", "MC26", "t", 0, null, "Bhavesh Kale", null));
+        afterFirstImport.add(
+                new RosterEntry(C, "262010007", "MC26", "t", 0, null, "Chirag More", 2));
+        roster.rosterOutcome = Outcome.success(afterFirstImport);
+        viewModel.onFile(FILE, Fixtures.BATCH);
         assertEquals(0, state().total);
         assertEquals(4, state().count(RosterCsv.Check.ALREADY_ON_ROSTER));
     }

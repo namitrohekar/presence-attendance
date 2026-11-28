@@ -46,4 +46,34 @@ public interface CourseRepository {
             @NonNull String teacherId,
             @NonNull String courseId,
             @NonNull Callback<List<Member>> callback);
+
+    /** What saving one subject from a timetable import did. */
+    enum SaveOutcome {
+        CREATED,
+        /** A new name or teacher; a new teacher starts unclaimed. */
+        UPDATED,
+        UNCHANGED
+    }
+
+    /**
+     * Brings the user's subjects up to date before their courses are listed: a teacher claims the
+     * subjects the HOD assigned to their address; a student joins their batch's subjects for the
+     * current semester (their lab group's labs only) and follows a reassigned subject to its new
+     * teacher. Resolves to how many changes were written.
+     */
+    @MainThread
+    void syncSubjects(@NonNull User user, @NonNull Callback<Integer> callback);
+
+    /** HOD: a batch's subjects for one semester, sorted by name and then lab group. */
+    @MainThread
+    void loadSubjects(
+            @NonNull String batchId, int semester, @NonNull Callback<List<Course>> callback);
+
+    /**
+     * HOD: creates the subject, or gives an existing one the new name and teacher. Never changes
+     * its batch, semester or lab group.
+     */
+    @MainThread
+    void saveSubject(
+            @NonNull User hod, @NonNull Course subject, @NonNull Callback<SaveOutcome> callback);
 }

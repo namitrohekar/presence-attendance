@@ -10,7 +10,6 @@ import com.presence.attendance.roster.domain.IdentityAlert;
 import com.presence.attendance.roster.domain.RosterEntry;
 import com.presence.attendance.roster.domain.RosterRepository.CorrectionAction;
 import com.presence.attendance.roster.domain.StudentDetails;
-import com.presence.attendance.roster.domain.StudentEmoji;
 import com.presence.attendance.roster.domain.StudentIdentity;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,8 +29,7 @@ public final class RosterMappers {
     public static final String REGISTERED_UID = "registeredUid";
     public static final String REGISTERED_AT = "registeredAt";
     public static final String NAME = "name";
-    public static final String BATCH = "batch";
-    public static final String EMOJI = "emoji";
+    public static final String LAB_GROUP = "labGroup";
     public static final String AUDIENCE = "audience";
     public static final String CREATED_AT = "createdAt";
     private static final String TYPE = "type";
@@ -64,7 +62,7 @@ public final class RosterMappers {
         }
         // A detail that is missing or malformed is shown as missing; the identity still counts.
         final String name = Snapshots.string(snapshot, NAME);
-        final Long batch = Snapshots.integer(snapshot, BATCH);
+        final Long labGroup = Snapshots.integer(snapshot, LAB_GROUP);
         return new RosterEntry(
                 email,
                 rollNo,
@@ -73,10 +71,7 @@ public final class RosterMappers {
                 revision.intValue(),
                 Snapshots.string(snapshot, REGISTERED_UID),
                 name != null && StudentIdentity.isName(name) ? name : null,
-                batch != null && StudentIdentity.isBatch(batch.intValue())
-                        ? batch.intValue()
-                        : null,
-                StudentEmoji.fromName(Snapshots.string(snapshot, EMOJI)));
+                labGroup != null && labGroup > 0 ? labGroup.intValue() : null);
     }
 
     @NonNull
@@ -98,24 +93,24 @@ public final class RosterMappers {
     }
 
     /**
-     * The details as an update: the name and emoji are set and the batch is set or removed. The
-     * rules allow this alone on an entry, without an audit record, and the registration stays.
+     * The details as an update: the name is set and the lab group is set or removed. The rules
+     * allow this alone on an entry, without an audit record, and the registration stays.
      */
     @NonNull
     static Map<String, Object> detailsUpdate(@NonNull StudentDetails details) {
         final Map<String, Object> fields = new HashMap<>();
         fields.put(NAME, details.getName());
-        fields.put(EMOJI, details.getEmoji().name());
-        fields.put(BATCH, details.getBatch() != null ? details.getBatch() : FieldValue.delete());
+        fields.put(
+                LAB_GROUP,
+                details.getLabGroup() != null ? details.getLabGroup() : FieldValue.delete());
         return fields;
     }
 
     private static void putDetails(
             @NonNull Map<String, Object> document, @NonNull StudentDetails details) {
         document.put(NAME, details.getName());
-        document.put(EMOJI, details.getEmoji().name());
-        if (details.getBatch() != null) {
-            document.put(BATCH, details.getBatch());
+        if (details.getLabGroup() != null) {
+            document.put(LAB_GROUP, details.getLabGroup());
         }
     }
 
@@ -140,11 +135,8 @@ public final class RosterMappers {
         if (before.getName() != null) {
             document.put(NAME, before.getName());
         }
-        if (before.getEmoji() != null) {
-            document.put(EMOJI, before.getEmoji().name());
-        }
-        if (before.getBatch() != null) {
-            document.put(BATCH, before.getBatch());
+        if (before.getLabGroup() != null) {
+            document.put(LAB_GROUP, before.getLabGroup());
         }
         return document;
     }

@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 public final class FirestoreSessionRepository implements SessionRepository {
 
     private static final String SESSIONS = "sessions";
+    private static final String ROOMS = "rooms";
     private static final String TOKENS = "tokens";
     private static final String CAMPUS = "appConfig/campus";
     // A semester of daily classes fits; the figures are computed over everything loaded.
@@ -53,6 +54,49 @@ public final class FirestoreSessionRepository implements SessionRepository {
                             campus != null
                                     ? Outcome.success(campus)
                                     : Outcome.failure(AppError.CAMPUS_NOT_CONFIGURED));
+                });
+    }
+
+    @Override
+    public void loadRoom(@NonNull String name, @NonNull Callback<Geofence> callback) {
+        final String id = SessionMappers.roomId(name);
+        if (id.isEmpty()) {
+            callback.onResult(Outcome.failure(AppError.ROOM_NOT_SAVED));
+            return;
+        }
+        firestore
+                .collection(ROOMS)
+                .document(id)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        fail(callback, task.getException());
+                        return;
+                    }
+                    final Geofence room = SessionMappers.room(task.getResult());
+                    callback.onResult(
+                            room != null
+                                    ? Outcome.success(room)
+                                    : Outcome.failure(AppError.ROOM_NOT_SAVED));
+                });
+    }
+
+    @Override
+    public void saveRoom(
+            @NonNull User teacher,
+            @NonNull String name,
+            @NonNull Geofence geofence,
+            @NonNull Callback<Geofence> callback) {
+        firestore
+                .collection(ROOMS)
+                .document(SessionMappers.roomId(name))
+                .set(SessionMappers.newRoom(name, geofence, teacher.getUid()))
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        callback.onResult(Outcome.success(geofence));
+                    } else {
+                        fail(callback, task.getException());
+                    }
                 });
     }
 

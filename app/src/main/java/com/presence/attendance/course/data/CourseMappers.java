@@ -18,7 +18,7 @@ final class CourseMappers {
     static final String TEACHER_ID = "teacherId";
     static final String STUDENT_ID = "studentId";
     static final String COURSE_ID = "courseId";
-    private static final String NAME = "name";
+    static final String NAME = "name";
     private static final String CODE = "code";
     private static final String THRESHOLD = "threshold";
     private static final String JOIN_CODE = "joinCode";
@@ -29,6 +29,11 @@ final class CourseMappers {
     private static final String ROLL_NO = "rollNo";
     private static final String COHORT = "cohort";
     private static final String JOINED_AT = "joinedAt";
+    static final String TEACHER_EMAIL = "teacherEmail";
+    static final String BATCH_ID = "batchId";
+    static final String SEMESTER = "semester";
+    static final String LAB_GROUP = "labGroup";
+    private static final String CREATED_BY = "createdBy";
 
     private CourseMappers() {}
 
@@ -40,14 +45,72 @@ final class CourseMappers {
         final String code = Snapshots.string(snapshot, CODE);
         final Long threshold = Snapshots.integer(snapshot, THRESHOLD);
         final String joinCode = Snapshots.string(snapshot, JOIN_CODE);
+        final String batchId = Snapshots.string(snapshot, BATCH_ID);
         if (teacherId == null
                 || name == null
                 || code == null
                 || threshold == null
-                || joinCode == null) {
+                || (joinCode == null && batchId == null)) {
             return null;
         }
-        return new Course(snapshot.getId(), teacherId, name, code, threshold.intValue(), joinCode);
+        if (batchId == null) {
+            return new Course(
+                    snapshot.getId(), teacherId, name, code, threshold.intValue(), joinCode);
+        }
+        final Long semester = Snapshots.integer(snapshot, SEMESTER);
+        final Long labGroup = Snapshots.integer(snapshot, LAB_GROUP);
+        final String teacherEmail = Snapshots.string(snapshot, TEACHER_EMAIL);
+        if (semester == null || labGroup == null || teacherEmail == null) {
+            return null;
+        }
+        return Course.subject(
+                snapshot.getId(),
+                teacherId,
+                teacherEmail,
+                name,
+                code,
+                threshold.intValue(),
+                batchId,
+                semester.intValue(),
+                labGroup.intValue());
+    }
+
+    /** A new subject as the HOD writes it: unclaimed, under the HOD's name and server time. */
+    @NonNull
+    static Map<String, Object> newSubject(@NonNull Course subject, @NonNull String hodUid) {
+        final Map<String, Object> document = new HashMap<>();
+        document.put(TEACHER_ID, "");
+        document.put(TEACHER_EMAIL, subject.getTeacherEmail());
+        document.put(NAME, subject.getName());
+        document.put(CODE, subject.getCode());
+        document.put(THRESHOLD, subject.getThreshold());
+        document.put(BATCH_ID, subject.getBatchId());
+        document.put(SEMESTER, subject.getSemester());
+        document.put(LAB_GROUP, subject.getLabGroup());
+        document.put(CREATED_BY, hodUid);
+        document.put(CREATED_AT, FieldValue.serverTimestamp());
+        return document;
+    }
+
+    /** A registered student's membership of a subject of their batch: no join code. */
+    @NonNull
+    static Map<String, Object> newSubjectMembership(
+            @NonNull User student, @NonNull Course subject) {
+        final String rollNo = student.getRollNo();
+        final String cohort = student.getCohort();
+        if (rollNo == null || cohort == null) {
+            throw new IllegalStateException("Only a registered student can be in a subject");
+        }
+        final Map<String, Object> document = new HashMap<>();
+        document.put(COURSE_ID, subject.getId());
+        document.put(TEACHER_ID, subject.getTeacherId());
+        document.put(STUDENT_ID, student.getUid());
+        document.put(NAME, student.getName());
+        document.put(EMAIL, student.getEmail());
+        document.put(ROLL_NO, rollNo);
+        document.put(COHORT, cohort);
+        document.put(JOINED_AT, FieldValue.serverTimestamp());
+        return document;
     }
 
     /** The member in a membership snapshot, or null if the document is malformed. */

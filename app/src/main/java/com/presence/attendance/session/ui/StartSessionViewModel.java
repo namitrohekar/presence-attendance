@@ -29,7 +29,9 @@ public final class StartSessionViewModel extends ViewModel {
 
     public enum Mode {
         CAMPUS,
-        HERE
+        HERE,
+        /** The geofence saved for the timetable's room. */
+        ROOM
     }
 
     /** Where the "Here" location stands. */
@@ -53,6 +55,12 @@ public final class StartSessionViewModel extends ViewModel {
         @Nullable public final AppError error;
         @Nullable public final Session started;
 
+        /** The timetable's room for this class, "" when the session is not started from one. */
+        @NonNull public final String room;
+
+        /** Whether that room's location is saved, so ROOM can be chosen. */
+        public final boolean roomSaved;
+
         State(
                 boolean online,
                 int durationMin,
@@ -62,7 +70,9 @@ public final class StartSessionViewModel extends ViewModel {
                 int accuracyM,
                 boolean busy,
                 @Nullable AppError error,
-                @Nullable Session started) {
+                @Nullable Session started,
+                @NonNull String room,
+                boolean roomSaved) {
             this.online = online;
             this.durationMin = durationMin;
             this.mode = mode;
@@ -72,11 +82,23 @@ public final class StartSessionViewModel extends ViewModel {
             this.busy = busy;
             this.error = error;
             this.started = started;
+            this.room = room;
+            this.roomSaved = roomSaved;
         }
 
         /** Whether everything needed to start is in place. */
         public boolean canStart() {
-            return online && !busy && started == null && (mode == Mode.CAMPUS || fix == Fix.READY);
+            return online
+                    && !busy
+                    && started == null
+                    && (mode == Mode.CAMPUS
+                            || (mode == Mode.HERE && fix == Fix.READY)
+                            || (mode == Mode.ROOM && roomSaved));
+        }
+
+        /** Whether "Save as this room" can be offered: standing in it, with a good fix. */
+        public boolean canSaveRoom() {
+            return online && !busy && !room.isEmpty() && mode == Mode.HERE && fix == Fix.READY;
         }
 
         @NonNull
@@ -94,7 +116,9 @@ public final class StartSessionViewModel extends ViewModel {
                     newAccuracyM,
                     newBusy,
                     newError,
-                    started);
+                    started,
+                    room,
+                    roomSaved);
         }
     }
 
@@ -113,9 +137,12 @@ public final class StartSessionViewModel extends ViewModel {
                             0,
                             false,
                             null,
-                            null));
+                            null,
+                            "",
+                            false));
     // Kept out of the state: coordinates are never rendered or logged.
     @Nullable private LocationFix here;
+    @Nullable private Geofence roomFence;
 
     public StartSessionViewModel(
             @NonNull AuthRepository auth,
@@ -123,6 +150,21 @@ public final class StartSessionViewModel extends ViewModel {
             @NonNull LocationSource location,
             @NonNull LiveData<Boolean> online,
             @NonNull String courseId) {
+        this(auth, sessionRepository, location, online, courseId, "", DEFAULT_DURATION_MIN);
+    }
+
+    /**
+     * Started from a class in the timetable: its room and the minutes left in it. A room whose
+     * location is saved is chosen at once; one that is not starts at "Here", so it can be saved.
+     */
+    public StartSessionViewModel(
+            @NonNull AuthRepository auth,
+            @NonNull SessionRepository sessionRepository,
+            @NonNull LocationSource location,
+            @NonNull LiveData<Boolean> online,
+            @NonNull String courseId,
+            @NonNull String room,
+            int durationMin) {
         this.auth = auth;
         this.sessionRepository = sessionRepository;
         this.location = location;
@@ -141,8 +183,84 @@ public final class StartSessionViewModel extends ViewModel {
                                     s.accuracyM,
                                     s.busy,
                                     s.error,
-                                    s.started));
+                                    s.started,
+                                    s.room,
+                                    s.roomSaved));
                 });
+        if (durationMin != DEFAULT_DURATION_MIN) {
+            setDuration(durationMin);
+        }
+        if (!room.isEmpty()) {
+            final State s = current();
+            state.setValue(
+                    new State(
+                            s.online,
+                            s.durationMin,
+                            s.mode,
+                            s.radiusM,
+                            s.fix,
+                            s.accuracyM,
+                            s.busy,
+                            s.error,
+                            s.started,
+                            room,
+                            false));
+            sessionRepository.loadRoom(room, this::onRoom);
+        }
+    }
+
+    /** A saved room is chosen; an unsaved one needs the teacher's position to be saved. */
+    private void onRoom(@NonNull Outcome<Geofence> outcome) {
+        if (!outcome.isSuccess()) {
+            setMode(Mode.HERE);
+            return;
+        }
+        roomFence = outcome.getValue();
+        final State s = current();
+        state.setValue(
+                new State(
+                        s.online,
+                        s.durationMin,
+                        Mode.ROOM,
+                        s.radiusM,
+                        Fix.NOT_NEEDED,
+                        0,
+                        false,
+                        null,
+                        s.started,
+                        s.room,
+                        true));
+    }
+
+    /**
+     * Saves the teacher's position and the chosen radius as the room's location, then uses it.
+     * Every later session in this room can start without waiting for a fix.
+     */
+    public void saveRoom() {
+        final State s = current();
+        final LocationFix fix = here;
+        if (!s.canSaveRoom() || fix == null) {
+            return;
+        }
+        state.setValue(s.with(s.fix, s.accuracyM, true, null));
+        final Geofence geofence = Geofence.around(fix.getLat(), fix.getLng(), s.radiusM);
+        auth.loadUser(user -> {
+            if (!user.isSuccess()) {
+                fail(user.getError());
+                return;
+            }
+            sessionRepository.saveRoom(
+                    user.getValue(),
+                    s.room,
+                    geofence,
+                    saved -> {
+                        if (saved.isSuccess()) {
+                            onRoom(saved);
+                        } else {
+                            fail(saved.getError());
+                        }
+                    });
+        });
     }
 
     @NonNull
@@ -164,7 +282,9 @@ public final class StartSessionViewModel extends ViewModel {
                         s.accuracyM,
                         s.busy,
                         null,
-                        s.started));
+                        s.started,
+                        s.room,
+                        s.roomSaved));
     }
 
     public void setRadius(int metres) {
@@ -180,7 +300,9 @@ public final class StartSessionViewModel extends ViewModel {
                         s.accuracyM,
                         s.busy,
                         null,
-                        s.started));
+                        s.started,
+                        s.room,
+                        s.roomSaved));
     }
 
     public void setMode(@NonNull Mode mode) {
@@ -198,7 +320,9 @@ public final class StartSessionViewModel extends ViewModel {
                         0,
                         false,
                         null,
-                        s.started));
+                        s.started,
+                        s.room,
+                        s.roomSaved));
         if (mode == Mode.HERE) {
             locate();
         }
@@ -251,10 +375,15 @@ public final class StartSessionViewModel extends ViewModel {
         if (s.mode == Mode.HERE && (s.fix != Fix.READY || fix == null)) {
             return;
         }
+        if (s.mode == Mode.ROOM && roomFence == null) {
+            return;
+        }
         state.setValue(s.with(s.fix, s.accuracyM, true, null));
         auth.loadUser(user -> {
             if (!user.isSuccess()) {
                 fail(user.getError());
+            } else if (s.mode == Mode.ROOM && roomFence != null) {
+                create(user.getValue(), roomFence);
             } else if (s.mode == Mode.CAMPUS) {
                 sessionRepository.loadCampus(campus -> {
                     if (campus.isSuccess()) {
@@ -290,7 +419,9 @@ public final class StartSessionViewModel extends ViewModel {
                         s.accuracyM,
                         false,
                         null,
-                        outcome.getValue()));
+                        outcome.getValue(),
+                        s.room,
+                        s.roomSaved));
     }
 
     private void fail(@Nullable AppError error) {

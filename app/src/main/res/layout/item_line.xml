@@ -16,16 +16,20 @@
         android:paddingHorizontal="@dimen/space_16"
         android:paddingVertical="@dimen/space_12">
 
-        <!-- A student's emoji. Decoration only: the title names the student. -->
+        <!-- A person's monogram, "AP". Decoration only: the title names them. -->
         <TextView
             android:id="@+id/line_avatar"
             android:layout_width="@dimen/avatar"
             android:layout_height="@dimen/avatar"
             android:layout_marginEnd="@dimen/space_12"
             android:background="@drawable/bg_avatar"
+            android:fontFamily="serif"
             android:gravity="center"
             android:importantForAccessibility="no"
             android:includeFontPadding="false"
+            android:letterSpacing="0.04"
+            android:maxLines="1"
+            android:textColor="@color/on_accent"
             android:textSize="@dimen/avatar_text"
             android:visibility="gone"
             tools:ignore="SpUsage" />

@@ -23,6 +23,7 @@ import com.presence.attendance.roster.domain.AlertRepository;
 import com.presence.attendance.roster.domain.IdentityAlert;
 import com.presence.attendance.roster.domain.RosterEntry;
 import com.presence.attendance.roster.domain.StudentIdentity;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -36,6 +37,7 @@ import java.util.Map;
 public final class FirebaseAuthRepository implements AuthRepository {
 
     private static final String USERS = "users";
+    private static final String HODS = "hods";
     private static final String CLAIM_NAME = "name";
     private static final String CLAIM_EMAIL = "email";
 
@@ -170,7 +172,7 @@ public final class FirebaseAuthRepository implements AuthRepository {
                 });
         write.addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
-                succeed(callback, new User(uid, name, email, Role.FACULTY));
+                succeedAsFaculty(callback, new User(uid, name, email, Role.FACULTY));
                 return;
             }
             final AppError error = FirebaseErrors.toAppError(task.getException());
@@ -189,7 +191,7 @@ public final class FirebaseAuthRepository implements AuthRepository {
             @NonNull String email,
             @NonNull Callback<User> callback) {
         if (stored.getName().equals(name) && stored.getEmail().equals(email)) {
-            succeed(callback, stored);
+            succeedAsFaculty(callback, stored);
         } else {
             proposeFaculty(stored.getUid(), name, email, callback);
         }
@@ -411,6 +413,24 @@ public final class FirebaseAuthRepository implements AuthRepository {
                         fail(callback, AppError.NOT_VJTI_ACCOUNT);
                     }
                 });
+    }
+
+    /**
+     * Faculty learn whether they are the HOD by reading their own entry in {@code hods}, which the
+     * rules allow for nobody else's. It only decides which screens show: every HOD write is checked
+     * by the rules again. If it cannot be read, they carry on as faculty.
+     */
+    private void succeedAsFaculty(@NonNull Callback<User> callback, @NonNull User faculty) {
+        firestore
+                .collection(HODS)
+                .document(faculty.getEmail().toLowerCase(Locale.ROOT))
+                .get()
+                .addOnCompleteListener(task ->
+                        succeed(
+                                callback,
+                                task.isSuccessful() && task.getResult().exists()
+                                        ? faculty.asHod()
+                                        : faculty));
     }
 
     private void succeed(@NonNull Callback<User> callback, @NonNull User user) {

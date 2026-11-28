@@ -9,8 +9,8 @@ import com.presence.attendance.auth.domain.AuthRepository;
 import com.presence.attendance.auth.domain.User;
 import com.presence.attendance.core.AppError;
 import com.presence.attendance.core.Outcome;
+import com.presence.attendance.department.domain.Batch;
 import com.presence.attendance.roster.domain.RosterCsv;
-import com.presence.attendance.roster.domain.RosterEntry;
 import com.presence.attendance.roster.domain.RosterRepository;
 import com.presence.attendance.roster.domain.RosterRepository.AddOutcome;
 import com.presence.attendance.roster.domain.RosterRepository.CorrectOutcome;
@@ -111,6 +111,10 @@ public final class RosterImportViewModel extends ViewModel {
 
     private final AuthRepository auth;
     private final RosterRepository roster;
+
+    /** The batch the file being previewed or imported is for. */
+    @NonNull private String batchId = "";
+
     private final MediatorLiveData<State> state = new MediatorLiveData<>(idle(false, null, null));
 
     public RosterImportViewModel(
@@ -142,11 +146,12 @@ public final class RosterImportViewModel extends ViewModel {
     }
 
     /**
-     * A file was read. Validates all of it against itself and the current roster.
+     * A file was read for a batch. Validates all of it against itself, then against the whole
+     * roster as it is now: an address may be in only one batch.
      *
      * @param text the file's contents, or null if it could not be read or was too large
      */
-    public void onFile(@Nullable String text, @NonNull List<RosterEntry> currentRoster) {
+    public void onFile(@Nullable String text, @NonNull Batch batch) {
         if (current().phase == Phase.IMPORTING) {
             return;
         }
@@ -155,19 +160,36 @@ public final class RosterImportViewModel extends ViewModel {
             state.setValue(idle(online, AppError.FILE_UNREADABLE, null));
             return;
         }
-        final List<RosterCsv.Row> rows;
+        final List<RosterCsv.Row> parsed;
         try {
-            rows = RosterCsv.checkAgainst(RosterCsv.parse(text), currentRoster);
+            parsed = RosterCsv.parse(text, batch.getId(), batch.getLabGroups());
         } catch (RosterCsv.FileException unusable) {
             state.setValue(idle(online, null, unusable.problem));
             return;
         }
-        int writes = 0;
-        for (RosterCsv.Row row : rows) {
-            writes += row.writes() ? 1 : 0;
-        }
-        state.setValue(
-                new State(Phase.PREVIEW, online, rows, new HashMap<>(), writes, null, null, true));
+        batchId = batch.getId();
+        roster.loadRoster(loaded -> {
+            if (!loaded.isSuccess()) {
+                state.setValue(idle(current().online, loaded.getError(), null));
+                return;
+            }
+            final List<RosterCsv.Row> rows =
+                    RosterCsv.checkAgainst(parsed, batch.getId(), loaded.getValue());
+            int writes = 0;
+            for (RosterCsv.Row row : rows) {
+                writes += row.writes() ? 1 : 0;
+            }
+            state.setValue(
+                    new State(
+                            Phase.PREVIEW,
+                            current().online,
+                            rows,
+                            new HashMap<>(),
+                            writes,
+                            null,
+                            null,
+                            true));
+        });
     }
 
     /** The roster screen has navigated to the preview. */
@@ -227,7 +249,7 @@ public final class RosterImportViewModel extends ViewModel {
                     teacher,
                     row.email,
                     row.rollNo,
-                    row.cohort,
+                    batchId,
                     details,
                     outcome -> next.accept(added(outcome)));
         }

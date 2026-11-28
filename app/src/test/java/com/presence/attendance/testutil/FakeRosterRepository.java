@@ -39,6 +39,24 @@ public final class FakeRosterRepository implements RosterRepository {
         callback.onResult(rosterOutcome);
     }
 
+    /** The same entries as {@link #rosterOutcome}, kept to the batch asked for. */
+    @Override
+    public void loadBatchRoster(
+            @NonNull String batchId, @NonNull Callback<List<RosterEntry>> callback) {
+        loads++;
+        if (!rosterOutcome.isSuccess()) {
+            callback.onResult(rosterOutcome);
+            return;
+        }
+        final List<RosterEntry> batch = new ArrayList<>();
+        for (RosterEntry entry : rosterOutcome.getValue()) {
+            if (entry.getCohort().equals(batchId)) {
+                batch.add(entry);
+            }
+        }
+        callback.onResult(Outcome.success(batch));
+    }
+
     @Override
     public void addStudent(
             @NonNull User teacher,
@@ -61,14 +79,12 @@ public final class FakeRosterRepository implements RosterRepository {
         callback.onResult(detailsOutcome);
     }
 
-    /** "Name/batch/EMOJI", with batch "-" for none. */
+    /** "Name/labGroup", with "-" for no lab group. */
     @NonNull
     public static String describe(@NonNull StudentDetails details) {
         return details.getName()
                 + "/"
-                + (details.getBatch() == null ? "-" : details.getBatch())
-                + "/"
-                + details.getEmoji().name();
+                + (details.getLabGroup() == null ? "-" : details.getLabGroup());
     }
 
     @Override

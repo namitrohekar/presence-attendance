@@ -24,6 +24,7 @@ import com.presence.attendance.core.Log;
 import com.presence.attendance.core.ui.AppErrorMessages;
 import com.presence.attendance.core.ui.Line;
 import com.presence.attendance.core.ui.LineAdapter;
+import com.presence.attendance.core.ui.Monogram;
 import com.presence.attendance.core.ui.ViewModels;
 import com.presence.attendance.core.ui.WindowInsetsPadding;
 import com.presence.attendance.databinding.FragmentListBinding;
@@ -175,7 +176,7 @@ public final class CourseStudentsFragment extends Fragment {
                                     detail,
                                     badge,
                                     row.atRisk ? Line.Tone.DANGER : Line.Tone.NEUTRAL)
-                            .withAvatar(row.member.shownEmoji().glyph())
+                            .withAvatar(Monogram.of(row.member.getName()))
                             .navigates());
         }
         return Line.grouped(lines);
@@ -237,7 +238,7 @@ public final class CourseStudentsFragment extends Fragment {
                             row.member.getRollNo(),
                             row.member.getName(),
                             row.member.getEmail(),
-                            row.member.getBatch(),
+                            row.member.getLabGroup(),
                             row.stats.getPresent(),
                             row.stats.getTotal(),
                             row.stats.percent(),

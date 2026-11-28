@@ -9,7 +9,9 @@ import com.presence.attendance.session.domain.Geofence;
 import com.presence.attendance.session.domain.Session;
 import com.presence.attendance.session.domain.SessionRepository;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * In-memory {@link SessionRepository}. Most calls answer synchronously with what the test set;
@@ -45,6 +47,34 @@ public final class FakeSessionRepository implements SessionRepository {
     public void loadCampus(@NonNull Callback<Geofence> callback) {
         calls.add("loadCampus");
         callback.onResult(campusOutcome);
+    }
+
+    /** Saved rooms by name. saveRoom adds to it, as the real one would. */
+    public final Map<String, Geofence> rooms = new HashMap<>();
+
+    public AppError roomFailure;
+
+    @Override
+    public void loadRoom(@NonNull String name, @NonNull Callback<Geofence> callback) {
+        calls.add("loadRoom:" + name);
+        final Geofence room = rooms.get(name);
+        callback.onResult(
+                room != null ? Outcome.success(room) : Outcome.failure(AppError.ROOM_NOT_SAVED));
+    }
+
+    @Override
+    public void saveRoom(
+            @NonNull User teacher,
+            @NonNull String name,
+            @NonNull Geofence geofence,
+            @NonNull Callback<Geofence> callback) {
+        calls.add("saveRoom:" + name + ":" + (int) geofence.getRadiusM());
+        if (roomFailure != null) {
+            callback.onResult(Outcome.failure(roomFailure));
+            return;
+        }
+        rooms.put(name, geofence);
+        callback.onResult(Outcome.success(geofence));
     }
 
     @Override

@@ -32,6 +32,8 @@ public final class AppErrorMessages {
             case LOCATION_INACCURATE -> R.string.error_location_inaccurate;
             case CAMPUS_NOT_CONFIGURED -> R.string.error_campus_not_configured;
             case SESSION_NOT_FOUND -> R.string.error_session_not_found;
+            case BATCH_NOT_FOUND -> R.string.error_batch_not_found;
+            case ROOM_NOT_SAVED -> R.string.error_room_not_saved;
             case SESSION_ENDED -> R.string.error_session_ended;
             case ALREADY_MARKED -> R.string.error_already_marked;
             case DEVICE_USED -> R.string.error_device_used;

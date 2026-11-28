@@ -13,7 +13,7 @@ public enum AppError {
     SIGN_IN_CANCELLED,
     SIGN_IN_FAILED,
     NO_GOOGLE_ACCOUNT,
-    /** Neither on the faculty allowlist nor an address in the student domain. */
+    /** Neither on the faculty list nor an address in the student domain. */
     NOT_VJTI_ACCOUNT,
     /** A student address that has not registered a roll number yet. Not shown as an error. */
     REGISTRATION_REQUIRED,
@@ -33,6 +33,10 @@ public enum AppError {
     /** appConfig/campus has not been created in the console. */
     CAMPUS_NOT_CONFIGURED,
     SESSION_NOT_FOUND,
+    /** The batch was not found: it was never created, or the link is stale. */
+    BATCH_NOT_FOUND,
+    /** Nobody has saved this room's location yet. */
+    ROOM_NOT_SAVED,
     SESSION_ENDED,
     ALREADY_MARKED,
     /** Another student has already marked this session from this phone. */

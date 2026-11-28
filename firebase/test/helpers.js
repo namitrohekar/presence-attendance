@@ -20,8 +20,11 @@ const PROJECT_ID = 'demo-presence';
 const RULES_PATH = path.join(__dirname, '..', 'firestore.rules');
 const CONTRACTS_DIR = path.join(__dirname, '..', '..', 'contracts');
 
+// The HOD, who also teaches, and a teacher on the HOD's faculty list.
 const TEACHER = { uid: 'teacherA', email: 'asha.kulkarni@example.edu', name: 'Asha Kulkarni' };
 const OTHER_TEACHER = { uid: 'teacherB', email: 'vikram.rao@example.edu', name: 'Vikram Rao' };
+// A second HOD (a department may name more than one), not on the faculty list.
+const DEPUTY = { uid: 'teacherC', email: 'neha.shah@example.edu', name: 'Neha Shah' };
 
 // Fictional students. Roll numbers are opaque nine-digit identifiers.
 const student = (uid, local, name, rollNo) => ({
@@ -138,14 +141,43 @@ function joinCodeDoc(overrides = {}) {
   };
 }
 
-/** A roster entry as faculty add it: not yet claimed by the student. */
+/** A batch as the HOD creates it: the fixtures' cohort MC26 is programme MC from 2026. */
+function batchDoc(overrides = {}) {
+  return {
+    programme: 'MC',
+    startYear: 2026,
+    years: 2,
+    semester: 1,
+    intake: 70,
+    labGroups: 4,
+    createdBy: TEACHER.uid,
+    createdAt: ago(60 * DAY),
+    ...overrides,
+  };
+}
+
+/** Someone on the HOD's faculty list. */
+function facultyDoc(who, overrides = {}) {
+  return {
+    email: who.email,
+    name: who.name,
+    initials: who.name
+      .split(' ')
+      .map((word) => word[0])
+      .join(''),
+    addedBy: TEACHER.uid,
+    addedAt: ago(60 * DAY),
+    ...overrides,
+  };
+}
+
+/** A roster entry as the HOD adds it: not yet claimed by the student. */
 function registryDoc(who, overrides = {}) {
   return {
     email: who.email,
     rollNo: who.rollNo,
     cohort: who.cohort,
     name: who.name,
-    emoji: 'OWL',
     addedBy: TEACHER.uid,
     addedAt: ago(40 * DAY),
     revision: 0,
@@ -161,7 +193,7 @@ function claimedRegistryDoc(who, overrides = {}) {
 const registryPath = (who) => `studentRegistry/${who.email}`;
 const rollIndexPath = (who) => `rollIndex/${who.cohort}_${who.rollNo}`;
 
-/** The two documents faculty write for one student, with the entry claimed or not. */
+/** The two documents the HOD writes for one student, with the entry claimed or not. */
 function rosterDocs(who, claimed) {
   return {
     [registryPath(who)]: claimed ? claimedRegistryDoc(who) : registryDoc(who),
@@ -210,14 +242,19 @@ function sessionDoc(overrides = {}) {
 }
 
 /**
- * The standard world: an allowlisted teacher with one course, a roster of four
- * students (three registered, one not yet), two of them enrolled, one live
- * session and one token issued two seconds ago.
+ * The standard world: the HOD, who teaches one course, and a teacher on the
+ * faculty list; batches MC26 and MC25; a roster of four MC26 students (three
+ * registered, one not yet), two of them enrolled, one live session and one
+ * token issued two seconds ago.
  */
 function world(overrides = {}) {
   return {
-    [`teacherAllowlist/${TEACHER.email}`]: {},
-    [`teacherAllowlist/${OTHER_TEACHER.email}`]: {},
+    [`hods/${TEACHER.email}`]: {},
+    [`hods/${DEPUTY.email}`]: {},
+    [`faculty/${TEACHER.email}`]: facultyDoc(TEACHER),
+    [`faculty/${OTHER_TEACHER.email}`]: facultyDoc(OTHER_TEACHER),
+    'batches/MC26': batchDoc(),
+    'batches/MC25': batchDoc({ startYear: 2025, semester: 3 }),
     'appConfig/campus': GEOFENCE,
     ...rosterDocs(STUDENT, true),
     ...rosterDocs(OTHER_STUDENT, true),
@@ -363,6 +400,7 @@ module.exports = {
   RULES_PATH,
   TEACHER,
   OTHER_TEACHER,
+  DEPUTY,
   STUDENT,
   OTHER_STUDENT,
   OUTSIDER,
@@ -385,6 +423,8 @@ module.exports = {
   world,
   courseDoc,
   joinCodeDoc,
+  batchDoc,
+  facultyDoc,
   membershipDoc,
   registryDoc,
   claimedRegistryDoc,

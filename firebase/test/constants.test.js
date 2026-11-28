@@ -37,8 +37,14 @@ const ENFORCED_BY_RULES = [
   'CORRECTION_RETENTION_DAYS',
   'HEADCOUNT_MAX',
   'NAME_MAX_LEN',
-  'BATCH_MIN',
-  'BATCH_MAX',
+  'BATCH_YEAR_MIN',
+  'BATCH_YEAR_MAX',
+  'PROGRAMME_YEARS_MAX',
+  'SEMESTERS_PER_YEAR',
+  'INTAKE_MAX',
+  'LAB_GROUPS_MAX',
+  'TIMETABLE_SLOTS_MAX',
+  'ROOM_NAME_MAX_LEN',
 ];
 
 describe('constants parity (rules)', () => {
@@ -76,10 +82,20 @@ describe('constants parity (rules)', () => {
     );
   });
 
-  test('the emoji pattern lists exactly the contract emojis', () => {
-    const names = constants.STUDENT_EMOJIS.split(',');
-    expect(new Set(names).size).toBe(10);
-    expect(rules).toContain(`v.matches('^(${names.join('|')})$')`);
+  test('the initials and programme patterns match the contract lengths', () => {
+    expect(rules).toContain(`v.matches('^[A-Z]{1,${constants.INITIALS_MAX_LEN}}$')`);
+    expect(rules).toContain(
+      `v.matches('^[A-Z]{${constants.PROGRAMME_MIN_LEN},${constants.PROGRAMME_MAX_LEN}}$')`,
+    );
+    // A batch id is a programme and two digits, and must fit the cohort pattern.
+    expect(constants.PROGRAMME_MAX_LEN + 2).toBeLessThanOrEqual(constants.COHORT_MAX_LEN);
+    expect(constants.PROGRAMME_MIN_LEN + 2).toBeGreaterThanOrEqual(constants.COHORT_MIN_LEN);
+  });
+
+  test('a batch id takes the start year\'s last two digits', () => {
+    expect(rules).toContain('+ string(request.resource.data.startYear - 2000)');
+    expect(constants.BATCH_YEAR_MIN).toBeGreaterThanOrEqual(2010);
+    expect(constants.BATCH_YEAR_MAX).toBeLessThanOrEqual(2099);
   });
 
   test('the join code alphabet excludes look-alike characters', () => {

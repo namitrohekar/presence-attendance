@@ -162,4 +162,59 @@ public final class StartSessionViewModelTest {
         viewModel.start();
         assertEquals(2, sessions.calls.size());
     }
+
+    private static final Geofence ROOM = Geofence.around(19.0223, 72.8562, 40);
+
+    private StartSessionViewModel fromTimetable(String room, int minutes) {
+        final StartSessionViewModel model =
+                new StartSessionViewModel(
+                        auth, sessions, location, online, "courseA", room, minutes);
+        model.getState().observeForever(state -> {});
+        return model;
+    }
+
+    @Test
+    public void aSavedRoomIsChosenAndTheSessionRunsUntilTheClassEnds() {
+        sessions.rooms.put("AL-301", ROOM);
+        viewModel = fromTimetable("AL-301", 42);
+        assertEquals(Mode.ROOM, state().mode);
+        assertTrue(state().roomSaved);
+        assertEquals(42, state().durationMin);
+        assertEquals("no fix is needed", 0, location.requests);
+        viewModel.start();
+        assertEquals(ROOM, sessions.lastGeofence);
+        assertEquals(42, sessions.lastDurationMin);
+    }
+
+    @Test
+    public void anUnsavedRoomStartsHereAndCanBeSavedForNextTime() {
+        viewModel = fromTimetable("AL-301", 60);
+        assertEquals(Mode.HERE, state().mode);
+        assertFalse(state().roomSaved);
+        assertTrue(state().canSaveRoom());
+        viewModel.setRadius(60);
+        viewModel.saveRoom();
+        assertTrue(sessions.calls.contains("saveRoom:AL-301:60"));
+        assertEquals(Mode.ROOM, state().mode);
+        assertTrue(state().roomSaved);
+        assertFalse(state().busy);
+    }
+
+    @Test
+    public void aRoomThatCannotBeSavedSaysWhyAndStaysHere() {
+        sessions.roomFailure = AppError.PERMISSION_DENIED;
+        viewModel = fromTimetable("AL-301", 60);
+        viewModel.saveRoom();
+        assertEquals(AppError.PERMISSION_DENIED, state().error);
+        assertEquals(Mode.HERE, state().mode);
+        assertFalse(state().busy);
+    }
+
+    @Test
+    public void withoutARoomNothingCanBeSaved() {
+        viewModel.setMode(Mode.HERE);
+        assertFalse(state().canSaveRoom());
+        viewModel.saveRoom();
+        assertTrue(sessions.calls.stream().noneMatch(call -> call.startsWith("saveRoom")));
+    }
 }

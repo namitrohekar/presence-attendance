@@ -8,8 +8,8 @@ import com.presence.attendance.core.Callback;
 import java.util.List;
 
 /**
- * The faculty-managed student roster. Every write is one atomic transaction that the security rules
- * verify; nothing is ever silently overwritten.
+ * The student roster the HOD keeps, one batch per cohort. Every write is one atomic transaction
+ * that the security rules verify; nothing is ever silently overwritten.
  */
 public interface RosterRepository {
 
@@ -38,9 +38,13 @@ public interface RosterRepository {
         ROLL_TAKEN
     }
 
-    /** The whole roster, sorted by cohort and then roll number. */
+    /** The whole roster, every batch, sorted by cohort and then roll number. */
     @MainThread
     void loadRoster(@NonNull Callback<List<RosterEntry>> callback);
+
+    /** One batch's students, sorted by roll number. */
+    @MainThread
+    void loadBatchRoster(@NonNull String batchId, @NonNull Callback<List<RosterEntry>> callback);
 
     /** Adds one student. Inputs must already be normalised and valid. */
     @MainThread
@@ -53,8 +57,8 @@ public interface RosterRepository {
             @NonNull Callback<AddOutcome> callback);
 
     /**
-     * Changes a student's name, batch and emoji. No reason is needed and the registration stays:
-     * these describe the student, they do not identify them. Resolves to DONE or NOT_FOUND.
+     * Changes a student's name and lab group. No reason is needed and the registration stays: these
+     * describe the student, they do not identify them. Resolves to DONE or NOT_FOUND.
      */
     @MainThread
     void updateDetails(

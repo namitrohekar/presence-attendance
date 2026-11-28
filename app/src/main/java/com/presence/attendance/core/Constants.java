@@ -72,17 +72,38 @@ public final class Constants {
     /** Attended sessions taken off a student's figure for each mark revoked as a proxy. */
     public static final int PROXY_PENALTY_SESSIONS = 1;
 
-    /** Longest official name on the roster. */
+    /** Longest official name on the roster or the faculty list. */
     public static final int NAME_MAX_LEN = 80;
 
-    /** Lab batches are numbered from BATCH_MIN to BATCH_MAX. */
-    public static final int BATCH_MIN = 1;
+    /** A teacher's initials, as the timetable writes them: 1 to INITIALS_MAX_LEN capitals. */
+    public static final int INITIALS_MAX_LEN = 4;
 
-    public static final int BATCH_MAX = 20;
+    /** A programme code such as MCA: PROGRAMME_MIN_LEN to PROGRAMME_MAX_LEN capitals. */
+    public static final int PROGRAMME_MIN_LEN = 2;
 
-    /** The ten emojis a student can be shown with, by stored name, in their fixed order. */
-    public static final String STUDENT_EMOJIS =
-            "LION,TIGER,ELEPHANT,PANDA,FOX,OWL,DOLPHIN,TURTLE,BUTTERFLY,PEACOCK";
+    public static final int PROGRAMME_MAX_LEN = 6;
+
+    /** The years a batch may start in; its id takes the year's last two digits. */
+    public static final int BATCH_YEAR_MIN = 2010;
+
+    public static final int BATCH_YEAR_MAX = 2099;
+
+    /** The longest programme, in years. */
+    public static final int PROGRAMME_YEARS_MAX = 5;
+
+    public static final int SEMESTERS_PER_YEAR = 2;
+
+    /** The largest intake a batch can plan for. */
+    public static final int INTAKE_MAX = 500;
+
+    /** The most lab groups a batch can be split into. */
+    public static final int LAB_GROUPS_MAX = 10;
+
+    /** The most slots one batch's weekly timetable may hold. */
+    public static final int TIMETABLE_SLOTS_MAX = 200;
+
+    /** The longest room name, as the timetable writes it (AL-301). */
+    public static final int ROOM_NAME_MAX_LEN = 40;
 
     private Constants() {}
 }

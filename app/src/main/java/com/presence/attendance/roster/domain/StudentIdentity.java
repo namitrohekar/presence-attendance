@@ -3,23 +3,29 @@ package com.presence.attendance.roster.domain;
 import androidx.annotation.NonNull;
 import com.presence.attendance.core.Constants;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Strict validation of the three things that identify a student (official address, roll number and
- * cohort) and of the details kept about them (name and batch). The security rules apply the same
- * tests; these exist to give precise messages.
+ * cohort, which is the batch's id) and of the details kept about them (name and lab group). The
+ * security rules apply the same tests; these exist to give precise messages.
  */
 public final class StudentIdentity {
 
-    /** {@link #parseBatch} of blank text: the student is in no batch. */
-    public static final int NO_BATCH = 0;
+    /** {@link #parseLabGroup} of blank text: no lab group yet. */
+    public static final int NO_GROUP = 0;
 
-    /** {@link #parseBatch} of text that is not a batch number. */
-    public static final int INVALID_BATCH = -1;
+    /** {@link #parseLabGroup} of text that is not a lab group of the batch. */
+    public static final int INVALID_GROUP = -1;
 
     private static final int LOCAL_PART_MAX = 64;
     private static final String LOCAL_PART_EXTRA = "._-";
-    private static final int MAX_BATCH_DIGITS = 2;
+
+    /** "2", "B2", "Batch 2", "Group 2", "Lab group 2": the timetable calls them batches. */
+    private static final Pattern LAB_GROUP =
+            Pattern.compile(
+                    "^(?:(?:(?:lab\\s*)?(?:group|batch)|[bg])\\s*[-#:.]?\\s*)?([0-9]{1,2})$");
 
     private StudentIdentity() {}
 
@@ -105,24 +111,27 @@ public final class StudentIdentity {
                 && name.equals(name.trim());
     }
 
-    public static boolean isBatch(int batch) {
-        return batch >= Constants.BATCH_MIN && batch <= Constants.BATCH_MAX;
+    /** A lab group of a batch split into {@code groups}: 1 to groups. */
+    public static boolean isLabGroup(int labGroup, int groups) {
+        return labGroup >= 1 && labGroup <= groups;
     }
 
     /**
-     * A batch as a teacher typed it.
+     * A lab group as the HOD or a class list wrote it.
      *
-     * @return the batch number, {@link #NO_BATCH} for blank text, or {@link #INVALID_BATCH}
+     * @param groups how many lab groups the batch has
+     * @return the group, {@link #NO_GROUP} for blank text, or {@link #INVALID_GROUP}
      */
-    public static int parseBatch(@NonNull String input) {
-        final String text = input.trim();
+    public static int parseLabGroup(@NonNull String input, int groups) {
+        final String text = input.trim().toLowerCase(Locale.ROOT);
         if (text.isEmpty()) {
-            return NO_BATCH;
+            return NO_GROUP;
         }
-        if (text.length() > MAX_BATCH_DIGITS || !text.chars().allMatch(c -> c >= '0' && c <= '9')) {
-            return INVALID_BATCH;
+        final Matcher matcher = LAB_GROUP.matcher(text);
+        if (!matcher.matches()) {
+            return INVALID_GROUP;
         }
-        final int batch = Integer.parseInt(text);
-        return isBatch(batch) ? batch : INVALID_BATCH;
+        final int group = Integer.parseInt(matcher.group(1));
+        return isLabGroup(group, groups) ? group : INVALID_GROUP;
     }
 }

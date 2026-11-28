@@ -1,6 +1,6 @@
-// Invariant 1: profiles and role. The role is derived from the allowlist on
-// create and update, never chosen by the client, and the allowlist takes
-// precedence over the student domain. Student profiles are registrations and
+// Invariant 1: profiles and role. The role is derived from the HOD's faculty
+// list (or the console's HOD list) on create and update, never chosen by the
+// client, and the faculty list takes precedence over the student domain. Student profiles are registrations and
 // are covered in registration.test.js.
 
 const {
@@ -16,7 +16,7 @@ const {
 } = require('firebase/firestore');
 const h = require('./helpers');
 
-const { TEACHER, STUDENT, OTHER_STUDENT, UNLISTED, STRANGER, DROP } = h;
+const { TEACHER, OTHER_TEACHER, DEPUTY, STUDENT, OTHER_STUDENT, UNLISTED, STRANGER, DROP } = h;
 const { assertFails, assertSucceeds } = h;
 const t = h.setup();
 
@@ -30,11 +30,17 @@ const facultyProfile = (user, overrides = {}) => ({
 const userRef = (db, user) => doc(db, 'users', user.uid);
 
 describe('INV-1 faculty profile create', () => {
-  test('an allowlisted user creates their profile as FACULTY', async () => {
-    await assertSucceeds(setDoc(userRef(t.as(TEACHER), TEACHER), facultyProfile(TEACHER)));
+  test('someone on the faculty list creates their profile as FACULTY', async () => {
+    await assertSucceeds(
+      setDoc(userRef(t.as(OTHER_TEACHER), OTHER_TEACHER), facultyProfile(OTHER_TEACHER)),
+    );
   });
 
-  test('the allowlist lookup ignores the case of the email', async () => {
+  test('an HOD not on the faculty list is faculty too', async () => {
+    await assertSucceeds(setDoc(userRef(t.as(DEPUTY), DEPUTY), facultyProfile(DEPUTY)));
+  });
+
+  test('the faculty lookup ignores the case of the email', async () => {
     const mixedCase = { ...TEACHER, email: 'Asha.Kulkarni@Example.edu' };
     await assertSucceeds(setDoc(userRef(t.as(mixedCase), mixedCase), facultyProfile(mixedCase)));
   });
@@ -94,8 +100,8 @@ describe('INV-1 role follows the allowlist on every profile write', () => {
     await assertFails(updateDoc(userRef(db, STUDENT), asFaculty));
   });
 
-  test('allowlist precedence: a VJTI address added to the allowlist becomes FACULTY', async () => {
-    await t.seed({ [`teacherAllowlist/${STUDENT.email}`]: {} });
+  test('faculty precedence: a VJTI address added to the faculty list becomes FACULTY', async () => {
+    await t.seed({ [`faculty/${STUDENT.email}`]: h.facultyDoc(STUDENT) });
     const db = t.as(STUDENT);
     // The student shape is no longer valid for this account...
     await assertFails(updateDoc(userRef(db, STUDENT), { name: STUDENT.name }));
@@ -104,7 +110,7 @@ describe('INV-1 role follows the allowlist on every profile write', () => {
     await assertSucceeds(updateDoc(userRef(db, STUDENT), asFaculty));
   });
 
-  test('denied: a user removed from the allowlist keeps writing FACULTY', async () => {
+  test('denied: a user removed from the faculty list keeps writing FACULTY', async () => {
     await t.seed({ [`users/${UNLISTED.uid}`]: stored(UNLISTED) });
     await assertFails(updateDoc(userRef(t.as(UNLISTED), UNLISTED), { name: UNLISTED.name }));
   });
@@ -132,14 +138,24 @@ describe('INV-1 least-privilege reads', () => {
     await assertFails(getDocs(collection(t.as(TEACHER), 'users')));
   });
 
+  test('the HOD reads their own HOD entry, and a teacher learns they have none', async () => {
+    expect((await assertSucceeds(getDoc(doc(t.as(TEACHER), 'hods', TEACHER.email)))).exists()).toBe(
+      true,
+    );
+    const own = await assertSucceeds(getDoc(doc(t.as(OTHER_TEACHER), 'hods', OTHER_TEACHER.email)));
+    expect(own.exists()).toBe(false);
+  });
+
   test.each([
-    ['a teacher', TEACHER],
+    ['the HOD', TEACHER],
+    ['a teacher', OTHER_TEACHER],
     ['a student', STUDENT],
-  ])('denied: %s reading, listing or writing the allowlist', async (_, user) => {
+  ])('denied: %s reading another HOD entry, listing or writing them', async (_, user) => {
     const db = t.as(user);
-    await assertFails(getDoc(doc(db, 'teacherAllowlist', user.email)));
-    await assertFails(getDocs(collection(db, 'teacherAllowlist')));
-    await assertFails(setDoc(doc(db, 'teacherAllowlist', user.email), {}));
+    await assertFails(getDoc(doc(db, 'hods', DEPUTY.email)));
+    await assertFails(getDocs(collection(db, 'hods')));
+    await assertFails(setDoc(doc(db, 'hods', user.email), {}));
+    await assertFails(deleteDoc(doc(db, 'hods', TEACHER.email)));
   });
 
   test('a signed-in user reads the campus config', async () => {

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A one-question confirmation: moving a batch's semester, removing a teacher, applying lab groups. Texts are set in code. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="@dimen/screen_margin"
+    android:paddingBottom="@dimen/space_24">
+
+    <include layout="@layout/view_sheet_handle" />
+
+    <TextView
+        android:id="@+id/confirm_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_16"
+        android:accessibilityHeading="true"
+        android:textAppearance="@style/TextAppearance.Presence.Title" />
+
+    <TextView
+        android:id="@+id/confirm_body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_4"
+        android:fontFeatureSettings="tnum"
+        android:textAppearance="@style/TextAppearance.Presence.Body"
+        android:textColor="@color/text_secondary" />
+
+    <TextView
+        android:id="@+id/confirm_status"
+        style="@style/Widget.Presence.InlineError"
+        android:layout_marginTop="@dimen/space_16" />
+
+    <com.presence.attendance.core.ui.SpringButton
+        android:id="@+id/confirm_yes"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_24" />
+
+    <com.presence.attendance.core.ui.SpringButton
+        android:id="@+id/confirm_no"
+        style="@style/Widget.Presence.Button.Text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_4"
+        android:text="@string/action_cancel" />
+</LinearLayout>

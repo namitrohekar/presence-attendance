@@ -6,7 +6,6 @@ import android.view.inputmethod.EditorInfo;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.ViewModelProvider;
-import com.google.android.material.chip.ChipGroup;
 import com.presence.attendance.R;
 import com.presence.attendance.core.ui.AppErrorMessages;
 import com.presence.attendance.core.ui.SheetFragment;
@@ -14,53 +13,55 @@ import com.presence.attendance.core.ui.ViewModels;
 import com.presence.attendance.databinding.SheetAddStudentBinding;
 import com.presence.attendance.roster.domain.RosterRepository.AddOutcome;
 
-/** Faculty: add one student to the roster. */
+/** HOD: add one student to a batch. */
 public final class AddStudentSheet extends SheetFragment {
 
-    @Nullable private ChipGroup emojiGroup;
+    private static final String ARG_BATCH_ID = "batchId";
+    private static final String ARG_LAB_GROUPS = "labGroups";
 
     public AddStudentSheet() {
         super(R.layout.sheet_add_student);
     }
 
-    @Override
-    public void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-        if (emojiGroup != null) {
-            EmojiPicker.save(emojiGroup, outState);
-        }
-    }
-
-    @Override
-    public void onDestroyView() {
-        emojiGroup = null;
-        super.onDestroyView();
+    @NonNull
+    static AddStudentSheet newInstance(@NonNull String batchId, int labGroups) {
+        final Bundle args = new Bundle();
+        args.putString(ARG_BATCH_ID, batchId);
+        args.putInt(ARG_LAB_GROUPS, labGroups);
+        final AddStudentSheet sheet = new AddStudentSheet();
+        sheet.setArguments(args);
+        return sheet;
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         final SheetAddStudentBinding binding = SheetAddStudentBinding.bind(view);
+        final Bundle args = requireArguments();
+        final String batchId = args.getString(ARG_BATCH_ID, "");
+        final int labGroups = args.getInt(ARG_LAB_GROUPS);
         final AddStudentViewModel viewModel =
                 new ViewModelProvider(
                                 this,
                                 ViewModels.factory(c ->
-                                        new AddStudentViewModel(c.auth(), c.roster(), c.online())))
+                                        new AddStudentViewModel(
+                                                c.auth(),
+                                                c.roster(),
+                                                c.online(),
+                                                batchId,
+                                                labGroups)))
                         .get(AddStudentViewModel.class);
 
-        emojiGroup = binding.addEmoji;
-        EmojiPicker.fill(binding.addEmoji, EmojiPicker.restore(savedInstanceState));
+        binding.addGroup.setHint(getString(R.string.lab_group_hint, labGroups));
         final Runnable submit =
                 () ->
                         viewModel.submit(
                                 binding.addEmail.getText().toString(),
                                 binding.addRoll.getText().toString(),
                                 binding.addName.getText().toString(),
-                                binding.addCohort.getText().toString(),
-                                binding.addBatch.getText().toString(),
-                                EmojiPicker.selected(binding.addEmoji));
+                                binding.addGroup.getText().toString());
         binding.addSubmit.setOnClickListener(v -> submit.run());
-        binding.addBatch.setOnEditorActionListener((v, actionId, event) -> {
+        binding.addGroup.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE) {
                 submit.run();
             }
@@ -88,8 +89,7 @@ public final class AddStudentSheet extends SheetFragment {
                 rollTaken ? R.string.add_roll_taken : R.string.add_roll_invalid);
         binding.addRollError.setVisibility(visibleIf(state.invalid.rollNo || rollTaken));
         binding.addNameError.setVisibility(visibleIf(state.invalid.name));
-        binding.addCohortError.setVisibility(visibleIf(state.invalid.cohort));
-        binding.addBatchError.setVisibility(visibleIf(state.invalid.batch));
+        binding.addGroupError.setVisibility(visibleIf(state.invalid.labGroup));
 
         if (!state.online) {
             binding.addStatus.setText(R.string.roster_offline);

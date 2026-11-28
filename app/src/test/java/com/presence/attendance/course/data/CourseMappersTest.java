@@ -53,4 +53,29 @@ public final class CourseMappersTest {
                 IllegalStateException.class,
                 () -> CourseMappers.newMembership(Fixtures.TEACHER, Fixtures.JOIN_CODE));
     }
+
+    @Test
+    public void aNewSubjectIsUnclaimedWithExactlyTheContractFields() throws IOException {
+        final Map<String, Object> document = CourseMappers.newSubject(Fixtures.LAB, "teacherA");
+        assertEquals(
+                DocumentContract.fields("courses.subject", false),
+                new TreeSet<>(document.keySet()));
+        assertEquals("the assigned teacher claims it", "", document.get("teacherId"));
+        assertEquals("asha.kulkarni@example.edu", document.get("teacherEmail"));
+        assertEquals("MC26", document.get("batchId"));
+        assertEquals(1, document.get("semester"));
+        assertEquals(1, document.get("labGroup"));
+    }
+
+    @Test
+    public void aSubjectMembershipHasNoJoinCode() throws IOException {
+        final Map<String, Object> document =
+                CourseMappers.newSubjectMembership(Fixtures.STUDENT, Fixtures.LECTURE);
+        assertEquals(
+                DocumentContract.fields("memberships.subject", false),
+                new TreeSet<>(document.keySet()));
+        assertEquals("teacherA", document.get("teacherId"));
+        assertEquals(Fixtures.LECTURE.getId(), document.get("courseId"));
+        assertEquals("MC26", document.get("cohort"));
+    }
 }

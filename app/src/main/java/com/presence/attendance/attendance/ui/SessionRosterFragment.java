@@ -14,6 +14,7 @@ import com.presence.attendance.core.AppError;
 import com.presence.attendance.core.ui.AppErrorMessages;
 import com.presence.attendance.core.ui.Line;
 import com.presence.attendance.core.ui.LineAdapter;
+import com.presence.attendance.core.ui.Monogram;
 import com.presence.attendance.core.ui.ViewModels;
 import com.presence.attendance.core.ui.WindowInsetsPadding;
 import com.presence.attendance.course.domain.Member;
@@ -214,7 +215,7 @@ public final class SessionRosterFragment extends Fragment {
                         detail,
                         getString(AttendanceLabels.label(record)),
                         AttendanceLabels.tone(record))
-                .withAvatar(member.shownEmoji().glyph())
+                .withAvatar(Monogram.of(member.getName()))
                 .navigates();
     }
 

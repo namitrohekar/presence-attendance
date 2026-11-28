@@ -22,6 +22,7 @@ import com.presence.attendance.core.Constants;
 import com.presence.attendance.core.ui.AppErrorMessages;
 import com.presence.attendance.core.ui.Line;
 import com.presence.attendance.core.ui.LineAdapter;
+import com.presence.attendance.core.ui.Monogram;
 import com.presence.attendance.core.ui.ViewModels;
 import com.presence.attendance.core.ui.WindowInsetsPadding;
 import com.presence.attendance.course.domain.Member;
@@ -268,7 +269,7 @@ public final class LiveSessionFragment extends Fragment {
                                     record.getStatus() == AttendanceRecord.Status.LATE_SYNC
                                             ? Line.Tone.WARNING
                                             : Line.Tone.NEUTRAL)
-                            .withAvatar(member != null ? member.shownEmoji().glyph() : null));
+                            .withAvatar(member != null ? Monogram.of(member.getName()) : null));
         }
         return Line.grouped(lines);
     }

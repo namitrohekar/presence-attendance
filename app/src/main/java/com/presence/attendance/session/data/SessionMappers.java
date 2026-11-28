@@ -11,6 +11,7 @@ import com.presence.attendance.session.domain.Geofence;
 import com.presence.attendance.session.domain.Session;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /** Explicit mapping for {@code sessions}, their {@code tokens}, and {@code appConfig/campus}. */
@@ -22,6 +23,9 @@ final class SessionMappers {
     static final String STARTED_AT = "startedAt";
     static final String ENDS_AT = "endsAt";
     private static final String GEOFENCE = "geofence";
+    private static final String NAME = "name";
+    private static final String SAVED_BY = "savedBy";
+    private static final String SAVED_AT = "savedAt";
     static final String HEADCOUNT = "headcount";
     private static final String LAT = "lat";
     private static final String LNG = "lng";
@@ -78,16 +82,45 @@ final class SessionMappers {
     }
 
     @NonNull
-    static Map<String, Object> newSession(
-            @NonNull String courseId,
-            @NonNull String teacherId,
-            @NonNull Date endsAt,
-            @NonNull Geofence geofence) {
+    private static Map<String, Object> area(@NonNull Geofence geofence) {
         final Map<String, Object> area = new HashMap<>();
         area.put(LAT, geofence.getLat());
         area.put(LNG, geofence.getLng());
         area.put(RADIUS_M, geofence.getRadiusM());
         area.put(COS_LAT, geofence.getCosLat());
+        return area;
+    }
+
+    /** A room's document id: its name in capitals without punctuation, "AL-301" is "AL301". */
+    @NonNull
+    static String roomId(@NonNull String name) {
+        return name.toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]", "");
+    }
+
+    @NonNull
+    static Map<String, Object> newRoom(
+            @NonNull String name, @NonNull Geofence geofence, @NonNull String teacherId) {
+        final Map<String, Object> document = new HashMap<>();
+        document.put(NAME, name);
+        document.put(GEOFENCE, area(geofence));
+        document.put(SAVED_BY, teacherId);
+        document.put(SAVED_AT, FieldValue.serverTimestamp());
+        return document;
+    }
+
+    /** A room's saved geofence, or null if the room is missing or malformed. */
+    @Nullable
+    static Geofence room(@NonNull DocumentSnapshot snapshot) {
+        return geofence(snapshot.get(GEOFENCE));
+    }
+
+    @NonNull
+    static Map<String, Object> newSession(
+            @NonNull String courseId,
+            @NonNull String teacherId,
+            @NonNull Date endsAt,
+            @NonNull Geofence geofence) {
+        final Map<String, Object> area = area(geofence);
         final Map<String, Object> document = new HashMap<>();
         document.put(COURSE_ID, courseId);
         document.put(TEACHER_ID, teacherId);

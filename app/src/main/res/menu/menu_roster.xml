@@ -10,4 +10,8 @@
         android:icon="@drawable/ic_add"
         android:title="@string/add_title"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_edit_batch"
+        android:title="@string/batch_edit"
+        app:showAsAction="never" />
 </menu>

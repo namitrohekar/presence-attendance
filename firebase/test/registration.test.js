@@ -180,15 +180,15 @@ describe('registration: the rules refuse every shortcut', () => {
     expect((await entryOf(STUDENT)).registeredUid).toBe(STUDENT.uid);
   });
 
-  test('allowlist precedence: an allowlisted VJTI address cannot claim an entry', async () => {
-    await t.seed({ [`teacherAllowlist/${LISTED.email}`]: {} });
+  test('faculty precedence: a VJTI address on the faculty list cannot claim an entry', async () => {
+    await t.seed({ [`faculty/${LISTED.email}`]: h.facultyDoc(LISTED) });
     await assertFails(updateDoc(entryRef(t.as(LISTED), LISTED), claim(LISTED)));
   });
 
-  test('allowlist precedence: an allowlisted VJTI address cannot hold a student profile', async () => {
+  test('faculty precedence: a VJTI address on the faculty list cannot hold a student profile', async () => {
     // Even with the entry already claimed, the student shape is refused.
     await t.seed({
-      [`teacherAllowlist/${LISTED.email}`]: {},
+      [`faculty/${LISTED.email}`]: h.facultyDoc(LISTED),
       [h.registryPath(LISTED)]: h.claimedRegistryDoc(LISTED),
     });
     await assertFails(rawRegister(t.as(LISTED), LISTED, { skipClaim: true }));

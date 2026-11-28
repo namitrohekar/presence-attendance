@@ -14,11 +14,11 @@ import androidx.navigation.fragment.NavHostFragment;
 import com.presence.attendance.R;
 import com.presence.attendance.core.ui.Line;
 import com.presence.attendance.core.ui.LineAdapter;
+import com.presence.attendance.core.ui.Monogram;
 import com.presence.attendance.core.ui.ViewModels;
 import com.presence.attendance.core.ui.WindowInsetsPadding;
 import com.presence.attendance.databinding.FragmentListBinding;
 import com.presence.attendance.roster.domain.RosterCsv;
-import com.presence.attendance.roster.domain.StudentEmoji;
 import com.presence.attendance.roster.ui.RosterImportViewModel.Phase;
 import com.presence.attendance.roster.ui.RosterImportViewModel.Result;
 import java.util.ArrayList;
@@ -53,10 +53,17 @@ public final class ImportFragment extends Fragment {
                                         new RosterImportViewModel(
                                                 c.auth(), c.roster(), c.online())))
                         .get(RosterImportViewModel.class);
+        // The batch screen's own; this screen refreshes it after an import.
+        final Bundle batchArgs =
+                NavHostFragment.findNavController(this)
+                        .getBackStackEntry(R.id.rosterFragment)
+                        .getArguments();
         rosterViewModel =
-                new ViewModelProvider(
-                                owner, ViewModels.factory(c -> new RosterViewModel(c.roster())))
-                        .get(RosterViewModel.class);
+                RosterFragment.rosterViewModel(
+                        this,
+                        batchArgs != null
+                                ? RosterFragmentArgs.fromBundle(batchArgs).getBatchId()
+                                : "");
 
         binding.listToolbar.setTitle(R.string.import_title);
         binding.listToolbar.setNavigationOnClickListener(v -> leave());
@@ -170,7 +177,7 @@ public final class ImportFragment extends Fragment {
             } else {
                 badge = null;
             }
-            final StudentEmoji emoji = malformed ? null : row.shownEmoji();
+            final String monogram = malformed ? "" : Monogram.of(row.name);
             final Line line =
                     Line.row(
                                     String.valueOf(row.line),
@@ -178,26 +185,23 @@ public final class ImportFragment extends Fragment {
                                     TextUtils.join("\n", parts),
                                     badge,
                                     rejected ? Line.Tone.DANGER : Line.Tone.NEUTRAL)
-                            .withAvatar(emoji != null ? emoji.glyph() : null);
+                            .withAvatar(monogram.isEmpty() ? null : monogram);
             (rejected ? problems : others).add(line);
         }
         problems.addAll(others);
         return Line.grouped(problems);
     }
 
-    /** "262011005 · MC26", with " · Batch 2" when the row gives one. */
+    /** "262011005", with " · Lab group 2" when the row gives one. */
     @NonNull
     private String identity(@NonNull RosterCsv.Row row) {
-        final String identity = getString(R.string.import_row_detail, row.rollNo, row.cohort);
-        final Integer batch = row.details != null ? row.details.getBatch() : row.batch;
-        return batch == null
-                ? identity
-                : getString(R.string.import_row_detail, identity, batch(batch));
-    }
-
-    @NonNull
-    private String batch(int batch) {
-        return getString(R.string.roster_batch, batch);
+        final Integer labGroup = row.details != null ? row.details.getLabGroup() : row.labGroup;
+        return labGroup == null
+                ? row.rollNo
+                : getString(
+                        R.string.import_row_detail,
+                        row.rollNo,
+                        getString(R.string.roster_group, labGroup));
     }
 
     private static boolean isRejected(@NonNull RosterCsv.Check check, @Nullable Result result) {
@@ -217,9 +221,8 @@ public final class ImportFragment extends Fragment {
             case INVALID_EMAIL -> R.string.check_invalid_email;
             case INVALID_ROLL_NO -> R.string.check_invalid_roll;
             case INVALID_NAME -> R.string.check_invalid_name;
-            case INVALID_COHORT -> R.string.check_invalid_cohort;
-            case INVALID_BATCH -> R.string.check_invalid_batch;
-            case INVALID_EMOJI -> R.string.check_invalid_emoji;
+            case OTHER_BATCH -> R.string.check_other_batch;
+            case INVALID_LAB_GROUP -> R.string.check_invalid_group;
             case DUPLICATE_EMAIL -> R.string.check_duplicate_email;
             case DUPLICATE_ROLL_NO -> R.string.check_duplicate_roll;
             case ALREADY_ON_ROSTER -> R.string.check_already;

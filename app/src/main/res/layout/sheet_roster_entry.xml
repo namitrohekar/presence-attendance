@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/entry_scroll"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -23,7 +22,7 @@
                 android:accessibilityHeading="true"
                 android:textAppearance="@style/TextAppearance.Presence.Title" />
 
-            <!-- Name, batch and emoji: saved as they are, no reason, registration kept. -->
+            <!-- Name and lab group: saved as they are, no reason, registration kept. -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -54,11 +53,11 @@
 
             <TextView
                 style="@style/Widget.Presence.FieldLabel"
-                android:labelFor="@id/entry_batch"
-                android:text="@string/add_batch_label" />
+                android:labelFor="@id/entry_group"
+                android:text="@string/add_group_label" />
 
             <EditText
-                android:id="@+id/entry_batch"
+                android:id="@+id/entry_group"
                 style="@style/Widget.Presence.TextField"
                 android:autofillHints=""
                 android:importantForAutofill="no"
@@ -68,23 +67,10 @@
                 android:maxLength="2" />
 
             <TextView
-                android:id="@+id/entry_batch_error"
+                android:id="@+id/entry_group_error"
                 style="@style/Widget.Presence.InlineError"
-                android:text="@string/add_batch_invalid" />
+                android:text="@string/add_group_invalid" />
 
-            <TextView
-                style="@style/Widget.Presence.FieldLabel"
-                android:text="@string/add_emoji_label" />
-
-            <!-- The sheet carries the choice across a rotation itself; the chips get new ids. -->
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/entry_emoji"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_8"
-                android:saveEnabled="false"
-                app:selectionRequired="false"
-                app:singleSelection="true" />
 
             <com.presence.attendance.core.ui.SpringButton
                 android:id="@+id/entry_save_details"
@@ -130,24 +116,6 @@
                 style="@style/Widget.Presence.InlineError"
                 android:text="@string/add_roll_invalid" />
 
-            <TextView
-                style="@style/Widget.Presence.FieldLabel"
-                android:labelFor="@id/entry_cohort"
-                android:text="@string/add_cohort_label" />
-
-            <EditText
-                android:id="@+id/entry_cohort"
-                style="@style/Widget.Presence.TextField"
-                android:autofillHints=""
-                android:importantForAutofill="no"
-                android:imeOptions="actionNext"
-                android:inputType="textCapCharacters|textNoSuggestions"
-                android:maxLength="@integer/cohort_max" />
-
-            <TextView
-                android:id="@+id/entry_cohort_error"
-                style="@style/Widget.Presence.InlineError"
-                android:text="@string/add_cohort_invalid" />
 
             <TextView
                 style="@style/Widget.Presence.FieldLabel"

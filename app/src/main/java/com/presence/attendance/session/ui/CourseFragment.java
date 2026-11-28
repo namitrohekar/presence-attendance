@@ -43,6 +43,9 @@ public final class CourseFragment extends Fragment {
     private CourseViewModel viewModel;
     private CourseFragmentArgs args;
 
+    /** Opened from a class on now: open the start sheet once the course has loaded. */
+    private boolean quickStart;
+
     public CourseFragment() {
         super(R.layout.fragment_list);
     }
@@ -55,6 +58,8 @@ public final class CourseFragment extends Fragment {
         WindowInsetsPadding.applyBottom(binding.listContent);
         args = CourseFragmentArgs.fromBundle(requireArguments());
         final String courseId = args.getCourseId();
+        // Only on first opening: rotating or coming back must not offer it again.
+        quickStart = savedInstanceState == null && args.getStartMinutes() > 0;
 
         viewModel =
                 new ViewModelProvider(
@@ -103,6 +108,16 @@ public final class CourseFragment extends Fragment {
             @NonNull CourseViewModel.State state) {
         final boolean content = state.status == CourseViewModel.Status.CONTENT;
         final boolean error = state.status == CourseViewModel.Status.ERROR;
+        if (content && quickStart) {
+            quickStart = false;
+            if (state.live != null) {
+                openLive(state.live.getId());
+            } else if (getChildFragmentManager().findFragmentByTag(TAG_SHEET) == null) {
+                StartSessionSheet.newInstance(
+                                args.getCourseId(), args.getStartRoom(), args.getStartMinutes())
+                        .show(getChildFragmentManager(), TAG_SHEET);
+            }
+        }
         adapter.submitList(lines(state));
         binding.listProgress.setVisibility(
                 visibleIf(state.status == CourseViewModel.Status.LOADING));
@@ -122,8 +137,11 @@ public final class CourseFragment extends Fragment {
     @NonNull
     private List<Line> lines(@NonNull CourseViewModel.State state) {
         final List<Line> lines = new ArrayList<>();
-        lines.add(Line.header("h_code", getString(R.string.course_join_code_header)));
-        lines.add(Line.row(KEY_JOIN_CODE, args.getJoinCode(), null));
+        // A subject of a batch has no join code: its students are in it by their batch.
+        if (!args.getJoinCode().isEmpty()) {
+            lines.add(Line.header("h_code", getString(R.string.course_join_code_header)));
+            lines.add(Line.row(KEY_JOIN_CODE, args.getJoinCode(), null));
+        }
         lines.add(Line.header("h_attendance", getString(R.string.course_attendance_header)));
         lines.add(
                 Line.row(

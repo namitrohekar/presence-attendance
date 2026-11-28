@@ -56,6 +56,9 @@
             android:id="@+id/action_home_to_roster"
             app:destination="@id/rosterFragment" />
         <action
+            android:id="@+id/action_home_to_faculty"
+            app:destination="@id/facultyFragment" />
+        <action
             android:id="@+id/action_home_to_history"
             app:destination="@id/historyFragment" />
         <action
@@ -118,6 +121,15 @@
         <argument
             android:name="threshold"
             app:argType="integer" />
+        <!-- Opened from a class on now in "Today": start a session in its room at once. -->
+        <argument
+            android:name="startRoom"
+            android:defaultValue=""
+            app:argType="string" />
+        <argument
+            android:name="startMinutes"
+            android:defaultValue="0"
+            app:argType="integer" />
         <action
             android:id="@+id/action_course_to_students"
             app:destination="@id/courseStudentsFragment" />
@@ -147,14 +159,51 @@
             app:popUpToInclusive="true" />
     </fragment>
 
+    <!-- HOD: one batch, its semester and lab groups, and its students. -->
     <fragment
         android:id="@+id/rosterFragment"
         android:name="com.presence.attendance.roster.ui.RosterFragment"
         tools:layout="@layout/fragment_list">
+        <argument
+            android:name="batchId"
+            app:argType="string" />
+        <argument
+            android:name="batchName"
+            app:argType="string" />
         <action
             android:id="@+id/action_roster_to_import"
             app:destination="@id/importFragment" />
+        <action
+            android:id="@+id/action_roster_to_subjects"
+            app:destination="@id/subjectsFragment" />
     </fragment>
+
+    <!-- HOD: a batch's subjects and timetable for its current semester. -->
+    <fragment
+        android:id="@+id/subjectsFragment"
+        android:name="com.presence.attendance.department.ui.SubjectsFragment"
+        tools:layout="@layout/fragment_list">
+        <argument
+            android:name="batchId"
+            app:argType="string" />
+        <argument
+            android:name="batchName"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_subjects_to_timetable_import"
+            app:destination="@id/timetableImportFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/timetableImportFragment"
+        android:name="com.presence.attendance.department.ui.TimetableImportFragment"
+        tools:layout="@layout/fragment_list" />
+
+    <!-- HOD: the faculty list. -->
+    <fragment
+        android:id="@+id/facultyFragment"
+        android:name="com.presence.attendance.department.ui.FacultyFragment"
+        tools:layout="@layout/fragment_list" />
 
     <fragment
         android:id="@+id/importFragment"

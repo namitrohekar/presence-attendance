@@ -13,6 +13,21 @@ public interface SessionRepository {
     @MainThread
     void loadCampus(@NonNull Callback<Geofence> callback);
 
+    /**
+     * The geofence saved for a room, by its name as the timetable writes it ("AL-301"). Fails with
+     * ROOM_NOT_SAVED if nobody has saved it yet.
+     */
+    @MainThread
+    void loadRoom(@NonNull String name, @NonNull Callback<Geofence> callback);
+
+    /** Saves the geofence of the room the teacher is standing in, replacing any earlier one. */
+    @MainThread
+    void saveRoom(
+            @NonNull User teacher,
+            @NonNull String name,
+            @NonNull Geofence geofence,
+            @NonNull Callback<Geofence> callback);
+
     /** Starts a session that ends {@code durationMin} minutes from now. */
     @MainThread
     void startSession(

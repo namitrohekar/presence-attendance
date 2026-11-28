@@ -20,6 +20,8 @@ import com.presence.attendance.session.ui.StartSessionViewModel.Mode;
 public final class StartSessionSheet extends SheetFragment {
 
     private static final String ARG_COURSE_ID = "courseId";
+    private static final String ARG_ROOM = "room";
+    private static final String ARG_MINUTES = "minutes";
 
     private StartSessionViewModel viewModel;
 
@@ -35,8 +37,17 @@ public final class StartSessionSheet extends SheetFragment {
 
     @NonNull
     static StartSessionSheet newInstance(@NonNull String courseId) {
+        return newInstance(courseId, "", StartSessionViewModel.DEFAULT_DURATION_MIN);
+    }
+
+    /** From a class in the timetable: its room, and the minutes left until it ends. */
+    @NonNull
+    static StartSessionSheet newInstance(
+            @NonNull String courseId, @NonNull String room, int minutes) {
         final Bundle args = new Bundle();
         args.putString(ARG_COURSE_ID, courseId);
+        args.putString(ARG_ROOM, room);
+        args.putInt(ARG_MINUTES, minutes);
         final StartSessionSheet sheet = new StartSessionSheet();
         sheet.setArguments(args);
         return sheet;
@@ -47,6 +58,9 @@ public final class StartSessionSheet extends SheetFragment {
         super.onViewCreated(view, savedInstanceState);
         final SheetStartSessionBinding binding = SheetStartSessionBinding.bind(view);
         final String courseId = requireArguments().getString(ARG_COURSE_ID, "");
+        final String room = requireArguments().getString(ARG_ROOM, "");
+        final int minutes =
+                requireArguments().getInt(ARG_MINUTES, StartSessionViewModel.DEFAULT_DURATION_MIN);
         viewModel =
                 new ViewModelProvider(
                                 this,
@@ -56,7 +70,9 @@ public final class StartSessionSheet extends SheetFragment {
                                                 c.sessions(),
                                                 c.location(),
                                                 c.online(),
-                                                courseId)))
+                                                courseId,
+                                                room,
+                                                minutes)))
                         .get(StartSessionViewModel.class);
 
         binding.startDuration.addOnChangeListener((slider, value, fromUser) -> {
@@ -71,7 +87,10 @@ public final class StartSessionSheet extends SheetFragment {
         });
         binding.startMode.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
             if (isChecked) {
-                viewModel.setMode(checkedId == R.id.start_mode_here ? Mode.HERE : Mode.CAMPUS);
+                viewModel.setMode(
+                        checkedId == R.id.start_mode_here
+                                ? Mode.HERE
+                                : checkedId == R.id.start_mode_room ? Mode.ROOM : Mode.CAMPUS);
             }
         });
         binding.startAllowLocation.setOnClickListener(v ->
@@ -81,6 +100,7 @@ public final class StartSessionSheet extends SheetFragment {
                             Manifest.permission.ACCESS_COARSE_LOCATION
                         }));
         binding.startSubmit.setOnClickListener(v -> viewModel.start());
+        binding.startSaveRoom.setOnClickListener(v -> viewModel.saveRoom());
         viewModel.getState().observe(getViewLifecycleOwner(), state -> render(binding, state));
     }
 
@@ -102,8 +122,18 @@ public final class StartSessionSheet extends SheetFragment {
         binding.startRadiusLabel.setText(getString(R.string.start_radius_label, state.radiusM));
         binding.startRadius.setValue(state.radiusM);
         binding.startRadius.setContentDescription(binding.startRadiusLabel.getText());
+        binding.startModeRoom.setVisibility(state.roomSaved ? View.VISIBLE : View.GONE);
+        binding.startModeRoom.setText(state.room);
         binding.startMode.check(
-                state.mode == Mode.HERE ? R.id.start_mode_here : R.id.start_mode_campus);
+                switch (state.mode) {
+                    case HERE -> R.id.start_mode_here;
+                    case ROOM -> R.id.start_mode_room;
+                    case CAMPUS -> R.id.start_mode_campus;
+                });
+        binding.startSaveRoom.setVisibility(
+                !state.room.isEmpty() && !state.roomSaved ? View.VISIBLE : View.GONE);
+        binding.startSaveRoom.setText(getString(R.string.start_save_room, state.room));
+        binding.startSaveRoom.setEnabled(state.canSaveRoom());
 
         final boolean here = state.mode == Mode.HERE;
         binding.startHereGroup.setVisibility(here ? View.VISIBLE : View.GONE);

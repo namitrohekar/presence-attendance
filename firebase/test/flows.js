@@ -10,9 +10,15 @@
 const fs = require('fs');
 const path = require('path');
 const {
+  collection,
   deleteField,
   doc,
+  getDoc,
+  getDocs,
+  query,
   runTransaction,
+  updateDoc,
+  where,
   serverTimestamp,
   setDoc,
   Timestamp,
@@ -88,12 +94,11 @@ function writeFacultyProfile(db, user) {
   });
 }
 
-/** The details a roster entry keeps about a student: name, emoji, and a batch if any. */
+/** The details a roster entry keeps about a student: the name, and a lab group if any. */
 function details(who) {
   return {
     name: who.name,
-    emoji: who.emoji ?? 'LION',
-    ...(who.batch === undefined ? {} : { batch: who.batch }),
+    ...(who.labGroup === undefined ? {} : { labGroup: who.labGroup }),
   };
 }
 
@@ -111,7 +116,7 @@ function addStudent(db, teacher, who) {
     if ((await tx.get(index)).exists()) {
       return 'ROLL_TAKEN';
     }
-    const { batch, ...required } = details(who);
+    const { labGroup, ...required } = details(who);
     tx.set(
       entry,
       build(
@@ -125,7 +130,7 @@ function addStudent(db, teacher, who) {
           addedAt: serverTimestamp(),
           revision: 0,
         },
-        batch === undefined ? {} : { batch },
+        labGroup === undefined ? {} : { labGroup },
       ),
     );
     tx.set(index, build('rollIndex', { email: who.email }));
@@ -261,7 +266,7 @@ function correct(db, teacher, email, action, reason, change = {}) {
       addedAt: before.addedAt,
       revision: before.revision + 1,
     };
-    for (const field of ['name', 'emoji', 'batch']) {
+    for (const field of ['name', 'labGroup']) {
       if (field in before) {
         corrected[field] = before[field];
       }
@@ -276,8 +281,8 @@ function correct(db, teacher, email, action, reason, change = {}) {
 }
 
 /**
- * Faculty change a student's name, batch or emoji. The registration and the
- * revision are untouched. A batch of null removes it. Resolves to DONE or
+ * The HOD changes a student's name or lab group. The registration and the
+ * revision are untouched. A lab group of null removes it. Resolves to DONE or
  * NOT_FOUND.
  */
 function updateDetails(db, email, change) {
@@ -286,12 +291,77 @@ function updateDetails(db, email, change) {
     if (!(await tx.get(entry)).exists()) {
       return 'NOT_FOUND';
     }
-    const fields = { name: change.name, emoji: change.emoji };
-    if (change.batch !== undefined) {
-      fields.batch = change.batch === null ? deleteField() : change.batch;
+    const fields = { name: change.name };
+    if (change.labGroup !== undefined) {
+      fields.labGroup = change.labGroup === null ? deleteField() : change.labGroup;
     }
     tx.update(entry, fields);
     return 'DONE';
+  });
+}
+
+/** The id of a batch: the programme and the start year's last two digits. */
+function batchId(programme, startYear) {
+  return `${programme}${startYear - 2000}`;
+}
+
+/**
+ * The HOD creates a batch in its first semester. Resolves to CREATED or
+ * EXISTS; an existing batch is never overwritten.
+ */
+function createBatch(db, hod, batch) {
+  const ref = doc(db, 'batches', batchId(batch.programme, batch.startYear));
+  return runTransaction(db, async (tx) => {
+    if ((await tx.get(ref)).exists()) {
+      return 'EXISTS';
+    }
+    tx.set(
+      ref,
+      build('batches', {
+        programme: batch.programme,
+        startYear: batch.startYear,
+        years: batch.years,
+        semester: 1,
+        intake: batch.intake,
+        labGroups: batch.labGroups,
+        createdBy: hod.uid,
+        createdAt: serverTimestamp(),
+      }),
+    );
+    return 'CREATED';
+  });
+}
+
+/** The HOD changes a batch's semester, intake, lab groups or length. DONE or NOT_FOUND. */
+function updateBatch(db, id, change) {
+  const ref = doc(db, 'batches', id);
+  return runTransaction(db, async (tx) => {
+    if (!(await tx.get(ref)).exists()) {
+      return 'NOT_FOUND';
+    }
+    tx.update(ref, change);
+    return 'DONE';
+  });
+}
+
+/** The HOD adds someone to the faculty list. ADDED or EXISTS. */
+function addFaculty(db, hod, member) {
+  const ref = doc(db, 'faculty', member.email.toLowerCase());
+  return runTransaction(db, async (tx) => {
+    if ((await tx.get(ref)).exists()) {
+      return 'EXISTS';
+    }
+    tx.set(
+      ref,
+      build('faculty', {
+        email: member.email.toLowerCase(),
+        name: member.name,
+        initials: member.initials,
+        addedBy: hod.uid,
+        addedAt: serverTimestamp(),
+      }),
+    );
+    return 'ADDED';
   });
 }
 
@@ -521,7 +591,160 @@ function markQueued(db, session, mark, deviceId = deviceOf(mark.studentId)) {
   );
 }
 
+/** The id of a subject: batch, semester, code and, for a lab, the lab group. */
+function subjectId(batch, semester, code, labGroup) {
+  return `${batch}S${semester}${code.replace(/[^A-Za-z0-9]/g, '')}${labGroup > 0 ? `G${labGroup}` : ''}`;
+}
+
+/**
+ * The HOD saves one subject from a timetable import. A new one is created
+ * unclaimed; an existing one gets the new name or teacher, and a new teacher
+ * starts unclaimed. Resolves to CREATED, UPDATED or UNCHANGED.
+ */
+function saveSubject(db, hod, subject) {
+  const id = subjectId(subject.batchId, subject.semester, subject.code, subject.labGroup);
+  const ref = doc(db, 'courses', id);
+  return runTransaction(db, async (tx) => {
+    const current = await tx.get(ref);
+    if (!current.exists()) {
+      tx.set(
+        ref,
+        build('courses.subject', {
+          teacherId: '',
+          teacherEmail: subject.teacherEmail,
+          name: subject.name,
+          code: subject.code,
+          threshold: 75,
+          batchId: subject.batchId,
+          semester: subject.semester,
+          labGroup: subject.labGroup,
+          createdBy: hod.uid,
+          createdAt: serverTimestamp(),
+        }),
+      );
+      return 'CREATED';
+    }
+    const was = current.data();
+    if (was.name === subject.name && was.teacherEmail === subject.teacherEmail) {
+      return 'UNCHANGED';
+    }
+    const change = { name: subject.name };
+    if (was.teacherEmail !== subject.teacherEmail) {
+      change.teacherEmail = subject.teacherEmail;
+      change.teacherId = '';
+    }
+    tx.update(ref, change);
+    return 'UPDATED';
+  });
+}
+
+/** A teacher claims every subject assigned to their address. Resolves to the ids claimed. */
+async function claimSubjects(db, teacher) {
+  const pending = await getDocs(
+    query(
+      collection(db, 'courses'),
+      where('teacherEmail', '==', teacher.email.toLowerCase()),
+      where('teacherId', '==', ''),
+    ),
+  );
+  for (const subject of pending.docs) {
+    await updateDoc(subject.ref, { teacherId: teacher.uid });
+  }
+  return pending.docs.map((d) => d.id).sort();
+}
+
+/**
+ * A registered student joins the subjects of their batch's current semester
+ * that are for the whole batch or their lab group, and moves a membership to
+ * the subject's teacher if the HOD reassigned it. Subjects nobody has claimed
+ * yet are left for later. Resolves to { joined, moved } course ids.
+ */
+async function joinSubjects(db, who) {
+  const entry = (await getDoc(entryRef(db, who.email))).data();
+  const batch = (await getDoc(doc(db, 'batches', entry.cohort))).data();
+  const subjects = await getDocs(
+    query(
+      collection(db, 'courses'),
+      where('batchId', '==', entry.cohort),
+      where('semester', '==', batch.semester),
+    ),
+  );
+  const mine = await getDocs(
+    query(collection(db, 'memberships'), where('studentId', '==', who.uid)),
+  );
+  const teacherOf = new Map(mine.docs.map((d) => [d.data().courseId, d.data().teacherId]));
+  const joined = [];
+  const moved = [];
+  for (const subject of subjects.docs) {
+    const s = subject.data();
+    const forMe = s.labGroup === 0 || s.labGroup === (entry.labGroup ?? 0);
+    if (!forMe || s.teacherId === '') {
+      continue;
+    }
+    const ref = doc(db, 'memberships', `${subject.id}_${who.uid}`);
+    if (!teacherOf.has(subject.id)) {
+      await setDoc(
+        ref,
+        build('memberships.subject', {
+          courseId: subject.id,
+          teacherId: s.teacherId,
+          studentId: who.uid,
+          name: who.name,
+          email: who.email,
+          rollNo: entry.rollNo,
+          cohort: entry.cohort,
+          joinedAt: serverTimestamp(),
+        }),
+      );
+      joined.push(subject.id);
+    } else if (teacherOf.get(subject.id) !== s.teacherId) {
+      await updateDoc(ref, { teacherId: s.teacherId });
+      moved.push(subject.id);
+    }
+  }
+  return { joined: joined.sort(), moved: moved.sort() };
+}
+
+/** The HOD saves a batch's weekly timetable for one semester, replacing the last one. */
+function saveTimetable(db, hod, batch, semester, slots) {
+  return setDoc(
+    doc(db, 'timetables', `${batch}S${semester}`),
+    build('timetables', {
+      batchId: batch,
+      semester,
+      slots: slots.map((slot) => build('timetables.slot', slot)),
+      updatedBy: hod.uid,
+      updatedAt: serverTimestamp(),
+    }),
+  );
+}
+
+/** A room's id: its name in capitals without punctuation, AL-301 is AL301. */
+function roomId(name) {
+  return name.toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+/** A teacher saves the room they are standing in, replacing any earlier location. */
+function saveRoom(db, teacher, name, geofence) {
+  return setDoc(
+    doc(db, 'rooms', roomId(name)),
+    build('rooms', {
+      name,
+      geofence: build('sessions.geofence', geofence),
+      savedBy: teacher.uid,
+      savedAt: serverTimestamp(),
+    }),
+  );
+}
+
 module.exports = {
+  roomId,
+  saveRoom,
+  subjectId,
+  saveSubject,
+  claimSubjects,
+  joinSubjects,
+  saveTimetable,
   markLive,
   correctAttendance,
   setHeadcount,
@@ -538,5 +761,9 @@ module.exports = {
   joinCourse,
   correct,
   updateDetails,
+  batchId,
+  createBatch,
+  updateBatch,
+  addFaculty,
   reportAlert,
 };

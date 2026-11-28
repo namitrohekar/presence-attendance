@@ -88,15 +88,20 @@ public final class StudentIdentityTest {
     }
 
     @Test
-    public void aBatchIsANumberFromOneToTwentyOrNothing() {
-        assertEquals(StudentIdentity.NO_BATCH, StudentIdentity.parseBatch("  "));
-        assertEquals(1, StudentIdentity.parseBatch("1"));
-        assertEquals(20, StudentIdentity.parseBatch(" 20 "));
-        assertEquals(4, StudentIdentity.parseBatch("04"));
-        assertEquals(StudentIdentity.INVALID_BATCH, StudentIdentity.parseBatch("0"));
-        assertEquals(StudentIdentity.INVALID_BATCH, StudentIdentity.parseBatch("21"));
-        assertEquals(StudentIdentity.INVALID_BATCH, StudentIdentity.parseBatch("B2"));
-        assertEquals(StudentIdentity.INVALID_BATCH, StudentIdentity.parseBatch("-1"));
-        assertEquals(StudentIdentity.INVALID_BATCH, StudentIdentity.parseBatch("100"));
+    public void aLabGroupIsOneOfTheBatchsGroupsOrNothing() {
+        assertEquals(StudentIdentity.NO_GROUP, StudentIdentity.parseLabGroup("  ", 4));
+        assertEquals(1, StudentIdentity.parseLabGroup("1", 4));
+        assertEquals(4, StudentIdentity.parseLabGroup(" 04 ", 4));
+        assertEquals(2, StudentIdentity.parseLabGroup("Batch 2", 4));
+        assertEquals(3, StudentIdentity.parseLabGroup("B3", 4));
+        assertEquals(2, StudentIdentity.parseLabGroup("Lab group 2", 4));
+        assertEquals(1, StudentIdentity.parseLabGroup("G1", 4));
+        assertEquals(3, StudentIdentity.parseLabGroup("batch-3", 4));
+        assertEquals(StudentIdentity.INVALID_GROUP, StudentIdentity.parseLabGroup("0", 4));
+        assertEquals(StudentIdentity.INVALID_GROUP, StudentIdentity.parseLabGroup("5", 4));
+        assertEquals(6, StudentIdentity.parseLabGroup("6", 6));
+        assertEquals(StudentIdentity.INVALID_GROUP, StudentIdentity.parseLabGroup("two", 4));
+        assertEquals(StudentIdentity.INVALID_GROUP, StudentIdentity.parseLabGroup("-1", 4));
+        assertEquals(StudentIdentity.INVALID_GROUP, StudentIdentity.parseLabGroup("100", 4));
     }
 }

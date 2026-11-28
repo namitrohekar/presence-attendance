@@ -5,7 +5,6 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.ViewModelProvider;
-import com.google.android.material.chip.ChipGroup;
 import com.presence.attendance.R;
 import com.presence.attendance.core.ui.AppErrorMessages;
 import com.presence.attendance.core.ui.SheetFragment;
@@ -13,12 +12,11 @@ import com.presence.attendance.core.ui.ViewModels;
 import com.presence.attendance.databinding.SheetRosterEntryBinding;
 import com.presence.attendance.roster.domain.RosterEntry;
 import com.presence.attendance.roster.domain.StudentDetails;
-import com.presence.attendance.roster.domain.StudentEmoji;
 import com.presence.attendance.roster.ui.RosterEntryViewModel.Problem;
 
 /**
- * Faculty: one roster entry. The name, batch and emoji are saved without a reason and keep the
- * registration. Correcting, releasing or removing needs a reason and is written together with its
+ * HOD: one student. The name and lab group are saved without a reason and keep the registration.
+ * Correcting the roll number, releasing or removing needs a reason and is written together with its
  * audit record.
  */
 public final class RosterEntrySheet extends SheetFragment {
@@ -28,39 +26,26 @@ public final class RosterEntrySheet extends SheetFragment {
     private static final String ARG_COHORT = "cohort";
     private static final String ARG_REGISTERED = "registered";
     private static final String ARG_NAME = "name";
-    private static final String ARG_BATCH = "batch";
-    private static final String ARG_EMOJI = "emoji";
-
-    @Nullable private ChipGroup emojiGroup;
+    private static final String ARG_LAB_GROUP = "labGroup";
+    private static final String ARG_LAB_GROUPS = "labGroups";
 
     public RosterEntrySheet() {
         super(R.layout.sheet_roster_entry);
     }
 
-    @Override
-    public void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-        if (emojiGroup != null) {
-            EmojiPicker.save(emojiGroup, outState);
-        }
-    }
-
-    @Override
-    public void onDestroyView() {
-        emojiGroup = null;
-        super.onDestroyView();
-    }
-
+    /**
+     * @param labGroups how many lab groups the student's batch has
+     */
     @NonNull
-    static RosterEntrySheet newInstance(@NonNull RosterEntry entry) {
+    static RosterEntrySheet newInstance(@NonNull RosterEntry entry, int labGroups) {
         final Bundle args = new Bundle();
         args.putString(ARG_EMAIL, entry.getEmail());
         args.putString(ARG_ROLL_NO, entry.getRollNo());
         args.putString(ARG_COHORT, entry.getCohort());
         args.putBoolean(ARG_REGISTERED, entry.isRegistered());
         args.putString(ARG_NAME, entry.getName());
-        args.putInt(ARG_BATCH, entry.getBatch() != null ? entry.getBatch() : 0);
-        args.putString(ARG_EMOJI, entry.shownEmoji().name());
+        args.putInt(ARG_LAB_GROUP, entry.getLabGroup() != null ? entry.getLabGroup() : 0);
+        args.putInt(ARG_LAB_GROUPS, labGroups);
         final RosterEntrySheet sheet = new RosterEntrySheet();
         sheet.setArguments(args);
         return sheet;
@@ -76,12 +61,10 @@ public final class RosterEntrySheet extends SheetFragment {
         final String cohort = args.getString(ARG_COHORT, "");
         final boolean registered = args.getBoolean(ARG_REGISTERED);
         final String name = args.getString(ARG_NAME);
-        final int batch = args.getInt(ARG_BATCH);
-        final StudentEmoji emoji = StudentEmoji.fromName(args.getString(ARG_EMOJI));
+        final int labGroup = args.getInt(ARG_LAB_GROUP);
+        final int labGroups = args.getInt(ARG_LAB_GROUPS);
         final StudentDetails details =
-                name == null || emoji == null
-                        ? null
-                        : new StudentDetails(name, batch > 0 ? batch : null, emoji);
+                name == null ? null : new StudentDetails(name, labGroup > 0 ? labGroup : null);
 
         final RosterEntryViewModel viewModel =
                 new ViewModelProvider(
@@ -94,34 +77,31 @@ public final class RosterEntrySheet extends SheetFragment {
                                                 email,
                                                 rollNo,
                                                 cohort,
-                                                details)))
+                                                details,
+                                                labGroups)))
                         .get(RosterEntryViewModel.class);
 
         binding.entryTitle.setText(email);
         binding.entryNote.setText(
                 registered ? R.string.entry_registered_note : R.string.entry_unregistered_note);
+        binding.entryGroup.setHint(getString(R.string.lab_group_hint, labGroups));
         if (savedInstanceState == null) {
             binding.entryName.setText(name);
-            binding.entryBatch.setText(batch > 0 ? String.valueOf(batch) : "");
+            binding.entryGroup.setText(labGroup > 0 ? String.valueOf(labGroup) : "");
             binding.entryRoll.setText(rollNo);
-            binding.entryCohort.setText(cohort);
         }
-        emojiGroup = binding.entryEmoji;
-        EmojiPicker.fill(
-                binding.entryEmoji,
-                savedInstanceState == null ? emoji : EmojiPicker.restore(savedInstanceState));
         // Only a registered entry has a registration to release.
         binding.entryRelease.setVisibility(registered ? View.VISIBLE : View.GONE);
 
         binding.entrySaveDetails.setOnClickListener(v ->
                 viewModel.saveDetails(
                         binding.entryName.getText().toString(),
-                        binding.entryBatch.getText().toString(),
-                        EmojiPicker.selected(binding.entryEmoji)));
+                        binding.entryGroup.getText().toString()));
+        // A student stays in their batch; only the roll number is corrected here.
         binding.entrySave.setOnClickListener(v ->
                 viewModel.save(
                         binding.entryRoll.getText().toString(),
-                        binding.entryCohort.getText().toString(),
+                        cohort,
                         binding.entryReason.getText().toString()));
         binding.entryRelease.setOnClickListener(
                 v -> viewModel.release(binding.entryReason.getText().toString()));
@@ -144,9 +124,8 @@ public final class RosterEntrySheet extends SheetFragment {
                 rollTaken ? R.string.add_roll_taken : R.string.add_roll_invalid);
         binding.entryRollError.setVisibility(
                 visibleIf(problem == Problem.ROLL_NO_INVALID || rollTaken));
-        binding.entryCohortError.setVisibility(visibleIf(problem == Problem.COHORT_INVALID));
         binding.entryNameError.setVisibility(visibleIf(problem == Problem.NAME_INVALID));
-        binding.entryBatchError.setVisibility(visibleIf(problem == Problem.BATCH_INVALID));
+        binding.entryGroupError.setVisibility(visibleIf(problem == Problem.LAB_GROUP_INVALID));
         binding.entryReasonError.setVisibility(visibleIf(problem == Problem.REASON_MISSING));
 
         if (!state.online) {

@@ -7,9 +7,6 @@
         android:title="@string/home_account" />
     <!-- Faculty only; hidden for students at runtime. -->
     <item
-        android:id="@+id/action_roster"
-        android:title="@string/roster_title" />
-    <item
         android:id="@+id/action_alerts"
         android:title="@string/alerts_title" />
     <item

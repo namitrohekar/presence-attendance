@@ -38,4 +38,17 @@ public final class SessionMappersTest {
                 DocumentContract.fields("tokens", false),
                 new TreeSet<>(SessionMappers.newToken().keySet()));
     }
+
+    @Test
+    public void aRoomIsSavedUnderItsNameWithoutPunctuationWithTheContractFields()
+            throws IOException {
+        assertEquals("AL301", SessionMappers.roomId("al-301"));
+        final Map<String, Object> room =
+                SessionMappers.newRoom("AL-301", Geofence.around(19.0223, 72.8562, 40), "teacherA");
+        assertEquals(DocumentContract.fields("rooms", false), new TreeSet<>(room.keySet()));
+        assertEquals(
+                DocumentContract.fields("sessions.geofence", false),
+                new TreeSet<>(((Map<?, ?>) room.get("geofence")).keySet()));
+        assertEquals("AL-301", room.get("name"));
+    }
 }

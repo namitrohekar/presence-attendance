@@ -7,7 +7,7 @@ rules_version = '2';
 // own checks exist only to give precise messages.
 //
 // Anything not matched below is denied. request.time is the only clock.
-// Lookup budget: no request path uses more than 4 get()/exists()/getAfter()
+// Lookup budget: no request path uses more than 6 get()/exists()/getAfter()
 // calls (limit 10); the count is noted beside each write rule.
 
 service cloud.firestore {
@@ -32,11 +32,17 @@ service cloud.firestore {
     function CORRECTION_RETENTION_DAYS() { return 365; }
     function HEADCOUNT_MAX() { return 1000; }
     function NAME_MAX_LEN() { return 80; }
-    function BATCH_MIN() { return 1; }
-    function BATCH_MAX() { return 20; }
+    function BATCH_YEAR_MIN() { return 2010; }
+    function BATCH_YEAR_MAX() { return 2099; }
+    function PROGRAMME_YEARS_MAX() { return 5; }
+    function SEMESTERS_PER_YEAR() { return 2; }
+    function INTAKE_MAX() { return 500; }
+    function LAB_GROUPS_MAX() { return 10; }
+    function TIMETABLE_SLOTS_MAX() { return 200; }
+    function ROOM_NAME_MAX_LEN() { return 40; }
 
     // Students must sign in with an address in exactly this domain. Faculty
-    // are identified by the allowlist and may use any domain.
+    // are on the HOD's faculty list and may use any domain.
     function STUDENT_DOMAIN() { return 'mc.vjti.ac.in'; }
 
     // ---- Identity (invariant 1) -----------------------------------------
@@ -58,17 +64,24 @@ service cloud.firestore {
         && email().split('@')[1] == STUDENT_DOMAIN();
     }
 
-    // Role is derived from the allowlist on every use; it is never read from
-    // a field the client wrote.
-    function isAllowlisted() {
-      return exists(/databases/$(database)/documents/teacherAllowlist/$(email()));
+    // Roles are derived from documents on every use; never from a field the
+    // client wrote. The HOD is named in the console (hods/{email}), the one
+    // root of trust. The HOD keeps the faculty list (faculty/{email}).
+    function isHod() {
+      return exists(/databases/$(database)/documents/hods/$(email()));
     }
 
-    // Who may use the app at all: allowlisted faculty, or a student address.
-    // The cheap domain test runs first so students cost no lookup here. Where
-    // the role matters, the allowlist takes precedence (see users).
+    // Teaching staff: on the HOD's faculty list, or the HOD, who need not
+    // add themself to it.
+    function isFaculty() {
+      return exists(/databases/$(database)/documents/faculty/$(email())) || isHod();
+    }
+
+    // Who may use the app at all: faculty, or a student address. The cheap
+    // domain test runs first so students cost no lookup here. Where the role
+    // matters, faculty takes precedence (see users).
     function signedIn() {
-      return verified() && (hasStudentEmail() || isAllowlisted());
+      return verified() && (hasStudentEmail() || isFaculty());
     }
 
     // ---- Shared validators ----------------------------------------------
@@ -103,15 +116,22 @@ service cloud.firestore {
       return isText(v, 1, NAME_MAX_LEN()) && v.trim() == v;
     }
 
-    // A lab batch, such as 1 to 4 in the timetable.
-    function isBatch(v) {
-      return v is int && v >= BATCH_MIN() && v <= BATCH_MAX();
+    // A programme code such as MCA: the first part of a batch id.
+    function isProgramme(v) {
+      return v is string && v.matches('^[A-Z]{2,6}$');
     }
 
-    // One of the ten emojis a student is shown with, stored by its name.
-    function isEmoji(v) {
+    // A teacher's initials as the timetable writes them, such as SJ.
+    function isInitials(v) {
+      return v is string && v.matches('^[A-Z]{1,4}$');
+    }
+
+    // A faculty address, in any domain: lower case, one '@', a dotted domain.
+    function isStaffEmail(v) {
       return v is string
-        && v.matches('^(LION|TIGER|ELEPHANT|PANDA|FOX|OWL|DOLPHIN|TURTLE|BUTTERFLY|PEACOCK)$');
+        && v.size() <= 100
+        && v == v.lower()
+        && v.matches('^[a-z0-9._%+-]+@[a-z0-9-]+([.][a-z0-9-]+)+$');
     }
 
     // A roster address: lower case, one '@', exactly the student domain.
@@ -125,6 +145,22 @@ service cloud.firestore {
 
     function hasExactly(data, fields) {
       return data.keys().hasOnly(fields) && data.keys().hasAll(fields);
+    }
+
+    // A circle students must be inside: a session's, or a room's saved one.
+    function validGeofence(g) {
+      return hasExactly(g, ['lat', 'lng', 'radiusM', 'cosLat'])
+        && g.lat is number && g.lat >= -90 && g.lat <= 90
+        && g.lng is number && g.lng >= -180 && g.lng <= 180
+        && g.radiusM is number
+        && g.radiusM >= GEO_RADIUS_MIN_M()
+        && g.radiusM <= GEO_RADIUS_MAX_M()
+        && g.cosLat is number && g.cosLat > 0 && g.cosLat <= 1;
+    }
+
+    // A course the HOD made from a batch's timetable (see courses).
+    function isSubject(data) {
+      return 'batchId' in data;
     }
 
     function isMemberOf(courseId, studentId) {
@@ -146,16 +182,29 @@ service cloud.firestore {
       return ['email', 'rollNo', 'cohort', 'addedBy', 'addedAt', 'revision'];
     }
 
-    // What describes the student rather than identifies them. Entries added
-    // before names were kept have none; any that is present must be valid.
+    // What describes the student rather than identifies them: the official
+    // name and the lab group. Entries added before names were kept have none;
+    // any that is present must be valid, and a lab group must exist in the
+    // student's batch.
     function rosterDetails() {
-      return ['name', 'batch', 'emoji'];
+      return ['name', 'labGroup'];
     }
 
-    function validDetails(data) {
+    function validDetails(data, batch) {
       return (!('name' in data) || isName(data.name))
-        && (!('batch' in data) || isBatch(data.batch))
-        && (!('emoji' in data) || isEmoji(data.emoji));
+        && (!('labGroup' in data)
+            || (data.labGroup is int
+                && data.labGroup >= 1
+                && data.labGroup <= batch.labGroups));
+    }
+
+    // The batch a cohort names. Only read where a lab group needs its bound.
+    function batchOf(cohort) {
+      return get(/databases/$(database)/documents/batches/$(cohort)).data;
+    }
+
+    function batchExists(cohort) {
+      return exists(/databases/$(database)/documents/batches/$(cohort));
     }
 
     function rosterEntry(studentEmail) {
@@ -199,8 +248,90 @@ service cloud.firestore {
       allow get: if signedIn();
     }
 
-    // teacherAllowlist has no match block on purpose: no client can read,
-    // list or write it. Only exists() in these rules can see it.
+    // ---- HODs: written from the console only ------------------------------
+    // Each person may read their own document, to learn they are the HOD, and
+    // nobody else's; the list cannot be read.
+    match /hods/{hodEmail} {
+      allow get: if signedIn() && hodEmail == email();
+    }
+
+    // ---- faculty list: kept by the HOD ------------------------------------
+    // A teacher may be added before they have ever signed in. Removing them
+    // ends their faculty access the next time they sign in or write.
+    match /faculty/{facultyEmail} {
+      allow get, list: if signedIn() && isFaculty();
+
+      function validMember(data) {
+        return isName(data.name) && isInitials(data.initials);
+      }
+
+      // Lookups: 2 (HOD; the faculty check in signedIn).
+      allow create: if signedIn()
+        && isHod()
+        && hasExactly(request.resource.data, ['email', 'name', 'initials', 'addedBy', 'addedAt'])
+        && isStaffEmail(request.resource.data.email)
+        && facultyEmail == request.resource.data.email
+        && validMember(request.resource.data)
+        && request.resource.data.addedBy == uid()
+        && request.resource.data.addedAt == request.time;
+
+      allow update: if signedIn()
+        && isHod()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'initials'])
+        && validMember(request.resource.data);
+
+      allow delete: if signedIn() && isHod();
+    }
+
+    // ---- batches: kept by the HOD -----------------------------------------
+    // batches/{id}: the id is the programme and the start year's last two
+    // digits (MCA25). Everyone signed in may read them: a student's screens
+    // name their batch and semester.
+    match /batches/{batchId} {
+      allow get, list: if signedIn();
+
+      function validBatch(data) {
+        return isProgramme(data.programme)
+          && data.startYear is int
+          && data.startYear >= BATCH_YEAR_MIN()
+          && data.startYear <= BATCH_YEAR_MAX()
+          && data.years is int
+          && data.years >= 1
+          && data.years <= PROGRAMME_YEARS_MAX()
+          && data.semester is int
+          && data.semester >= 1
+          && data.semester <= data.years * SEMESTERS_PER_YEAR()
+          && data.intake is int
+          && data.intake >= 1
+          && data.intake <= INTAKE_MAX()
+          && data.labGroups is int
+          && data.labGroups >= 1
+          && data.labGroups <= LAB_GROUPS_MAX();
+      }
+
+      // Lookups: 2 (HOD; the faculty check in signedIn). A batch starts in
+      // its first semester.
+      allow create: if signedIn()
+        && isHod()
+        && hasExactly(request.resource.data,
+            ['programme', 'startYear', 'years', 'semester', 'intake', 'labGroups', 'createdBy',
+             'createdAt'])
+        && validBatch(request.resource.data)
+        && batchId == request.resource.data.programme
+            + string(request.resource.data.startYear - 2000)
+        && request.resource.data.semester == 1
+        && request.resource.data.createdBy == uid()
+        && request.resource.data.createdAt == request.time;
+
+      // The HOD moves the semester, corrects the intake or the number of lab
+      // groups, or the programme's length. A batch is never deleted: its
+      // attendance history refers to it.
+      allow update: if signedIn()
+        && isHod()
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['years', 'semester', 'intake', 'labGroups'])
+        && validBatch(request.resource.data);
+    }
 
     // ---- users (invariant 1) --------------------------------------------
     match /users/{userId} {
@@ -214,27 +345,27 @@ service cloud.firestore {
           && data.email == request.auth.token.email;
       }
 
-      // The allowlist decides: an allowlisted address is faculty, whatever
-      // its domain, and can never hold a student profile.
+      // The faculty list decides: a listed address (or the HOD's) is faculty,
+      // whatever its domain, and can never hold a student profile.
       function validFaculty(data) {
         return hasExactly(data, baseFields())
           && tokenIdentity(data)
           && data.role == 'FACULTY'
-          && isAllowlisted();
+          && isFaculty();
       }
 
       // A student profile is a registration: the roll number and cohort must
       // equal the roster entry for the token's address, and that entry must
       // be claimed by this sign-in (in this same write or an earlier one).
       // The comparison is made on every write, so the roll number can only
-      // change if faculty correct the roster first.
+      // change if the HOD corrects the roster first.
       function validStudent(data) {
         let entry = rosterEntryAfter(email());
         return hasExactly(data, baseFields().concat(['rollNo', 'cohort']))
           && tokenIdentity(data)
           && data.role == 'STUDENT'
           && hasStudentEmail()
-          && !isAllowlisted()
+          && !isFaculty()
           && entry.rollNo == data.rollNo
           && entry.cohort == data.cohort
           && entry.registeredUid == uid();
@@ -242,14 +373,14 @@ service cloud.firestore {
 
       allow get: if signedIn() && uid() == userId;
 
-      // Lookups: 2 (allowlist, roster entry).
+      // Lookups: 3 (faculty list, HOD, roster entry).
       allow create: if signedIn()
         && uid() == userId
         && (validFaculty(request.resource.data) || validStudent(request.resource.data))
         && request.resource.data.createdAt == request.time;
 
-      // Lookups: 2. The role is re-derived, so adding or removing an
-      // allowlist entry takes effect the next time the profile is written.
+      // Lookups: 3. The role is re-derived, so adding or removing someone on
+      // the faculty list takes effect the next time the profile is written.
       allow update: if signedIn()
         && uid() == userId
         && (validFaculty(request.resource.data) || validStudent(request.resource.data))
@@ -259,23 +390,26 @@ service cloud.firestore {
     // ---- student roster --------------------------------------------------
     match /studentRegistry/{entryEmail} {
       // A student may read their own entry and nothing else; it cannot be
-      // listed by them. Faculty read and list the whole roster.
-      allow get: if signedIn() && (entryEmail == email() || isAllowlisted());
-      allow list: if signedIn() && isAllowlisted();
+      // listed by them. Faculty read and list the whole roster; only the HOD
+      // writes it.
+      allow get: if signedIn() && (entryEmail == email() || isFaculty());
+      allow list: if signedIn() && isFaculty();
 
-      // Lookups: 2 (allowlist, roll index after this write). The index must be
-      // created in the same batch. A second write to an existing address is
-      // an update, so nothing is ever silently overwritten. A new entry always
-      // has the student's name and emoji; the batch is optional.
+      // Lookups: 4 (faculty and HOD, the batch, the roll index after this
+      // write). The index must be created in the same batch. A second write to
+      // an existing address is an update, so nothing is ever silently
+      // overwritten. A new entry always has the student's name and belongs to
+      // a batch that exists; the lab group is optional.
       allow create: if signedIn()
-        && isAllowlisted()
+        && isHod()
         && request.resource.data.keys().hasOnly(rosterBase().concat(rosterDetails()))
-        && request.resource.data.keys().hasAll(rosterBase().concat(['name', 'emoji']))
-        && validDetails(request.resource.data)
+        && request.resource.data.keys().hasAll(rosterBase().concat(['name']))
         && isStudentEmail(request.resource.data.email)
         && entryEmail == request.resource.data.email
         && isRollNo(request.resource.data.rollNo)
         && isCohort(request.resource.data.cohort)
+        && batchExists(request.resource.data.cohort)
+        && validDetails(request.resource.data, batchOf(request.resource.data.cohort))
         && request.resource.data.addedBy == uid()
         && request.resource.data.addedAt == request.time
         && request.resource.data.revision == 0
@@ -283,11 +417,11 @@ service cloud.firestore {
             == entryEmail;
 
       // The student whose address this is binds the entry to their sign-in,
-      // once. Lookups: 1 (allowlist: faculty never register as students).
+      // once. Lookups: 2 (faculty and HOD: staff never register as students).
       function isClaim() {
         return entryEmail == email()
           && hasStudentEmail()
-          && !isAllowlisted()
+          && !isFaculty()
           && !('registeredUid' in resource.data)
           && request.resource.data.diff(resource.data).affectedKeys()
               .hasOnly(['registeredUid', 'registeredAt'])
@@ -295,25 +429,26 @@ service cloud.firestore {
           && request.resource.data.registeredAt == request.time;
       }
 
-      // Faculty change an existing entry only together with its audit record.
-      // Every correction releases the claim, so the student registers again
-      // against the corrected entry. Lookups: 4 (allowlist, audit record,
-      // new index, old index).
+      // The HOD changes an existing entry only together with its audit
+      // record. Every correction releases the claim, so the student registers
+      // again against the corrected entry. Lookups: 6 (faculty and HOD, audit
+      // record, the batch after, new index, old index).
       function isCorrection() {
         let before = resource.data;
         let after = request.resource.data;
         let record = correctionAfter(entryEmail, before);
         let changed = after.rollNo != before.rollNo || after.cohort != before.cohort;
-        return isAllowlisted()
+        return isHod()
           && after.keys().hasOnly(rosterBase().concat(rosterDetails()))
           && after.keys().hasAll(rosterBase())
-          && validDetails(after)
           && after.email == before.email
           && after.addedBy == before.addedBy
           && after.addedAt == before.addedAt
           && after.revision == before.revision + 1
           && isRollNo(after.rollNo)
           && isCohort(after.cohort)
+          && (after.cohort == before.cohort || batchExists(after.cohort))
+          && validDetails(after, batchOf(after.cohort))
           && record.correctedBy == uid()
           && record.correctedAt == request.time
           && ((record.action == 'UPDATE'
@@ -325,22 +460,22 @@ service cloud.firestore {
                 && 'registeredUid' in before));
       }
 
-      // Faculty fix a student's name, batch or emoji. These describe the
+      // The HOD fixes a student's name or lab group. These describe the
       // student, not their identity, so the registration stays and no audit
-      // record is needed. Name and emoji stay present once set. Lookups: 1
-      // (allowlist).
+      // record is needed. The name stays present once set. Lookups: 3
+      // (faculty and HOD, the batch).
       function isDetailsEdit() {
-        return isAllowlisted()
+        return isHod()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(rosterDetails())
-          && request.resource.data.keys().hasAll(['name', 'emoji'])
-          && validDetails(request.resource.data);
+          && 'name' in request.resource.data
+          && validDetails(request.resource.data, batchOf(resource.data.cohort));
       }
 
       allow update: if signedIn() && (isClaim() || isCorrection() || isDetailsEdit());
 
-      // Lookups: 3 (allowlist, audit record, old index).
+      // Lookups: 4 (faculty and HOD, audit record, old index).
       allow delete: if signedIn()
-        && isAllowlisted()
+        && isHod()
         && correctionAfter(entryEmail, resource.data).action == 'REMOVE'
         && correctionAfter(entryEmail, resource.data).correctedBy == uid()
         && correctionAfter(entryEmail, resource.data).correctedAt == request.time
@@ -350,23 +485,24 @@ service cloud.firestore {
     match /rollIndex/{key} {
       // get only, faculty only: used to check a roll number is free. Nobody
       // can list it, and students cannot read it at all.
-      allow get: if signedIn() && isAllowlisted();
+      allow get: if signedIn() && isFaculty();
 
-      // Lookups: 2 (allowlist, roster entry after this write). A key that
+      // Lookups: 3 (faculty and HOD, roster entry after this write). A key that
       // already exists makes this an update, which fails, so a roll number
-      // maps to one address per cohort.
+      // maps to one address per cohort. The index only follows its entry, and
+      // only the HOD writes entries, so staff is enough here.
       allow create: if signedIn()
-        && isAllowlisted()
+        && isFaculty()
         && hasExactly(request.resource.data, ['email'])
         && isStudentEmail(request.resource.data.email)
         && key == rollIndexKey(
             rosterEntryAfter(request.resource.data.email).cohort,
             rosterEntryAfter(request.resource.data.email).rollNo);
 
-      // Lookups: 2. Only once the roster entry no longer points here, which
-      // itself requires an audited correction or removal.
+      // Lookups: 3. Only once the roster entry no longer points here, which
+      // itself requires the HOD's audited correction or removal.
       allow delete: if signedIn()
-        && isAllowlisted()
+        && isFaculty()
         && (!rosterEntryExistsAfter(resource.data.email)
             || key != rollIndexKey(
                 rosterEntryAfter(resource.data.email).cohort,
@@ -375,9 +511,9 @@ service cloud.firestore {
 
     // Immutable audit trail of every change to an existing roster entry.
     match /registryCorrections/{recordId} {
-      allow read: if signedIn() && isAllowlisted();
+      allow read: if signedIn() && isFaculty();
 
-      // Lookups: 3 (allowlist, roster entry before, roster entry after). The
+      // Lookups: 4 (faculty and HOD, roster entry before and after). The
       // record must describe the entry as it was, and the entry must change
       // in this same batch, so a record cannot exist without its change.
       function validRecord(data) {
@@ -408,12 +544,14 @@ service cloud.firestore {
                 && data.afterCohort == rosterEntryAfter(data.email).cohort));
       }
 
-      allow create: if signedIn() && isAllowlisted() && validRecord(request.resource.data);
+      // A record must describe a change made to the entry in the same write,
+      // and only the HOD changes entries.
+      allow create: if signedIn() && isFaculty() && validRecord(request.resource.data);
 
       // Retention: kept for at least CORRECTION_RETENTION_DAYS, then a
       // faculty app may purge it. No update rule exists.
       allow delete: if signedIn()
-        && isAllowlisted()
+        && isHod()
         && resource.data.correctedAt
             < request.time - duration.value(CORRECTION_RETENTION_DAYS(), 'd');
     }
@@ -437,12 +575,12 @@ service cloud.firestore {
         return baseFields().concat(['enteredRollNo']);
       }
 
-      // Lookups: 1 (allowlist).
+      // Lookups: 2 (faculty and HOD).
       function nonVjtiEmail(data) {
         return hasExactly(data, baseFields())
           && data.audience == 'ALL'
           && !hasStudentEmail()
-          && !isAllowlisted();
+          && !isFaculty();
       }
 
       // Lookups: 1 (roster entry).
@@ -496,14 +634,14 @@ service cloud.firestore {
         return resource.data.audience == uid() || resource.data.audience == 'ALL';
       }
 
-      // Lookups: 1 (allowlist). Faculty only, and only alerts addressed to
+      // Lookups: 2 (faculty and HOD). Faculty only, and only alerts addressed to
       // them or to all faculty.
-      allow read: if signedIn() && isAllowlisted() && isAudience();
+      allow read: if signedIn() && isFaculty() && isAudience();
 
       // Retention: kept for at least ALERT_RETENTION_DAYS, then a faculty app
       // may purge it. No update rule exists.
       allow delete: if signedIn()
-        && isAllowlisted()
+        && isFaculty()
         && isAudience()
         && resource.data.createdAt
             < request.time - duration.value(ALERT_RETENTION_DAYS(), 'd');
@@ -523,16 +661,93 @@ service cloud.firestore {
         return getAfter(/databases/$(database)/documents/joinCodes/$(code)).data;
       }
 
-      // Lookups: 1 (membership), only when the reader is not the owner.
+      // A subject the HOD made from a batch's timetable. It has a batch, a
+      // semester and a lab group (0: the whole batch) instead of a join code,
+      // and names its teacher by address, so a teacher can be assigned before
+      // they have ever signed in. teacherId stays '' until that teacher claims
+      // it; from then on every rule keyed on teacherId applies unchanged.
+      function onStaff(staffEmail) {
+        return exists(/databases/$(database)/documents/faculty/$(staffEmail))
+          || exists(/databases/$(database)/documents/hods/$(staffEmail));
+      }
+
+      function validSubject(data, batch) {
+        return validCourseFields(data)
+          && data.semester is int
+          && data.semester >= 1
+          && data.semester <= batch.years * SEMESTERS_PER_YEAR()
+          && data.labGroup is int
+          && data.labGroup >= 0
+          && data.labGroup <= batch.labGroups
+          && (data.teacherEmail == ''
+              || (isStaffEmail(data.teacherEmail) && onStaff(data.teacherEmail)));
+      }
+
+      // A student of the subject's batch. Lab groups are not checked here:
+      // the timetable is not secret, only joining is limited to the group.
+      function inStudentsBatch(data) {
+        return hasStudentEmail() && data.batchId == rosterEntry(email()).cohort;
+      }
+
+      // Lookups: 1 (membership), only when the reader is not the owner; the
+      // HOD and a subject's assigned teacher or batch read it too. Only the HOD
+      // reads a course that does not exist: the import checks before it makes
+      // one. The HOD is asked last, so students' reads cost no extra lookup.
       allow get: if signedIn()
-        && (resource.data.teacherId == uid() || isMemberOf(courseId, uid()));
+        && (resource == null
+            ? isHod()
+            : (resource.data.teacherId == uid()
+                || isMemberOf(courseId, uid())
+                || (isSubject(resource.data)
+                    && (resource.data.teacherEmail == email() || inStudentsBatch(resource.data)))
+                || isHod()));
 
-      allow list: if signedIn() && resource.data.teacherId == uid();
+      allow list: if signedIn()
+        && (resource.data.teacherId == uid()
+            || resource.data.teacherEmail == email()
+            || inStudentsBatch(resource.data)
+            || isHod());
 
-      // Lookups: 2 (allowlist, join code after this write). The join code
+      // Lookups: up to 5 (HOD, the batch, the teacher on the faculty list or
+      // HOD list, the faculty check in signedIn). A subject starts unclaimed.
+      allow create: if signedIn()
+        && isHod()
+        && hasExactly(request.resource.data,
+            ['teacherId', 'teacherEmail', 'name', 'code', 'threshold', 'batchId', 'semester',
+             'labGroup', 'createdBy', 'createdAt'])
+        && request.resource.data.teacherId == ''
+        && isCohort(request.resource.data.batchId)
+        && batchExists(request.resource.data.batchId)
+        && validSubject(request.resource.data, batchOf(request.resource.data.batchId))
+        && request.resource.data.createdBy == uid()
+        && request.resource.data.createdAt == request.time;
+
+      // The HOD renames a subject or assigns another teacher. A new teacher
+      // starts unclaimed; the previous one loses it, their sessions stay.
+      allow update: if signedIn()
+        && isHod()
+        && isSubject(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['teacherEmail', 'teacherId', 'name', 'code', 'threshold'])
+        && validSubject(request.resource.data, batchOf(resource.data.batchId))
+        && (request.resource.data.teacherEmail == resource.data.teacherEmail
+            ? request.resource.data.teacherId == resource.data.teacherId
+            : request.resource.data.teacherId == '');
+
+      // The assigned teacher claims the subject with their account. Only an
+      // unclaimed subject can be claimed, and only by the address it names.
+      allow update: if signedIn()
+        && isFaculty()
+        && isSubject(resource.data)
+        && resource.data.teacherEmail == email()
+        && resource.data.teacherId == ''
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['teacherId'])
+        && request.resource.data.teacherId == uid();
+
+      // Lookups: 3 (faculty and HOD, join code after this write). The join code
       // document must be created in the same batch and point back here.
       allow create: if signedIn()
-        && isAllowlisted()
+        && isFaculty()
         && hasExactly(request.resource.data,
             ['teacherId', 'name', 'code', 'threshold', 'joinCode', 'createdAt'])
         && request.resource.data.teacherId == uid()
@@ -615,20 +830,96 @@ service cloud.firestore {
         && request.resource.data.email == request.auth.token.email
         && registeredAs(request.resource.data)
         && request.resource.data.joinedAt == request.time;
+
+      // A subject's course for the student's own batch and lab group (a
+      // subject for the whole batch has lab group 0). No join code: the
+      // roster says who belongs. Only once the teacher has claimed it.
+      function inSubject(course, entry) {
+        return isSubject(course)
+          && course.batchId == entry.cohort
+          && (course.labGroup == 0 || course.labGroup == entry.get('labGroup', 0));
+      }
+
+      // Lookups: 2 (course, roster entry).
+      allow create: if signedIn()
+        && hasExactly(request.resource.data,
+            ['courseId', 'teacherId', 'studentId', 'name', 'email', 'rollNo', 'cohort',
+             'joinedAt'])
+        && isId(request.resource.data.courseId)
+        && membershipId == request.resource.data.courseId + '_' + uid()
+        && request.resource.data.studentId == uid()
+        && request.resource.data.teacherId != ''
+        && request.resource.data.teacherId != uid()
+        && get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data.teacherId
+            == request.resource.data.teacherId
+        && inSubject(
+            get(/databases/$(database)/documents/courses/$(request.resource.data.courseId)).data,
+            rosterEntry(email()))
+        && request.resource.data.name == request.auth.token.name
+        && request.resource.data.email == request.auth.token.email
+        && registeredAs(request.resource.data)
+        && request.resource.data.joinedAt == request.time;
+
+      // Lookups: 1 (course). When the HOD assigns a subject to another
+      // teacher, each student's app moves their membership to the teacher who
+      // has claimed it, so that teacher sees them. Nothing else changes.
+      allow update: if signedIn()
+        && resource.data.studentId == uid()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['teacherId'])
+        && request.resource.data.teacherId != ''
+        && request.resource.data.teacherId != uid()
+        && get(/databases/$(database)/documents/courses/$(resource.data.courseId)).data.teacherId
+            == request.resource.data.teacherId;
+    }
+
+    // ---- rooms: where classes are held, saved by the teachers who stand in them
+    // rooms/{id}: the id is the room's name in capitals without punctuation
+    // (AL-301 is AL301), as the timetable writes it. A teacher saves the room's
+    // geofence once, from inside it; every session started there afterwards
+    // copies it. Students never read rooms: a session carries its own.
+    match /rooms/{roomId} {
+      allow get, list: if signedIn() && isFaculty();
+
+      // Lookups: 2 (the faculty check here and in signedIn). Saving again
+      // replaces it: a room is moved by whoever stands in it next.
+      allow create, update: if signedIn()
+        && isFaculty()
+        && hasExactly(request.resource.data, ['name', 'geofence', 'savedBy', 'savedAt'])
+        && isText(request.resource.data.name, 1, ROOM_NAME_MAX_LEN())
+        && roomId.matches('^[A-Z0-9]{1,40}$')
+        && roomId == request.resource.data.name.upper().replace('[^A-Z0-9]', '')
+        && request.resource.data.geofence is map
+        && validGeofence(request.resource.data.geofence)
+        && request.resource.data.savedBy == uid()
+        && request.resource.data.savedAt == request.time;
+    }
+
+    // ---- timetables: one per batch and semester, kept by the HOD ----------
+    // timetables/{batchId}S{semester} holds the week's slots (day, start, end,
+    // subject course id, type, room, the timetable's faculty text). It only
+    // tells people where to be; attendance never depends on it.
+    match /timetables/{timetableId} {
+      allow get, list: if signedIn();
+
+      // Lookups: 3 (HOD, the batch, the faculty check in signedIn).
+      allow create, update: if signedIn()
+        && isHod()
+        && hasExactly(request.resource.data, ['batchId', 'semester', 'slots', 'updatedBy', 'updatedAt'])
+        && isCohort(request.resource.data.batchId)
+        && batchExists(request.resource.data.batchId)
+        && request.resource.data.semester is int
+        && request.resource.data.semester >= 1
+        && request.resource.data.semester
+            <= batchOf(request.resource.data.batchId).years * SEMESTERS_PER_YEAR()
+        && timetableId == request.resource.data.batchId + 'S' + string(request.resource.data.semester)
+        && request.resource.data.slots is list
+        && request.resource.data.slots.size() <= TIMETABLE_SLOTS_MAX()
+        && request.resource.data.updatedBy == uid()
+        && request.resource.data.updatedAt == request.time;
     }
 
     // ---- sessions and tokens (invariants 4 and 5) -----------------------
     match /sessions/{sessionId} {
-      function validGeofence(g) {
-        return hasExactly(g, ['lat', 'lng', 'radiusM', 'cosLat'])
-          && g.lat is number && g.lat >= -90 && g.lat <= 90
-          && g.lng is number && g.lng >= -180 && g.lng <= 180
-          && g.radiusM is number
-          && g.radiusM >= GEO_RADIUS_MIN_M()
-          && g.radiusM <= GEO_RADIUS_MAX_M()
-          && g.cosLat is number && g.cosLat > 0 && g.cosLat <= 1;
-      }
-
       // Lookups: 1 (membership), only when the reader is not the teacher.
       allow read: if signedIn()
         && (resource.data.teacherId == uid() || isMemberOf(resource.data.courseId, uid()));
