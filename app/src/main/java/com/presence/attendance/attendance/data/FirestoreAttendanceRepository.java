@@ -4,6 +4,10 @@ import android.os.Handler;
 import android.os.Looper;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
+import com.google.firebase.firestore.AggregateQuerySnapshot;
+import com.google.firebase.firestore.AggregateSource;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -11,6 +15,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.presence.attendance.attendance.domain.AttendanceRecord;
 import com.presence.attendance.attendance.domain.AttendanceRepository;
+import com.presence.attendance.attendance.domain.CourseCount;
 import com.presence.attendance.attendance.domain.PendingMark;
 import com.presence.attendance.auth.domain.User;
 import com.presence.attendance.core.AppError;
@@ -21,6 +26,7 @@ import com.presence.attendance.core.data.QueryLiveData;
 import com.presence.attendance.core.location.LocationFix;
 import com.presence.attendance.session.domain.Session;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -29,6 +35,13 @@ public final class FirestoreAttendanceRepository implements AttendanceRepository
 
     private static final String ATTENDANCE = "attendance";
     private static final String SESSIONS = "sessions";
+    private static final String MEMBERSHIPS = "memberships";
+    private static final String STATUS = "status";
+    private static final List<String> PRESENT_STATUSES =
+            Arrays.asList(
+                    AttendanceRecord.Status.PRESENT.name(),
+                    AttendanceRecord.Status.LATE_SYNC.name(),
+                    AttendanceRecord.Status.MANUAL_PRESENT.name());
     private static final String DEVICES = "devices";
     private static final String CHANGES = "attendanceChanges";
 
@@ -270,6 +283,43 @@ public final class FirestoreAttendanceRepository implements AttendanceRepository
 
     private DocumentReference record(@NonNull String sessionId, @NonNull String studentId) {
         return attendance().document(sessionId + "_" + studentId);
+    }
+
+    @Override
+    public void countCourse(@NonNull String courseId, @NonNull Callback<CourseCount> callback) {
+        final Task<AggregateQuerySnapshot> held =
+                firestore
+                        .collection(SESSIONS)
+                        .whereEqualTo(AttendanceMappers.COURSE_ID, courseId)
+                        .whereEqualTo(STATUS, "ENDED")
+                        .count()
+                        .get(AggregateSource.SERVER);
+        final Task<AggregateQuerySnapshot> students =
+                firestore
+                        .collection(MEMBERSHIPS)
+                        .whereEqualTo(AttendanceMappers.COURSE_ID, courseId)
+                        .count()
+                        .get(AggregateSource.SERVER);
+        final Task<AggregateQuerySnapshot> present =
+                attendance()
+                        .whereEqualTo(AttendanceMappers.COURSE_ID, courseId)
+                        .whereIn(STATUS, PRESENT_STATUSES)
+                        .count()
+                        .get(AggregateSource.SERVER);
+        Tasks.whenAllSuccess(held, students, present)
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        callback.onResult(
+                                Outcome.failure(FirebaseErrors.toAppError(task.getException())));
+                        return;
+                    }
+                    callback.onResult(
+                            Outcome.success(
+                                    new CourseCount(
+                                            (int) held.getResult().getCount(),
+                                            (int) students.getResult().getCount(),
+                                            (int) present.getResult().getCount())));
+                });
     }
 
     private CollectionReference attendance() {

@@ -79,7 +79,7 @@ describe('INV-8 attendance reads', () => {
   });
 
   test('denied: listing without constraints, or reading signed out', async () => {
-    await assertFails(getDocs(collection(t.as(TEACHER), 'attendance')));
+    await assertFails(getDocs(collection(t.as(OTHER_TEACHER), 'attendance')));
     await assertFails(getDoc(ref(t.anon(), STUDENT)));
   });
 });

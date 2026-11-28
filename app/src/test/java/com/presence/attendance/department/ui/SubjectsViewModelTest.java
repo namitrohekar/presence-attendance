@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 import androidx.lifecycle.MutableLiveData;
+import com.presence.attendance.attendance.domain.CourseCount;
 import com.presence.attendance.core.AppError;
 import com.presence.attendance.core.Outcome;
 import com.presence.attendance.course.domain.Course;
@@ -18,6 +19,7 @@ import com.presence.attendance.department.ui.SubjectsViewModel.Phase;
 import com.presence.attendance.department.ui.SubjectsViewModel.State;
 import com.presence.attendance.department.ui.SubjectsViewModel.Status;
 import com.presence.attendance.roster.domain.RosterCsv;
+import com.presence.attendance.testutil.FakeAttendanceRepository;
 import com.presence.attendance.testutil.FakeAuthRepository;
 import com.presence.attendance.testutil.FakeBatchRepository;
 import com.presence.attendance.testutil.FakeCourseRepository;
@@ -51,6 +53,7 @@ public final class SubjectsViewModelTest {
     private final FakeCourseRepository courses = new FakeCourseRepository();
     private final FakeBatchRepository batches = new FakeBatchRepository();
     private final FakeFacultyRepository faculty = new FakeFacultyRepository();
+    private final FakeAttendanceRepository attendance = new FakeAttendanceRepository();
     private final MutableLiveData<Boolean> online = new MutableLiveData<>(true);
     private SubjectsViewModel viewModel;
 
@@ -65,7 +68,7 @@ public final class SubjectsViewModelTest {
 
     private SubjectsViewModel newViewModel() {
         final SubjectsViewModel model =
-                new SubjectsViewModel(auth, courses, batches, faculty, online, "MC26");
+                new SubjectsViewModel(auth, courses, batches, faculty, attendance, online, "MC26");
         model.getState().observeForever(state -> {});
         return model;
     }
@@ -224,5 +227,17 @@ public final class SubjectsViewModelTest {
                 new FacultyMember(Fixtures.HOD.getEmail(), Fixtures.HOD.getName(), "AK"));
         viewModel = newViewModel();
         assertEquals(3, state().faculty.size());
+    }
+
+    @Test
+    public void claimedSubjectsAreCountedAndUnclaimedOnesAreNot() {
+        courses.subjects.add(
+                Course.subject(
+                        "MC26S1OSG1", "teacherB", GS.getEmail(), "OS Lab", "OS", 75, "MC26", 1, 1));
+        courses.subjects.add(subject("MC26S1OSG2", GS.getEmail(), 2));
+        attendance.counts.put("MC26S1OSG1", new CourseCount(10, 18, 153));
+        viewModel = newViewModel();
+        assertEquals(85, state().counts.get("MC26S1OSG1").percent());
+        assertNull("nobody teaches it yet", state().counts.get("MC26S1OSG2"));
     }
 }

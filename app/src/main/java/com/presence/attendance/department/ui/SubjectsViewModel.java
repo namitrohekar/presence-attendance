@@ -5,6 +5,8 @@ import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.ViewModel;
+import com.presence.attendance.attendance.domain.AttendanceRepository;
+import com.presence.attendance.attendance.domain.CourseCount;
 import com.presence.attendance.auth.domain.AuthRepository;
 import com.presence.attendance.auth.domain.User;
 import com.presence.attendance.core.AppError;
@@ -25,7 +27,9 @@ import com.presence.attendance.department.domain.TimetablePlan;
 import com.presence.attendance.roster.domain.RosterCsv;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * HOD: one batch's subjects for its current semester, who teaches each, and its weekly timetable. A
@@ -90,6 +94,9 @@ public final class SubjectsViewModel extends ViewModel {
         @Nullable public final AppError fileError;
         public final boolean openPreview;
 
+        /** Each claimed subject's counted attendance, by course id, once it has been counted. */
+        @NonNull public final Map<String, CourseCount> counts;
+
         State(Builder b) {
             status = b.status;
             batch = b.batch;
@@ -106,6 +113,7 @@ public final class SubjectsViewModel extends ViewModel {
             fileProblem = b.fileProblem;
             fileError = b.fileError;
             openPreview = b.openPreview;
+            counts = Collections.unmodifiableMap(b.counts);
         }
 
         /** How many of the plan's subjects will be, or were, saved this way. */
@@ -155,6 +163,7 @@ public final class SubjectsViewModel extends ViewModel {
             b.fileProblem = fileProblem;
             b.fileError = fileError;
             b.openPreview = openPreview;
+            b.counts = counts;
             return b;
         }
     }
@@ -175,12 +184,14 @@ public final class SubjectsViewModel extends ViewModel {
         RosterCsv.FileProblem fileProblem;
         AppError fileError;
         boolean openPreview;
+        Map<String, CourseCount> counts = new HashMap<>();
     }
 
     private final AuthRepository auth;
     private final CourseRepository courses;
     private final BatchRepository batches;
     private final FacultyRepository facultyRepository;
+    private final AttendanceRepository attendance;
     private final String batchId;
     private final MediatorLiveData<State> state = new MediatorLiveData<>(new State(new Builder()));
 
@@ -189,8 +200,10 @@ public final class SubjectsViewModel extends ViewModel {
             @NonNull CourseRepository courses,
             @NonNull BatchRepository batches,
             @NonNull FacultyRepository faculty,
+            @NonNull AttendanceRepository attendance,
             @NonNull LiveData<Boolean> online,
             @NonNull String batchId) {
+        this.attendance = attendance;
         this.auth = auth;
         this.courses = courses;
         this.batches = batches;
@@ -286,6 +299,7 @@ public final class SubjectsViewModel extends ViewModel {
                                                 ? timetables.getValue().get(0)
                                                 : null;
                                 publish(b);
+                                countSubjects();
                             });
                 });
     }
@@ -416,8 +430,33 @@ public final class SubjectsViewModel extends ViewModel {
                         final Builder b = current().edit();
                         b.subjects = subjects.getValue();
                         publish(b);
+                        countSubjects();
                     }
                 });
+    }
+
+    /**
+     * Counts each claimed subject's sessions, students and present marks. A subject that cannot be
+     * counted simply shows no figure.
+     */
+    private void countSubjects() {
+        for (Course subject : current().subjects) {
+            if (subject.getTeacherId().isEmpty()) {
+                continue;
+            }
+            attendance.countCourse(
+                    subject.getId(),
+                    count -> {
+                        if (!count.isSuccess()) {
+                            return;
+                        }
+                        final Builder b = current().edit();
+                        final Map<String, CourseCount> counts = new HashMap<>(b.counts);
+                        counts.put(subject.getId(), count.getValue());
+                        b.counts = counts;
+                        publish(b);
+                    });
+        }
     }
 
     /** Forgets the file; the preview screen closes. */

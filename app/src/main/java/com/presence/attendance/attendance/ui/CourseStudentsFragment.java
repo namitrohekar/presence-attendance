@@ -3,6 +3,7 @@ package com.presence.attendance.attendance.ui;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.text.format.DateUtils;
 import android.view.View;
 import androidx.activity.result.ActivityResultLauncher;
@@ -18,6 +19,7 @@ import androidx.navigation.fragment.NavHostFragment;
 import com.presence.attendance.PresenceApp;
 import com.presence.attendance.R;
 import com.presence.attendance.attendance.domain.AttendanceCsv;
+import com.presence.attendance.attendance.domain.ClassStats;
 import com.presence.attendance.core.AppError;
 import com.presence.attendance.core.AppExecutors;
 import com.presence.attendance.core.Log;
@@ -145,6 +147,7 @@ public final class CourseStudentsFragment extends Fragment {
                         state.month == null
                                 ? getString(R.string.students_switch_to_month, thisMonth)
                                 : getString(R.string.students_switch_to_overall)));
+        addClassLines(lines, state);
         lines.add(Line.header("h_students", getString(R.string.students_title)));
         for (CourseStudentsViewModel.Row row : state.rows) {
             final String detail =
@@ -180,6 +183,37 @@ public final class CourseStudentsFragment extends Fragment {
                             .navigates());
         }
         return Line.grouped(lines);
+    }
+
+    /** The class as a whole: its average, who is below the requirement, the latest turnout. */
+    private void addClassLines(
+            @NonNull List<Line> lines, @NonNull CourseStudentsViewModel.State state) {
+        final ClassStats figures = state.classStats;
+        if (figures == null || !figures.hasSessions()) {
+            return;
+        }
+        lines.add(Line.header("h_class", getString(R.string.class_header)));
+        lines.add(
+                Line.row(
+                        "class_average",
+                        getString(R.string.class_average, figures.averagePercent()),
+                        getString(
+                                R.string.class_below,
+                                args.getThreshold(),
+                                state.atRiskCount,
+                                state.rows.size())));
+        final List<String> turnout = new ArrayList<>();
+        for (int present : figures.recentTurnout) {
+            turnout.add(String.valueOf(present));
+        }
+        lines.add(
+                Line.row(
+                        "class_turnout",
+                        getString(R.string.class_turnout_title),
+                        getString(
+                                R.string.class_turnout,
+                                TextUtils.join(" · ", turnout),
+                                state.rows.size())));
     }
 
     private void onRowClicked(@NonNull String key) {

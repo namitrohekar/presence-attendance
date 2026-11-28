@@ -18,6 +18,7 @@ import androidx.navigation.NavDestination;
 import androidx.navigation.fragment.NavHostFragment;
 import com.presence.attendance.PresenceApp;
 import com.presence.attendance.R;
+import com.presence.attendance.attendance.domain.CourseCount;
 import com.presence.attendance.core.AppError;
 import com.presence.attendance.core.AppExecutors;
 import com.presence.attendance.core.ui.AppErrorMessages;
@@ -70,6 +71,7 @@ public final class SubjectsFragment extends Fragment {
                                         c.courses(),
                                         c.batches(),
                                         c.faculty(),
+                                        c.attendance(),
                                         c.online(),
                                         batchId)))
                 .get(SubjectsViewModel.class);
@@ -213,10 +215,23 @@ public final class SubjectsFragment extends Fragment {
         return Line.row(
                         SUBJECT + subject.getId(),
                         subject.getName(),
-                        TextUtils.join(" · ", where) + "\n" + who,
+                        TextUtils.join(" · ", where) + "\n" + who + figure(state, subject),
                         badge,
                         tone)
                 .navigates();
+    }
+
+    /** "\nAttendance 86% over 12 sessions" once the subject has been counted. */
+    @NonNull
+    private String figure(@NonNull SubjectsViewModel.State state, @NonNull Course subject) {
+        final CourseCount count = state.counts.get(subject.getId());
+        if (count == null) {
+            return "";
+        }
+        return "\n"
+                + (count.hasSessions()
+                        ? getString(R.string.subjects_attendance, count.percent(), count.sessions)
+                        : getString(R.string.subjects_no_sessions));
     }
 
     private boolean onMenuItem(@NonNull MenuItem item) {

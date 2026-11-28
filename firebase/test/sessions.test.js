@@ -190,6 +190,6 @@ describe('INV-4 session reads', () => {
     const db = t.as(OUTSIDER);
     const history = query(collection(db, 'sessions'), where('courseId', '==', COURSE));
     await assertFails(getDocs(history));
-    await assertFails(getDocs(collection(t.as(TEACHER), 'sessions')));
+    await assertFails(getDocs(collection(t.as(OTHER_TEACHER), 'sessions')));
   });
 });

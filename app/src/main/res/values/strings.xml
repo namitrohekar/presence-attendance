@@ -491,4 +491,11 @@
     <string name="phone_title">Move %1$s to a new phone?</string>
     <string name="phone_body">The account is released from the phone it is on now. The next phone it signs in on becomes the only one it can mark attendance from. Do this only when the student has a new phone.</string>
     <string name="phone_confirm">Move to a new phone</string>
+    <string name="class_header">Class</string>
+    <string name="class_average">Average attendance: %1$d%%</string>
+    <string name="class_below">Below %1$d%%: %2$d of %3$d</string>
+    <string name="class_turnout_title">Present in the latest sessions</string>
+    <string name="class_turnout">%1$s. Enrolled: %2$d. Oldest first.</string>
+    <string name="subjects_attendance">Attendance %1$d%% · Sessions held: %2$d</string>
+    <string name="subjects_no_sessions">No sessions held yet</string>
 </resources>

@@ -165,6 +165,6 @@ describe('INV-3 membership reads', () => {
     const db = t.as(STUDENT);
     const classmates = query(collection(db, 'memberships'), where('courseId', '==', COURSE));
     await assertFails(getDocs(classmates));
-    await assertFails(getDocs(collection(t.as(TEACHER), 'memberships')));
+    await assertFails(getDocs(collection(t.as(OTHER_TEACHER), 'memberships')));
   });
 });

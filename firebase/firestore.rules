@@ -819,8 +819,9 @@ service cloud.firestore {
       allow get: if signedIn()
         && (isOwnCompositeId(membershipId) || resource.data.teacherId == uid());
 
+      // The HOD counts a subject's students for the department's figures.
       allow list: if signedIn()
-        && (resource.data.studentId == uid() || resource.data.teacherId == uid());
+        && (resource.data.studentId == uid() || resource.data.teacherId == uid() || isHod());
 
       // Only a registered student can enrol, and the roll number and cohort
       // are the roster's, not something typed at join time.
@@ -939,9 +940,12 @@ service cloud.firestore {
 
     // ---- sessions and tokens (invariants 4 and 5) -----------------------
     match /sessions/{sessionId} {
-      // Lookups: 1 (membership), only when the reader is not the teacher.
+      // Lookups: 1 (membership), only when the reader is not the teacher. The
+      // HOD reads every session, for the department's figures.
       allow read: if signedIn()
-        && (resource.data.teacherId == uid() || isMemberOf(resource.data.courseId, uid()));
+        && (resource.data.teacherId == uid()
+            || isMemberOf(resource.data.courseId, uid())
+            || isHod());
 
       // Lookups: 1 (course).
       allow create: if signedIn()
@@ -1156,8 +1160,9 @@ service cloud.firestore {
       allow get: if signedIn()
         && (isOwnCompositeId(attendanceId) || resource.data.teacherId == uid());
 
+      // The HOD counts a subject's marks for the department's figures.
       allow list: if signedIn()
-        && (resource.data.studentId == uid() || resource.data.teacherId == uid());
+        && (resource.data.studentId == uid() || resource.data.teacherId == uid() || isHod());
 
       allow create: if signedIn()
         && (studentMark(request.resource.data) || manualCreate(request.resource.data));

@@ -5,14 +5,18 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import com.presence.attendance.attendance.domain.AttendanceRecord;
 import com.presence.attendance.attendance.domain.AttendanceRepository;
+import com.presence.attendance.attendance.domain.CourseCount;
 import com.presence.attendance.attendance.domain.PendingMark;
 import com.presence.attendance.auth.domain.User;
+import com.presence.attendance.core.AppError;
 import com.presence.attendance.core.Callback;
 import com.presence.attendance.core.Outcome;
 import com.presence.attendance.core.location.LocationFix;
 import com.presence.attendance.session.domain.Session;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /** In-memory {@link AttendanceRepository}: the test pushes rosters into {@link #feed}. */
 public final class FakeAttendanceRepository implements AttendanceRepository {
@@ -114,5 +118,15 @@ public final class FakeAttendanceRepository implements AttendanceRepository {
             @NonNull Callback<List<AttendanceRecord>> callback) {
         recordLoads.add("teacher:" + teacherId + ":student:" + studentId + ":" + courseId);
         callback.onResult(recordsOutcome);
+    }
+
+    /** What countCourse answers, by course id; a course not listed fails. */
+    public final Map<String, CourseCount> counts = new HashMap<>();
+
+    @Override
+    public void countCourse(@NonNull String courseId, @NonNull Callback<CourseCount> callback) {
+        final CourseCount count = counts.get(courseId);
+        callback.onResult(
+                count != null ? Outcome.success(count) : Outcome.failure(AppError.OFFLINE));
     }
 }

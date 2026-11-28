@@ -96,4 +96,8 @@ public interface AttendanceRepository {
             @NonNull String studentId,
             @NonNull String courseId,
             @NonNull Callback<List<AttendanceRecord>> callback);
+
+    /** HOD: a course's closed sessions, students and present marks, by count queries. */
+    @MainThread
+    void countCourse(@NonNull String courseId, @NonNull Callback<CourseCount> callback);
 }

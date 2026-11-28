@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel;
 import com.presence.attendance.attendance.domain.AttendanceRecord;
 import com.presence.attendance.attendance.domain.AttendanceRepository;
 import com.presence.attendance.attendance.domain.AttendanceStats;
+import com.presence.attendance.attendance.domain.ClassStats;
 import com.presence.attendance.attendance.domain.MonthGrid;
 import com.presence.attendance.auth.domain.AuthRepository;
 import com.presence.attendance.core.AppError;
@@ -62,16 +63,21 @@ public final class CourseStudentsViewModel extends ViewModel {
         /** The month the figures cover, or null for the whole course. */
         @Nullable public final YearMonth month;
 
+        /** The class as a whole for the same period; null outside CONTENT. */
+        @Nullable public final ClassStats classStats;
+
         State(@NonNull Status status, @NonNull List<Row> rows, @Nullable AppError error) {
-            this(status, rows, error, null);
+            this(status, rows, error, null, null);
         }
 
         State(
                 @NonNull Status status,
                 @NonNull List<Row> rows,
                 @Nullable AppError error,
-                @Nullable YearMonth month) {
+                @Nullable YearMonth month,
+                @Nullable ClassStats classStats) {
             this.month = month;
+            this.classStats = classStats;
             this.status = status;
             this.rows = Collections.unmodifiableList(rows);
             int atRisk = 0;
@@ -192,22 +198,29 @@ public final class CourseStudentsViewModel extends ViewModel {
         final long now = wallClockMs.getAsLong();
         final YearMonth month =
                 thisMonth ? YearMonth.from(Instant.ofEpochMilli(now).atZone(zone)) : null;
-        final Set<String> ended =
-                AttendanceStats.ended(
-                        month != null ? MonthGrid.inMonth(held, month, zone) : held, now);
+        final List<Session> period = month != null ? MonthGrid.inMonth(held, month, zone) : held;
+        final Set<String> ended = AttendanceStats.ended(period, now);
         final Map<String, List<AttendanceRecord>> byStudent = new HashMap<>();
         for (AttendanceRecord record : records) {
             byStudent.computeIfAbsent(record.getStudentId(), id -> new ArrayList<>()).add(record);
         }
         final List<Row> rows = new ArrayList<>(members.size());
+        final List<AttendanceStats> all = new ArrayList<>(members.size());
         for (Member member : members) {
             final AttendanceStats stats =
                     AttendanceStats.of(
                             ended,
                             byStudent.getOrDefault(member.getStudentId(), Collections.emptyList()));
             rows.add(new Row(member, stats, stats.isBelow(threshold)));
+            all.add(stats);
         }
-        state.setValue(new State(Status.CONTENT, rows, null, month));
+        state.setValue(
+                new State(
+                        Status.CONTENT,
+                        rows,
+                        null,
+                        month,
+                        ClassStats.of(all, period, ended, records)));
     }
 
     private void fail(@Nullable AppError error) {
