@@ -83,7 +83,10 @@ public final class AppContainer {
         if (auth == null) {
             auth =
                     new FirebaseAuthRepository(
-                            FirebaseAuth.getInstance(), FirebaseFirestore.getInstance(), alerts());
+                            FirebaseAuth.getInstance(),
+                            FirebaseFirestore.getInstance(),
+                            alerts(),
+                            this::deviceId);
         }
         return auth;
     }

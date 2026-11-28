@@ -81,4 +81,11 @@ public interface RosterRepository {
             @Nullable String newRollNo,
             @Nullable String newCohort,
             @NonNull Callback<CorrectOutcome> callback);
+
+    /**
+     * HOD: moves a registered student's account to a new phone. The phone it is bound to is
+     * forgotten; the next phone the student signs in on is bound instead.
+     */
+    @MainThread
+    void releasePhone(@NonNull String studentUid, @NonNull Callback<Boolean> callback);
 }

@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.ViewModelProvider;
 import com.presence.attendance.R;
 import com.presence.attendance.core.ui.AppErrorMessages;
@@ -28,6 +29,7 @@ public final class RosterEntrySheet extends SheetFragment {
     private static final String ARG_NAME = "name";
     private static final String ARG_LAB_GROUP = "labGroup";
     private static final String ARG_LAB_GROUPS = "labGroups";
+    private static final String ARG_UID = "uid";
 
     public RosterEntrySheet() {
         super(R.layout.sheet_roster_entry);
@@ -46,6 +48,7 @@ public final class RosterEntrySheet extends SheetFragment {
         args.putString(ARG_NAME, entry.getName());
         args.putInt(ARG_LAB_GROUP, entry.getLabGroup() != null ? entry.getLabGroup() : 0);
         args.putInt(ARG_LAB_GROUPS, labGroups);
+        args.putString(ARG_UID, entry.getRegisteredUid());
         final RosterEntrySheet sheet = new RosterEntrySheet();
         sheet.setArguments(args);
         return sheet;
@@ -92,6 +95,17 @@ public final class RosterEntrySheet extends SheetFragment {
         }
         // Only a registered entry has a registration to release.
         binding.entryRelease.setVisibility(registered ? View.VISIBLE : View.GONE);
+        // A registered student's account is bound to one phone; a new phone needs the HOD.
+        final String uid = args.getString(ARG_UID);
+        binding.entryMovePhone.setVisibility(uid != null ? View.VISIBLE : View.GONE);
+        binding.entryMovePhone.setOnClickListener(v -> {
+            if (uid == null) {
+                return;
+            }
+            final FragmentManager parent = getParentFragmentManager();
+            dismiss();
+            PhoneSheet.newInstance(uid, name != null ? name : email).show(parent, PhoneSheet.TAG);
+        });
 
         binding.entrySaveDetails.setOnClickListener(v ->
                 viewModel.saveDetails(

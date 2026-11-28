@@ -143,7 +143,7 @@ function addStudent(db, teacher, who) {
  * sign-in token's, never typed. Resolves to REGISTERED, NOT_ON_REGISTER,
  * DUPLICATE_CLAIM or ROLL_MISMATCH.
  */
-function register(db, who, enteredRollNo) {
+function register(db, who, enteredRollNo, deviceId = deviceOf(who.uid)) {
   const entry = entryRef(db, who.email);
   const profile = doc(db, 'users', who.uid);
   return decideAgainIfDenied(db, async (tx) => {
@@ -174,9 +174,12 @@ function register(db, who, enteredRollNo) {
       cohort: roster.cohort,
     };
     if (profileExists) {
-      tx.update(profile, fields);
+      tx.update(profile, { ...fields, deviceId });
     } else {
-      tx.set(profile, build('users.student', { ...fields, createdAt: serverTimestamp() }));
+      tx.set(
+        profile,
+        build('users.student', { ...fields, createdAt: serverTimestamp() }, { deviceId }),
+      );
     }
     return 'REGISTERED';
   });
@@ -737,7 +740,32 @@ function saveRoom(db, teacher, name, geofence) {
   );
 }
 
+/**
+ * A registered student's app at sign-in: binds the account to this phone if it
+ * has none, and refuses a phone other than the bound one. Resolves to BOUND,
+ * SAME_PHONE or OTHER_PHONE.
+ */
+async function bindPhone(db, who, deviceId) {
+  const profile = doc(db, 'users', who.uid);
+  const stored = (await getDoc(profile)).data();
+  if (stored.deviceId === deviceId) {
+    return 'SAME_PHONE';
+  }
+  if (stored.deviceId) {
+    return 'OTHER_PHONE';
+  }
+  await updateDoc(profile, { deviceId });
+  return 'BOUND';
+}
+
+/** The HOD moves a student to a new phone: the bound one is forgotten. */
+function releasePhone(db, studentUid) {
+  return updateDoc(doc(db, 'users', studentUid), { deviceId: deleteField() });
+}
+
 module.exports = {
+  bindPhone,
+  releasePhone,
   roomId,
   saveRoom,
   subjectId,

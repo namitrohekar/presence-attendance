@@ -45,7 +45,10 @@ describe('phone claim: allowed', () => {
     expect(claim.exists()).toBe(false);
   });
 
-  test('the same phone may be used by someone else in a different session', async () => {
+  test('a phone two accounts are bound to may mark for each in different sessions', async () => {
+    await t.seed({
+      [`users/${OTHER_STUDENT.uid}`]: h.studentProfileDoc(OTHER_STUDENT, { deviceId: PHONE }),
+    });
     await assertSucceeds(h.submit(markRef(t.as(STUDENT)), h.liveMark()));
     const other = t.as(OTHER_STUDENT);
     const mark = h.liveMark(OTHER_STUDENT, {
@@ -104,6 +107,8 @@ describe('phone claim: refused', () => {
       together(db, h.liveMark(), PHONE, { studentId: STUDENT.uid, note: 'mine' }),
     );
     const short = 'abc';
+    // Even an account somehow bound to it: the claim's own id check refuses it.
+    await t.seed({ [`users/${STUDENT.uid}`]: h.studentProfileDoc(STUDENT, { deviceId: short }) });
     await assertFails(
       together(db, h.liveMark(STUDENT, { deviceId: short }), short, { studentId: STUDENT.uid }),
     );

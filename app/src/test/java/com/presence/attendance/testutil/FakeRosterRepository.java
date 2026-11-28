@@ -99,4 +99,12 @@ public final class FakeRosterRepository implements RosterRepository {
         calls.add(action + ":" + email + ":" + newRollNo + ":" + newCohort + ":" + reason);
         callback.onResult(correctOutcome);
     }
+
+    public Outcome<Boolean> releasePhoneOutcome = Outcome.success(true);
+
+    @Override
+    public void releasePhone(@NonNull String studentUid, @NonNull Callback<Boolean> callback) {
+        calls.add("releasePhone:" + studentUid);
+        callback.onResult(releasePhoneOutcome);
+    }
 }

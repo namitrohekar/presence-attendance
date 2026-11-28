@@ -19,6 +19,7 @@ final class UserMapper {
     static final String ROLE = "role";
     static final String ROLL_NO = "rollNo";
     static final String COHORT = "cohort";
+    static final String DEVICE_ID = "deviceId";
     private static final String CREATED_AT = "createdAt";
 
     private UserMapper() {}
@@ -61,23 +62,35 @@ final class UserMapper {
             @NonNull String name,
             @NonNull String email,
             @NonNull String rollNo,
-            @NonNull String cohort) {
-        final Map<String, Object> document = studentFields(name, email, rollNo, cohort);
+            @NonNull String cohort,
+            @NonNull String deviceId) {
+        final Map<String, Object> document = studentFields(name, email, rollNo, cohort, deviceId);
         document.put(CREATED_AT, FieldValue.serverTimestamp());
         return document;
     }
 
-    /** Everything a student profile holds except createdAt, for updating an existing one. */
+    /**
+     * Everything a student profile holds except createdAt, for updating an existing one. The
+     * deviceId is the phone the account is bound to: once set, the rules accept only that one.
+     */
     @NonNull
     static Map<String, Object> studentFields(
             @NonNull String name,
             @NonNull String email,
             @NonNull String rollNo,
-            @NonNull String cohort) {
+            @NonNull String cohort,
+            @NonNull String deviceId) {
         final Map<String, Object> fields = identity(name, email, Role.STUDENT);
         fields.put(ROLL_NO, rollNo);
         fields.put(COHORT, cohort);
+        fields.put(DEVICE_ID, deviceId);
         return fields;
+    }
+
+    /** The phone a student profile is bound to, or null if none (from before binding). */
+    @Nullable
+    static String boundPhone(@NonNull DocumentSnapshot snapshot) {
+        return Snapshots.string(snapshot, DEVICE_ID);
     }
 
     /**
@@ -89,6 +102,7 @@ final class UserMapper {
         final Map<String, Object> fields = identity(name, email, Role.FACULTY);
         fields.put(ROLL_NO, FieldValue.delete());
         fields.put(COHORT, FieldValue.delete());
+        fields.put(DEVICE_ID, FieldValue.delete());
         return fields;
     }
 

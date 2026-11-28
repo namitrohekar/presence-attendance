@@ -486,4 +486,9 @@
     <string name="teacher_nobody_detail">The subject stays in the list until a teacher is picked.</string>
     <string name="error_room_not_saved">This room\'s location has not been saved yet.</string>
     <string name="start_save_room">Save as %1$s for next time</string>
+    <string name="error_account_on_other_phone">This account is in use on another phone. To use it on this one, ask the HOD to move it.</string>
+    <string name="entry_move_phone">Move to a new phone</string>
+    <string name="phone_title">Move %1$s to a new phone?</string>
+    <string name="phone_body">The account is released from the phone it is on now. The next phone it signs in on becomes the only one it can mark attendance from. Do this only when the student has a new phone.</string>
+    <string name="phone_confirm">Move to a new phone</string>
 </resources>

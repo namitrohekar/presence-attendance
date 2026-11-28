@@ -6,6 +6,7 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.presence.attendance.auth.domain.User;
@@ -30,6 +31,8 @@ public final class FirestoreRosterRepository implements RosterRepository {
 
     private static final String TAG = "RosterRepository";
     public static final String REGISTRY = "studentRegistry";
+    private static final String USERS = "users";
+    private static final String DEVICE_ID = "deviceId";
     private static final String ROLL_INDEX = "rollIndex";
     private static final String CORRECTIONS = "registryCorrections";
 
@@ -202,6 +205,23 @@ public final class FirestoreRosterRepository implements RosterRepository {
 
     private static <T> void fail(@NonNull Callback<T> callback, @Nullable Exception error) {
         callback.onResult(Outcome.failure(FirebaseErrors.toAppError(error)));
+    }
+
+    @Override
+    public void releasePhone(@NonNull String studentUid, @NonNull Callback<Boolean> callback) {
+        // An update, not a read: the HOD may not read a student's profile, only free its phone.
+        firestore
+                .collection(USERS)
+                .document(studentUid)
+                .update(DEVICE_ID, FieldValue.delete())
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        callback.onResult(Outcome.success(true));
+                    } else {
+                        callback.onResult(
+                                Outcome.failure(FirebaseErrors.toAppError(task.getException())));
+                    }
+                });
     }
 
     private CollectionReference registry() {

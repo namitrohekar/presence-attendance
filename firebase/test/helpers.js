@@ -260,6 +260,12 @@ function world(overrides = {}) {
     ...rosterDocs(OTHER_STUDENT, true),
     ...rosterDocs(OUTSIDER, true),
     ...rosterDocs(LISTED, false),
+    // Registered students' profiles, each bound to the one phone they mark from.
+    [`users/${STUDENT.uid}`]: studentProfileDoc(STUDENT, { deviceId: deviceOf(STUDENT) }),
+    [`users/${OTHER_STUDENT.uid}`]: studentProfileDoc(OTHER_STUDENT, {
+      deviceId: deviceOf(OTHER_STUDENT),
+    }),
+    [`users/${OUTSIDER.uid}`]: studentProfileDoc(OUTSIDER, { deviceId: deviceOf(OUTSIDER) }),
     [`courses/${COURSE}`]: courseDoc(),
     [`joinCodes/${JOIN_CODE}`]: joinCodeDoc(),
     [`memberships/${COURSE}_${STUDENT.uid}`]: membershipDoc(STUDENT),

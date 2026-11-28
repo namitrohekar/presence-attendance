@@ -1,6 +1,7 @@
 {
   "users": "name,email,role,createdAt",
   "users.student": "name,email,role,createdAt,rollNo,cohort",
+  "users.student.optional": "deviceId",
   "courses": "teacherId,name,code,threshold,joinCode,createdAt",
   "courses.subject": "teacherId,teacherEmail,name,code,threshold,batchId,semester,labGroup,createdBy,createdAt",
   "joinCodes": "courseId,courseName,teacherName,teacherId",

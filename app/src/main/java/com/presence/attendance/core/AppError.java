@@ -41,6 +41,8 @@ public enum AppError {
     ALREADY_MARKED,
     /** Another student has already marked this session from this phone. */
     DEVICE_USED,
+    /** The student's account is bound to another phone; the HOD can move it. */
+    ACCOUNT_ON_OTHER_PHONE,
     NOT_ENROLLED,
     MOCK_LOCATION,
     OUTSIDE_AREA,

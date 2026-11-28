@@ -25,6 +25,7 @@ import com.presence.attendance.roster.domain.RosterEntry;
 import com.presence.attendance.roster.domain.StudentIdentity;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * {@link AuthRepository} backed by Firebase Authentication, the {@code users} collection and the
@@ -61,16 +62,21 @@ public final class FirebaseAuthRepository implements AuthRepository {
     private final FirebaseFirestore firestore;
     private final AlertRepository alerts;
 
+    /** This phone's id, as marks carry it. Read lazily: it is only needed for students. */
+    private final Supplier<String> thisPhone;
+
     // The profile changes only at sign-in and registration, so one resolve per process is enough.
     @Nullable private User cachedUser;
 
     public FirebaseAuthRepository(
             @NonNull FirebaseAuth auth,
             @NonNull FirebaseFirestore firestore,
-            @NonNull AlertRepository alerts) {
+            @NonNull AlertRepository alerts,
+            @NonNull Supplier<String> thisPhone) {
         this.auth = auth;
         this.firestore = firestore;
         this.alerts = alerts;
+        this.thisPhone = thisPhone;
     }
 
     @Override
@@ -151,7 +157,7 @@ public final class FirebaseAuthRepository implements AuthRepository {
         } else if (stored.getRole() == Role.FACULTY) {
             keepFacultyProfileFresh(stored, name, email, callback);
         } else {
-            confirmStillRegistered(stored, name, email, callback);
+            confirmStillRegistered(stored, UserMapper.boundPhone(snapshot), name, email, callback);
         }
     }
 
@@ -203,6 +209,7 @@ public final class FirebaseAuthRepository implements AuthRepository {
      */
     private void confirmStillRegistered(
             @NonNull User stored,
+            @Nullable String boundPhone,
             @NonNull String name,
             @NonNull String email,
             @NonNull Callback<User> callback) {
@@ -221,7 +228,13 @@ public final class FirebaseAuthRepository implements AuthRepository {
                                     && entry.getCohort().equals(stored.getCohort());
                     if (!registered) {
                         fail(callback, AppError.REGISTRATION_REQUIRED);
-                    } else if (stored.getName().equals(name) && stored.getEmail().equals(email)) {
+                    } else if (boundPhone != null && !boundPhone.equals(thisPhone.get())) {
+                        // One phone per account: only the HOD can move it to this one.
+                        signOut();
+                        fail(callback, AppError.ACCOUNT_ON_OTHER_PHONE);
+                    } else if (boundPhone != null
+                            && stored.getName().equals(name)
+                            && stored.getEmail().equals(email)) {
                         succeed(callback, stored);
                     } else {
                         refreshStudentProfile(stored, name, email, callback);
@@ -241,7 +254,9 @@ public final class FirebaseAuthRepository implements AuthRepository {
             return;
         }
         final DocumentReference profile = profile(stored.getUid());
-        final Map<String, Object> fields = UserMapper.studentFields(name, email, rollNo, cohort);
+        // Also binds an account from before binding to this phone.
+        final Map<String, Object> fields =
+                UserMapper.studentFields(name, email, rollNo, cohort, thisPhone.get());
         final Task<Void> write =
                 firestore.runTransaction(transaction -> {
                     transaction.update(profile, fields);
@@ -309,8 +324,18 @@ public final class FirebaseAuthRepository implements AuthRepository {
                                             if (!entry.getRollNo().equals(enteredRollNo)) {
                                                 return new Attempt(entry, AppError.ROLL_MISMATCH);
                                             }
-                                            final boolean profileExists =
-                                                    transaction.get(profile).exists();
+                                            final DocumentSnapshot existing =
+                                                    transaction.get(profile);
+                                            final boolean profileExists = existing.exists();
+                                            final String bound =
+                                                    profileExists
+                                                            ? UserMapper.boundPhone(existing)
+                                                            : null;
+                                            final String phone = thisPhone.get();
+                                            if (bound != null && !bound.equals(phone)) {
+                                                return new Attempt(
+                                                        entry, AppError.ACCOUNT_ON_OTHER_PHONE);
+                                            }
                                             if (holder == null) {
                                                 transaction.update(
                                                         entryRef, RosterMappers.claim(uid));
@@ -324,7 +349,8 @@ public final class FirebaseAuthRepository implements AuthRepository {
                                                                 name,
                                                                 email,
                                                                 entry.getRollNo(),
-                                                                entry.getCohort()));
+                                                                entry.getCohort(),
+                                                                phone));
                                             } else {
                                                 transaction.set(
                                                         profile,
@@ -332,7 +358,8 @@ public final class FirebaseAuthRepository implements AuthRepository {
                                                                 name,
                                                                 email,
                                                                 entry.getRollNo(),
-                                                                entry.getCohort()));
+                                                                entry.getCohort(),
+                                                                phone));
                                             }
                                             return new Attempt(entry, null);
                                         })
@@ -368,6 +395,11 @@ public final class FirebaseAuthRepository implements AuthRepository {
             return;
         }
         final AppError error = attempt.error != null ? attempt.error : AppError.UNKNOWN;
+        if (error == AppError.ACCOUNT_ON_OTHER_PHONE) {
+            signOut();
+            fail(callback, error);
+            return;
+        }
         final IdentityAlert.Type type =
                 switch (error) {
                     case NOT_ON_ROSTER -> IdentityAlert.Type.NOT_ON_REGISTER;

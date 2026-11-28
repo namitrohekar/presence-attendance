@@ -192,6 +192,14 @@ const MUTATIONS = [
   ['room under any id', 'rooms', '        && roomId == request.resource.data.name.upper().replace(\'[^A-Z0-9]\', \'\')\n', ''],
   ['room geofence of any shape', 'rooms', '        && validGeofence(request.resource.data.geofence)\n        && request.resource.data.savedBy', '        && request.resource.data.savedBy'],
   ['room saved in another teacher\'s name', 'rooms', '        && request.resource.data.savedBy == uid()\n        && request.resource.data.savedAt == request.time;\n    }\n\n    // ---- timetables', '        && request.resource.data.savedAt == request.time;\n    }\n\n    // ---- timetables'],
+  // ---- one phone per account
+  ['mark from a phone the account is not bound to', 'phones', '          && boundPhone() == data.deviceId\n', ''],
+  ['student may move the account to another phone', 'phones', '\n        && (!(\'deviceId\' in resource.data)\n            || request.resource.data.get(\'deviceId\', \'\') == resource.data.deviceId);', ';'],
+  ['phone id of any shape', 'phones', '          && (!(\'deviceId\' in data) || isToken(data.deviceId))\n', ''],
+  ['teachers may release phones', 'phones', 'allow update: if signedIn()\n        && isHod()\n        && resource.data.role == \'STUDENT\'', 'allow update: if signedIn()\n        && isFaculty()\n        && resource.data.role == \'STUDENT\''],
+  ['release may choose the new phone', 'phones', 'affectedKeys().hasOnly([\'deviceId\'])\n        && !(\'deviceId\' in request.resource.data);', 'affectedKeys().hasOnly([\'deviceId\']);'],
+  ['release may change more than the phone', 'phones', 'affectedKeys().hasOnly([\'deviceId\'])\n        && !(\'deviceId\'', 'affectedKeys().hasOnly([\'deviceId\', \'name\'])\n        && !(\'deviceId\''],
+  ['release of a teacher\'s profile', 'phones', '        && resource.data.role == \'STUDENT\'\n', ''],
 ];
 
 function jestFails(file) {

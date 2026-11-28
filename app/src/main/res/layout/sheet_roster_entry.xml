@@ -157,6 +157,15 @@
                 android:text="@string/entry_release" />
 
             <com.presence.attendance.core.ui.SpringButton
+                android:id="@+id/entry_move_phone"
+                style="@style/Widget.Presence.Button.Text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_4"
+                android:text="@string/entry_move_phone"
+                android:visibility="gone" />
+
+            <com.presence.attendance.core.ui.SpringButton
                 android:id="@+id/entry_remove"
                 style="@style/Widget.Presence.Button.Text"
                 android:layout_width="match_parent"

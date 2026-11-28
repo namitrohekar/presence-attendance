@@ -27,6 +27,7 @@ const t = h.setup(() =>
     ...classmates.map((s) => ({
       ...h.rosterDocs(s, true),
       [`memberships/${h.COURSE}_${s.uid}`]: h.membershipDoc(s),
+      [`users/${s.uid}`]: h.studentProfileDoc(s, { deviceId: h.deviceOf(s) }),
     })),
   ),
 );

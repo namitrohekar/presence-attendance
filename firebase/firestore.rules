@@ -359,9 +359,14 @@ service cloud.firestore {
       // be claimed by this sign-in (in this same write or an earlier one).
       // The comparison is made on every write, so the roll number can only
       // change if the HOD corrects the roster first.
+      //
+      // deviceId is the phone the account is bound to (one phone per account).
+      // It is optional only for profiles from before binding existed.
       function validStudent(data) {
         let entry = rosterEntryAfter(email());
-        return hasExactly(data, baseFields().concat(['rollNo', 'cohort']))
+        return data.keys().hasOnly(baseFields().concat(['rollNo', 'cohort', 'deviceId']))
+          && data.keys().hasAll(baseFields().concat(['rollNo', 'cohort']))
+          && (!('deviceId' in data) || isToken(data.deviceId))
           && tokenIdentity(data)
           && data.role == 'STUDENT'
           && hasStudentEmail()
@@ -381,10 +386,24 @@ service cloud.firestore {
 
       // Lookups: 3. The role is re-derived, so adding or removing someone on
       // the faculty list takes effect the next time the profile is written.
+      // A profile bound to a phone stays bound to it: the student can neither
+      // change nor remove the deviceId. One without a phone is bound by the
+      // first write that names one.
       allow update: if signedIn()
         && uid() == userId
         && (validFaculty(request.resource.data) || validStudent(request.resource.data))
-        && request.resource.data.createdAt == resource.data.createdAt;
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (!('deviceId' in resource.data)
+            || request.resource.data.get('deviceId', '') == resource.data.deviceId);
+
+      // Lookups: 2 (HOD; the faculty check in signedIn). The HOD moves a
+      // student to a new phone: the old one is forgotten, and the next phone
+      // the student signs in on is bound. Nothing else changes.
+      allow update: if signedIn()
+        && isHod()
+        && resource.data.role == 'STUDENT'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deviceId'])
+        && !('deviceId' in request.resource.data);
     }
 
     // ---- student roster --------------------------------------------------
@@ -1058,7 +1077,13 @@ service cloud.firestore {
         return getAfter(/databases/$(database)/documents/sessions/$(sessionId)/devices/$(deviceId)).data;
       }
 
-      // Lookups: 4 (session, membership, token, device claim after the write).
+      // The phone the student's account is bound to (one phone per account).
+      function boundPhone() {
+        return get(/databases/$(database)/documents/users/$(uid())).data.get('deviceId', '');
+      }
+
+      // Lookups: 5 (session, membership, token, device claim after the write,
+      // the student's profile).
       function studentMark(data) {
         let session = sessionOf(data.sessionId);
         let validFrom = validFromOf(data.sessionId, data.token);
@@ -1067,6 +1092,7 @@ service cloud.firestore {
           && attendanceId == data.sessionId + '_' + uid()
           && data.studentId == uid()
           && deviceClaimAfter(data.sessionId, data.deviceId).studentId == uid()
+          && boundPhone() == data.deviceId
           && data.courseId == session.courseId
           && data.teacherId == session.teacherId
           && isMemberOf(session.courseId, uid())
